@@ -129,7 +129,7 @@ export function ConnectWallet({ onConnected }: ConnectWalletProps) {
                         Connect Wallet
                       </div>
                       <div className="text-slate-400 text-sm">
-                        WalletConnect, MetaMask & more
+                        Reown AppKit
                       </div>
                     </div>
                   </div>
