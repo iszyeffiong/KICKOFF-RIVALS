@@ -138,7 +138,15 @@ export function ConnectWallet({ onConnected }: ConnectWalletProps) {
 
                 {/* Individual connectors */}
                 {connectors
-                  .filter((c) => c.name !== "WalletConnect")
+                  .filter(
+                    (c) =>
+                      ![
+                        "WalletConnect",
+                        "Injected",
+                        "Rabby Wallet",
+                        "Trust Wallet",
+                      ].includes(c.name)
+                  )
                   .slice(0, 3)
                   .map((connector) => (
                     <button
