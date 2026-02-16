@@ -145,6 +145,9 @@ export function ConnectWallet({ onConnected }: ConnectWalletProps) {
                         "Injected",
                         "Rabby Wallet",
                         "Trust Wallet",
+                        "Phantom",
+                        "Ronin Wallet",
+                        "Magic Eden",
                       ].includes(c.name)
                   )
                   .slice(0, 3)
