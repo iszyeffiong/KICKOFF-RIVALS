@@ -12,7 +12,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      axios: path.resolve(process.cwd(), "node_modules/axios"),
+      axios: path.resolve(process.cwd(), "node_modules/axios/dist/esm/axios.js"),
     },
   },
   optimizeDeps: {
