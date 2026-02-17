@@ -9,6 +9,9 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  optimizeDeps: {
+    include: ["axios", "buffer"],
+  },
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
