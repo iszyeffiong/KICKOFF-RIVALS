@@ -36,16 +36,23 @@ export function ConnectWallet({ onConnected }: ConnectWalletProps) {
     }
   };
 
-  const handleOpenAppKit = () => {
+  const handleOpenAppKit = async () => {
     // Try to open the AppKit modal if available
     const appKit = (window as any).appKit;
+
+    console.log("Opening AppKit:", { appKitAvailable: !!appKit });
+
     if (appKit?.open) {
-      appKit.open();
+      await appKit.open();
     } else {
       // Fallback: use w3m-button click
+      console.warn("AppKit instance not found on window, attempting fallback click");
       const button = document.querySelector("w3m-button");
       if (button) {
+        // Ensure we're targeting the shadow root button if possible, but usually the custom element handles click
         (button as HTMLElement).click();
+      } else {
+        setError("Wallet connection module not fully initialized. Please refresh.");
       }
     }
   };

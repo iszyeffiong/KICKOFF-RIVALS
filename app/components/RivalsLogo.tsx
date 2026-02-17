@@ -27,43 +27,16 @@ export function RivalsLogo({
 
   if (variant === "icon") {
     return (
-      <div
+      <img
+        src="/logo.png"
+        alt="KickOff Rivals"
         className={cn(
-          "flex items-center justify-center rounded-full bg-primary",
+          "object-contain",
           sizeClasses[size],
           "aspect-square",
           className,
         )}
-      >
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-2/3 h-2/3"
-        >
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            stroke="white"
-            strokeWidth="4"
-            fill="none"
-          />
-          <path
-            d="M50 10 L50 90 M10 50 L90 50"
-            stroke="white"
-            strokeWidth="3"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r="12"
-            stroke="white"
-            strokeWidth="3"
-            fill="none"
-          />
-        </svg>
-      </div>
+      />
     );
   }
 
@@ -83,42 +56,15 @@ export function RivalsLogo({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div
+      <img
+        src="/logo.png"
+        alt="KickOff Rivals"
         className={cn(
-          "flex items-center justify-center rounded-full bg-primary",
+          "object-contain",
           sizeClasses[size],
           "aspect-square",
         )}
-      >
-        <svg
-          viewBox="0 0 100 100"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-2/3 h-2/3"
-        >
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            stroke="white"
-            strokeWidth="4"
-            fill="none"
-          />
-          <path
-            d="M50 10 L50 90 M10 50 L90 50"
-            stroke="white"
-            strokeWidth="3"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r="12"
-            stroke="white"
-            strokeWidth="3"
-            fill="none"
-          />
-        </svg>
-      </div>
+      />
       <span
         className={cn(
           "font-sport font-black italic tracking-tighter text-white",

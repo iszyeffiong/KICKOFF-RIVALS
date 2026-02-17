@@ -233,7 +233,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     bestOddsWon: 0,
     dailyWalkPoints: 0,
     lastWalkDate: "",
-    coins: 1000,
+    coins: 5000,
     korBalance: 1000,
     referralCode: generate6DigitCode(),
     hasReferred: false,
@@ -405,7 +405,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       bestOddsWon: 0,
       dailyWalkPoints: 0,
       lastWalkDate: "",
-      coins: 1000,
+      coins: 5000,
       korBalance: 1000,
       referralCode: generate6DigitCode(),
       hasReferred: false,
@@ -872,10 +872,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               const elapsed = Math.floor((serverTime - bettingEndTime) / 1000);
               setTimer(elapsed);
             } else {
-              // FINISHED (Waiting for next round)
-              setGameState("FINISHED");
-              // Usually loop moves to next round fast.
-              setTimer(0);
+              // FINISHED PHASE (Intermission)
+              const finishedEndTime = matchEndTime + RESULT_DURATION_SEC * 1000;
+              if (serverTime < finishedEndTime) {
+                setGameState("FINISHED");
+                const remaining = Math.max(0, Math.floor((finishedEndTime - serverTime) / 1000));
+                setTimer(remaining);
+              } else {
+                // Round truly over, waiting for next generation
+                setGameState("FINISHED");
+                setTimer(0);
+              }
             }
           }
         }
@@ -891,15 +898,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (hasLiveMatches) {
           setGameState("LIVE");
         } else if (hasFinishedMatches && !hasLiveMatches) {
-          setGameState("FINISHED");
+          // Keep it as FINISHED, but rely on time logic above for timer
+          if (gameState !== "FINISHED") setGameState("FINISHED");
         } else {
-          setGameState("BETTING");
+          if (gameState === "FINISHED" && timer === 0) {
+            // Only switch to betting if we are done with finished phase
+            setGameState("BETTING");
+          }
         }
       }
     } catch (error) {
       console.error("Failed to fetch matches:", error);
     }
-  }, [selectedLeagueId]);
+  }, [selectedLeagueId, gameState, timer]); // Added dependencies
 
   const fetchActiveBets = useCallback(async () => {
     const activeAddress =
@@ -944,8 +955,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           }
           return prev + 1;
         } else if (gameState === "FINISHED") {
-          fetchMatches();
-          return 0;
+          // Count DOWN (Intermission)
+          if (prev <= 0) {
+            fetchMatches();
+            return 0;
+          }
+          return prev - 1;
         }
         return prev;
       });

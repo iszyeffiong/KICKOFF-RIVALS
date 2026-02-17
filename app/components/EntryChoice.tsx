@@ -46,7 +46,7 @@ export function EntryChoice({ onNewUser, onReturningUser }: EntryChoiceProps) {
             icon={<IconSparkles className="w-8 h-8" />}
             onClick={onNewUser}
             variant="primary"
-            badge="500 Coins Bonus"
+            badge="5000 Coins and 1000 KOR (Tokens) Bonus"
           />
 
           {/* Returning User */}

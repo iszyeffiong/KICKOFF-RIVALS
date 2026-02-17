@@ -1,5 +1,5 @@
 import { createAppKit } from "@reown/appkit/react";
-import { mainnet, polygon, arbitrum, base } from "@reown/appkit/networks";
+import { avalanche } from "@reown/appkit/networks";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,11 +19,15 @@ const metadata = {
     typeof window !== "undefined"
       ? window.location.origin
       : "https://kickoffrivals.com",
-  icons: ["https://avatars.githubusercontent.com/u/179229932"],
+  icons: [
+    typeof window !== "undefined"
+      ? `${window.location.origin}/logo.png`
+      : "https://kickoffrivals.com/logo.png",
+  ],
 };
 
 // 3. Set the networks
-const networks = [mainnet, polygon, arbitrum, base] as any;
+const networks = [avalanche] as any;
 
 // 4. Create Wagmi Adapter - only on client
 let wagmiAdapter: WagmiAdapter | null = null;
@@ -37,7 +41,7 @@ function getWagmiAdapter() {
     });
 
     // 5. Create modal
-    createAppKit({
+    const appKit = createAppKit({
       adapters: [wagmiAdapter],
       networks,
       projectId,
@@ -53,6 +57,12 @@ function getWagmiAdapter() {
         "--w3m-border-radius-master": "1px",
       },
     });
+
+    // Expose appKit for global access
+    if (typeof window !== "undefined") {
+      (window as any).appKit = appKit;
+      console.log("AppKit initialized and attached to window");
+    }
   }
   return wagmiAdapter;
 }

@@ -85,6 +85,7 @@ function DashboardRoute() {
   >("home");
   const [betTab, setBetTab] = useState<"ongoing" | "ended">("ongoing");
   const [themeTransition, setThemeTransition] = useState(false);
+  const [selectedLeagueFilter, setSelectedLeagueFilter] = useState("all");
 
   // Tell the context that the dashboard is mounted (starts game loop)
   useEffect(() => {
@@ -134,17 +135,15 @@ function DashboardRoute() {
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
-                className={`flex flex-col items-center flex-1 py-2 transition-all ${
-                  activeTab === t.id
-                    ? "text-pitch border-b-2 border-pitch"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                className={`flex flex-col items-center flex-1 py-2 transition-all ${activeTab === t.id
+                  ? "text-pitch border-b-2 border-pitch"
+                  : "text-gray-400 hover:text-white"
+                  }`}
               >
                 {t.icon}
                 <span
-                  className={`text-[9px] font-bold uppercase mt-1 ${
-                    activeTab === t.id ? "opacity-100" : "opacity-70"
-                  }`}
+                  className={`text-[9px] font-bold uppercase mt-1 ${activeTab === t.id ? "opacity-100" : "opacity-70"
+                    }`}
                 >
                   {t.label}
                 </span>
@@ -159,22 +158,86 @@ function DashboardRoute() {
         <div className="p-3 max-w-[95vw] mx-auto w-full relative min-h-[50vh]">
           {/* RESULTS OVERLAY */}
           {gameState === "FINISHED" && (
-            <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center text-white overflow-y-auto p-4">
-              <div className="text-4xl font-bold font-sport italic mb-2 animate-bounce mt-10">
-                ROUND ENDED
-              </div>
-              <div className="text-xl text-brand-light font-mono tracking-widest mb-6">
-                FINAL SCORES
-              </div>
+            <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-start text-white overflow-y-auto w-full">
+              <div className="w-full max-w-6xl flex flex-col items-center pt-36 pb-8 px-4">
+                <div className="text-4xl md:text-6xl font-bold font-sport italic mb-2 animate-bounce text-center text-pitch drop-shadow-glow">
+                  ROUND ENDED
+                </div>
 
-              <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 px-4">
-                {LEAGUES.map((league) => (
-                  <div key={league.id} className="space-y-3">
-                    <h3 className="font-bold text-center text-brand-light mb-2 border-b border-brand-light/30 pb-1">
-                      {league.name}
-                    </h3>
+                <div className="flex flex-col items-center gap-2 mb-8 bg-dark/50 p-4 rounded-xl border border-pitch/30 backdrop-blur-sm">
+                  <div className="text-sm text-gray-400 font-mono uppercase tracking-widest">
+                    Next Round Starts In
+                  </div>
+                  <div className="text-5xl font-mono font-bold text-white tabular-nums">
+                    {Math.floor(timer / 60).toString().padStart(2, "0")}:{(timer % 60).toString().padStart(2, "0")}
+                  </div>
+                </div>
+
+                <div className="text-xl text-brand-light font-mono tracking-widest mb-6 border-b border-brand-light/30 pb-2 w-full text-center max-w-md">
+                  FINAL SCORES
+                </div>
+
+                {/* Overlay Filter Buttons */}
+                <div className="flex gap-2 mb-6 overflow-x-auto pb-4 scrollbar-hide px-2 w-full justify-center">
+                  <button
+                    onClick={() => setSelectedLeagueFilter("all")}
+                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors shadow-sm ${selectedLeagueFilter === "all"
+                      ? "bg-pitch text-white ring-2 ring-offset-2 ring-pitch"
+                      : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white"
+                      }`}
+                  >
+                    ALL LEAGUES
+                  </button>
+                  {LEAGUES.map((league) => (
+                    <button
+                      key={league.id}
+                      onClick={() => setSelectedLeagueFilter(league.id)}
+                      className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors shadow-sm ${selectedLeagueFilter === league.id
+                        ? `bg-pitch text-white ring-2 ring-offset-2 ring-pitch`
+                        : "bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white"
+                        }`}
+                    >
+                      {league.name.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                {selectedLeagueFilter === "all" ? (
+                  <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    {LEAGUES.map((league) => (
+                      <div key={league.id} className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                        <h3 className="font-bold text-center text-brand-light mb-2 border-b border-brand-light/30 pb-1">
+                          {league.name}
+                        </h3>
+                        {matches
+                          .filter((m) => m.leagueId === league.id)
+                          .map((m) => (
+                            <MatchCard
+                              key={m.id}
+                              match={m}
+                              minute={90}
+                              displayScore={{
+                                home:
+                                  m.homeScore !== undefined && m.homeScore !== null
+                                    ? m.homeScore
+                                    : (m.result?.homeScore ?? 0),
+                                away:
+                                  m.awayScore !== undefined && m.awayScore !== null
+                                    ? m.awayScore
+                                    : (m.result?.awayScore ?? 0),
+                              }}
+                              onBet={() => { }}
+                              onWatch={() => { }}
+                              onAddToBetSlip={() => { }}
+                            />
+                          ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                     {matches
-                      .filter((m) => m.leagueId === league.id)
+                      .filter((m) => m.leagueId === selectedLeagueFilter)
                       .map((m) => (
                         <MatchCard
                           key={m.id}
@@ -190,17 +253,13 @@ function DashboardRoute() {
                                 ? m.awayScore
                                 : (m.result?.awayScore ?? 0),
                           }}
-                          onBet={() => {}}
-                          onWatch={() => {}}
-                          onAddToBetSlip={() => {}}
+                          onBet={() => { }}
+                          onWatch={() => { }}
+                          onAddToBetSlip={() => { }}
                         />
                       ))}
                   </div>
-                ))}
-              </div>
-
-              <div className="text-sm text-gray-400 font-mono animate-pulse mb-10">
-                Generating Next Round...
+                )}
               </div>
             </div>
           )}
@@ -255,77 +314,137 @@ function DashboardRoute() {
             </div>
           </div>
 
-          {/* Match Cards */}
-          {/* Match Cards - 3 Column Layout */}
-          <div
-            className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-opacity duration-300 ${
-              gameState !== "BETTING" ? "opacity-90 grayscale-0" : ""
-            }`}
-          >
+          {/* League Filter Buttons */}
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-4 scrollbar-hide px-2">
+            <button
+              onClick={() => setSelectedLeagueFilter("all")}
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors shadow-sm ${selectedLeagueFilter === "all"
+                ? "bg-pitch text-white ring-2 ring-offset-2 ring-pitch"
+                : "bg-white text-gray-500 hover:bg-gray-100 hover:text-dark"
+                }`}
+            >
+              ALL LEAGUES
+            </button>
             {LEAGUES.map((league) => (
-              <div key={league.id} className="space-y-4">
-                <h3 className="md:hidden font-bold text-brand-dark mb-2 sticky top-[130px] z-[105] bg-light/95 backdrop-blur-sm p-2 rounded border-b-2 border-brand">
-                  {league.name}
-                </h3>
-                {matches
-                  .filter((m) => m.leagueId === league.id)
-                  .map((m) => {
-                    const currentMinute = getCurrentGameMinute();
-                    let displayScore = undefined;
-
-                    if (gameState === "LIVE" || gameState === "FINISHED") {
-                      // Prefer server scores if available
-                      if (m.homeScore !== undefined && m.homeScore !== null) {
-                        displayScore = {
-                          home: m.homeScore,
-                          away: m.awayScore!,
-                        };
-                      }
-                      // Fallback to events if score is missing but we have events
-                      else if (m.events) {
-                        const homeGoals = m.events.filter(
-                          (e: any) =>
-                            e.type === "goal" &&
-                            e.teamId === m.homeTeam.id &&
-                            e.minute <= currentMinute,
-                        ).length;
-                        const awayGoals = m.events.filter(
-                          (e: any) =>
-                            e.type === "goal" &&
-                            e.teamId === m.awayTeam.id &&
-                            e.minute <= currentMinute,
-                        ).length;
-                        displayScore = { home: homeGoals, away: awayGoals };
-                      }
-
-                      // For FINISHED state, fallback to result object
-                      if (
-                        gameState === "FINISHED" &&
-                        !displayScore &&
-                        m.result
-                      ) {
-                        displayScore = {
-                          home: m.result.homeScore,
-                          away: m.result.awayScore,
-                        };
-                      }
-                    }
-
-                    return (
-                      <MatchCard
-                        key={m.id}
-                        match={m}
-                        minute={currentMinute}
-                        displayScore={displayScore}
-                        onBet={setBettingOn}
-                        onWatch={(match) => setWatchingMatchId(match.id)}
-                        onAddToBetSlip={handleAddToBetSlip}
-                      />
-                    );
-                  })}
-              </div>
+              <button
+                key={league.id}
+                onClick={() => setSelectedLeagueFilter(league.id)}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors shadow-sm ${selectedLeagueFilter === league.id
+                  ? `bg-pitch text-white ring-2 ring-offset-2 ring-pitch`
+                  : "bg-white text-gray-500 hover:bg-gray-100 hover:text-dark"
+                  }`}
+                style={selectedLeagueFilter === league.id ? { backgroundColor: league.color.split(' ')[0].replace('bg-', '') } : {}}
+              >
+                {league.name.toUpperCase()}
+              </button>
             ))}
           </div>
+
+          {/* Match Cards - filtered */}
+          {selectedLeagueFilter === "all" ? (
+            <div
+              className={`grid grid-cols-1 md:grid-cols-3 gap-6 transition-opacity duration-300 ${gameState !== "BETTING" ? "opacity-90 grayscale-0" : ""
+                }`}
+            >
+              {LEAGUES.map((league) => (
+                <div key={league.id} className="space-y-4">
+                  <h3 className="md:hidden font-bold text-brand-dark mb-2 sticky top-[130px] z-[105] bg-light/95 backdrop-blur-sm p-2 rounded border-b-2 border-brand">
+                    {league.name}
+                  </h3>
+                  {matches
+                    .filter((m) => m.leagueId === league.id)
+                    .map((m) => {
+                      const currentMinute = getCurrentGameMinute();
+                      let displayScore = undefined;
+
+                      if (gameState === "LIVE" || gameState === "FINISHED") {
+                        // Prefer server scores if available
+                        if (m.homeScore !== undefined && m.homeScore !== null) {
+                          displayScore = {
+                            home: m.homeScore,
+                            away: m.awayScore!,
+                          };
+                        }
+                        // Fallback to events if score is missing but we have events
+                        else if (m.events) {
+                          const homeGoals = m.events.filter(
+                            (e: any) =>
+                              e.type === "goal" &&
+                              e.teamId === m.homeTeam.id &&
+                              e.minute <= currentMinute,
+                          ).length;
+                          const awayGoals = m.events.filter(
+                            (e: any) =>
+                              e.type === "goal" &&
+                              e.teamId === m.awayTeam.id &&
+                              e.minute <= currentMinute,
+                          ).length;
+                          displayScore = { home: homeGoals, away: awayGoals };
+                        }
+
+                        // For FINISHED state, fallback to result object
+                        if (
+                          gameState === "FINISHED" &&
+                          !displayScore &&
+                          m.result
+                        ) {
+                          displayScore = {
+                            home: m.result.homeScore,
+                            away: m.result.awayScore,
+                          };
+                        }
+                      }
+
+                      return (
+                        <MatchCard
+                          key={m.id}
+                          match={m}
+                          minute={currentMinute}
+                          displayScore={displayScore}
+                          onBet={setBettingOn}
+                          onWatch={(match) => setWatchingMatchId(match.id)}
+                          onAddToBetSlip={handleAddToBetSlip}
+                        />
+                      );
+                    })}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-300 ${gameState !== "BETTING" ? "opacity-90 grayscale-0" : ""}`}>
+              {matches
+                .filter((m) => m.leagueId === selectedLeagueFilter)
+                .map((m) => {
+                  const currentMinute = getCurrentGameMinute();
+                  let displayScore = undefined;
+
+                  if (gameState === "LIVE" || gameState === "FINISHED") {
+                    if (m.homeScore !== undefined && m.homeScore !== null) {
+                      displayScore = { home: m.homeScore, away: m.awayScore! };
+                    } else if (m.events) {
+                      const homeGoals = m.events.filter((e: any) => e.type === "goal" && e.teamId === m.homeTeam.id && e.minute <= currentMinute).length;
+                      const awayGoals = m.events.filter((e: any) => e.type === "goal" && e.teamId === m.awayTeam.id && e.minute <= currentMinute).length;
+                      displayScore = { home: homeGoals, away: awayGoals };
+                    }
+                    if (gameState === "FINISHED" && !displayScore && m.result) {
+                      displayScore = { home: m.result.homeScore, away: m.result.awayScore };
+                    }
+                  }
+
+                  return (
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      minute={currentMinute}
+                      displayScore={displayScore}
+                      onBet={setBettingOn}
+                      onWatch={(match) => setWatchingMatchId(match.id)}
+                      onAddToBetSlip={handleAddToBetSlip}
+                    />
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
@@ -347,21 +466,19 @@ function DashboardRoute() {
           <div className="flex bg-gray-200 p-1 rounded-xl overflow-hidden shadow-inner">
             <button
               onClick={() => setBetTab("ongoing")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                betTab === "ongoing"
-                  ? "bg-white text-brand shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${betTab === "ongoing"
+                ? "bg-white text-brand shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+                }`}
             >
               Active
             </button>
             <button
               onClick={() => setBetTab("ended")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                betTab === "ended"
-                  ? "bg-white text-brand shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${betTab === "ended"
+                ? "bg-white text-brand shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+                }`}
             >
               History
             </button>
@@ -389,13 +506,12 @@ function DashboardRoute() {
                     </div>
                   </div>
                   <div
-                    className={`text-[9px] font-bold uppercase px-2 py-1 rounded border ${
-                      b.status === "won"
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : b.status === "lost"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                    }`}
+                    className={`text-[9px] font-bold uppercase px-2 py-1 rounded border ${b.status === "won"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : b.status === "lost"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                      }`}
                   >
                     {b.status}
                   </div>
@@ -435,7 +551,7 @@ function DashboardRoute() {
           }}
           currentBalance={balance}
           userStats={userStats}
-          onWalkReward={() => {}}
+          onWalkReward={() => { }}
         />
       )}
 

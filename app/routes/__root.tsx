@@ -23,6 +23,7 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.ico" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
@@ -41,12 +42,12 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <AppKitProvider>
-        <GameProvider>
+      <GameProvider>
+        <AppKitProvider>
           <Outlet />
           <Toaster position="top-center" />
-        </GameProvider>
-      </AppKitProvider>
+        </AppKitProvider>
+      </GameProvider>
     </RootDocument>
   );
 }
@@ -58,7 +59,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <div id="root">{children}</div>
         <Scripts />
       </body>
     </html>
