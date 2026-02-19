@@ -333,35 +333,64 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const refreshProfile = useCallback(async (address: string) => {
-    try {
-      const res = await fetch(
-        `${API_URL}/api/user/profile?walletAddress=${address.toLowerCase()}`,
-      );
-      const data = await res.json();
-      console.log("[refreshProfile] API response:", data);
-      // The API returns fields FLAT (not nested under data.user)
-      if (data.success && data.username) {
-        setUserStats((prev) => ({
-          ...prev,
-          username: data.username || prev.username,
-          walletAddress: data.walletAddress || address.toLowerCase(),
-          coins: data.coins ?? prev.coins,
-          korBalance: data.korBalance ?? prev.korBalance,
-          totalBets: data.totalBets ?? prev.totalBets,
-          wins: data.wins ?? prev.wins,
-          referralCode: data.referralCode || prev.referralCode,
-          referralCount: data.referralCount ?? prev.referralCount,
-          referralEarnings: data.referralEarnings ?? prev.referralEarnings,
-          allianceLeagueId: data.allianceLeagueId || prev.allianceLeagueId,
-          allianceTeamId: data.allianceTeamId || prev.allianceTeamId,
-          unclaimedAllianceRewards:
-            data.unclaimedAllianceRewards ?? prev.unclaimedAllianceRewards,
-        }));
-        setBalance(data.korBalance ?? INITIAL_BALANCE);
-        setIsNewUser(data.isNew ?? false);
-      } else {
-        // Fallback: wallet connected but profile fetch failed
+  const refreshProfile = useCallback(
+    async (address: string) => {
+      try {
+        // Build query — include username/leagueId/teamId from registrationData
+        // so the server creates the user with the correct name on first call
+        const params = new URLSearchParams({
+          walletAddress: address.toLowerCase(),
+        });
+        if (registrationData?.username)
+          params.set("username", registrationData.username);
+        if (registrationData?.leagueId)
+          params.set("leagueId", registrationData.leagueId);
+        if (registrationData?.teamId)
+          params.set("teamId", registrationData.teamId);
+
+        console.log("[refreshProfile] Calling with params:", params.toString());
+
+        const res = await fetch(
+          `${API_URL}/api/user/profile?${params.toString()}`,
+        );
+        const data = await res.json();
+        console.log("[refreshProfile] API response:", data);
+
+        // The API returns fields FLAT (not nested under data.user)
+        if (data.success && data.username) {
+          setUserStats((prev) => ({
+            ...prev,
+            username: data.username || prev.username,
+            walletAddress: data.walletAddress || address.toLowerCase(),
+            coins: data.coins ?? prev.coins,
+            korBalance: data.korBalance ?? prev.korBalance,
+            totalBets: data.totalBets ?? prev.totalBets,
+            wins: data.wins ?? prev.wins,
+            referralCode: data.referralCode || prev.referralCode,
+            referralCount: data.referralCount ?? prev.referralCount,
+            referralEarnings: data.referralEarnings ?? prev.referralEarnings,
+            allianceLeagueId: data.allianceLeagueId || prev.allianceLeagueId,
+            allianceTeamId: data.allianceTeamId || prev.allianceTeamId,
+            unclaimedAllianceRewards:
+              data.unclaimedAllianceRewards ?? prev.unclaimedAllianceRewards,
+          }));
+          setBalance(data.korBalance ?? INITIAL_BALANCE);
+          setIsNewUser(data.isNew ?? false);
+          // Clear registration data after it has been consumed by the server
+          if (data.isNew) {
+            setRegistrationData(null);
+          }
+        } else {
+          // Fallback: wallet connected but profile fetch failed
+          const shortAddr = address.slice(0, 6);
+          setUserStats((prev) => ({
+            ...prev,
+            username: prev.username || `User_${shortAddr}`,
+            walletAddress: prev.walletAddress || address.toLowerCase(),
+          }));
+        }
+      } catch (err) {
+        console.error("Profile refresh failed:", err);
         const shortAddr = address.slice(0, 6);
         setUserStats((prev) => ({
           ...prev,
@@ -369,16 +398,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           walletAddress: prev.walletAddress || address.toLowerCase(),
         }));
       }
-    } catch (err) {
-      console.error("Profile refresh failed:", err);
-      const shortAddr = address.slice(0, 6);
-      setUserStats((prev) => ({
-        ...prev,
-        username: prev.username || `User_${shortAddr}`,
-        walletAddress: prev.walletAddress || address.toLowerCase(),
-      }));
-    }
-  }, []);
+    },
+    [registrationData], // re-create when registrationData changes so new users get their chosen name
+  );
 
   const handleWalletConnected = useCallback(
     (address: string) => {
