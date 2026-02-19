@@ -8,7 +8,7 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-// Determine if we're using Neon (serverless) or local PostgreSQL
+// Determine if we're using Neon (serverless) or standard PostgreSQL
 const isNeonDatabase = (url: string): boolean => {
   return url.includes("neon.tech") || url.includes("neon-");
 };
@@ -19,7 +19,7 @@ const getDatabaseUrl = (): string => {
   if (!url) {
     throw new Error(
       "DATABASE_URL is not defined. Please set it in your .env file.\n" +
-        "For local Docker: DATABASE_URL=postgresql://kickoff:kickoff_secret@localhost:5432/kickoff_rivals\n" +
+        "For Railway: DATABASE_URL=postgresql://postgres:password@host:port/railway\n" +
         "For Neon: DATABASE_URL=postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require",
     );
   }
@@ -36,14 +36,25 @@ const createDatabaseClient = () => {
     const sql = neon(databaseUrl);
     return drizzleNeon(sql, { schema });
   } else {
-    // Use node-postgres for local/Docker PostgreSQL
-    console.log("🐘 Using local PostgreSQL database driver");
+    // Use node-postgres for Railway / standard PostgreSQL
+    // Rate-limiting via pool config: small pool to prevent query bursts
+    console.log("🚂 Using Railway PostgreSQL database driver (rate-limited pool)");
     const pool = new pg.Pool({
       connectionString: databaseUrl,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      ssl: { rejectUnauthorized: false }, // Required for Railway external proxy
+      // --- Rate-limiting / connection control ---
+      max: 5,                     // Max simultaneous DB connections (default is 10; lower = fewer concurrent queries)
+      min: 1,                     // Keep 1 idle connection alive to avoid cold start overhead
+      idleTimeoutMillis: 30000,   // Release idle connections after 30s to free server resources
+      connectionTimeoutMillis: 5000, // Wait max 5s for a free connection before erroring
+      // query_timeout handled per-query via drizzle; pool itself controls concurrency
     });
+
+    // Attach error handler so the process doesn't crash on idle connection drops
+    pool.on("error", (err) => {
+      console.error("⚠️  Unexpected DB pool error (connection dropped):", err.message);
+    });
+
     return drizzleNode(pool, { schema });
   }
 };
@@ -74,7 +85,6 @@ export type Database = ReturnType<typeof createDatabaseClient>;
 // Helper to check connection health (useful for debugging)
 export const checkDatabaseConnection = async (): Promise<boolean> => {
   try {
-    // Simple query to test connection using Drizzle's query builder
     const result = await db.query.leagues.findFirst();
     console.log("✅ Database connection successful");
     return true;

@@ -188,6 +188,8 @@ export const getUserProfile = createServerFn({ method: "GET" })
       referralCode: user.referralCode,
       referralCount: user.referralCount,
       referralEarnings: user.referralEarnings,
+      totalBets: user.totalBets,
+      wins: user.wins,
       isNew: result.isNew,
     };
   });

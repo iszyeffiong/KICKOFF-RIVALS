@@ -205,35 +205,35 @@ const App: React.FC = () => {
           // Prefer server-provided names, fallback to local lookup
           const hTeam = m.home_team_name
             ? {
-              id: m.home_team_id,
-              name: m.home_team_name,
-              color: "#000",
-              strength: 50,
-              leagueId: lId,
-            }
+                id: m.home_team_id,
+                name: m.home_team_name,
+                color: "#000",
+                strength: 50,
+                leagueId: lId,
+              }
             : teamList.find((t) => t.id === m.home_team_id) || {
-              id: "unknown",
-              name: "Unknown",
-              color: "#000",
-              strength: 50,
-              leagueId: lId,
-            };
+                id: "unknown",
+                name: "Unknown",
+                color: "#000",
+                strength: 50,
+                leagueId: lId,
+              };
 
           const aTeam = m.away_team_name
             ? {
-              id: m.away_team_id,
-              name: m.away_team_name,
-              color: "#000",
-              strength: 50,
-              leagueId: lId,
-            }
+                id: m.away_team_id,
+                name: m.away_team_name,
+                color: "#000",
+                strength: 50,
+                leagueId: lId,
+              }
             : teamList.find((t) => t.id === m.away_team_id) || {
-              id: "unknown",
-              name: "Unknown",
-              color: "#000",
-              strength: 50,
-              leagueId: lId,
-            };
+                id: "unknown",
+                name: "Unknown",
+                color: "#000",
+                strength: 50,
+                leagueId: lId,
+              };
 
           return {
             id: m.id,
@@ -247,7 +247,10 @@ const App: React.FC = () => {
             homeScore: m.homeScore, // Usually final or live static score from DB
             awayScore: m.awayScore,
             // Calculate current display score if LIVE
-            currentScore: m.status.toUpperCase() === 'LIVE' ? { home: m.homeScore, away: m.awayScore } : undefined,
+            currentScore:
+              m.status.toUpperCase() === "LIVE"
+                ? { home: m.homeScore, away: m.awayScore }
+                : undefined,
             odds: m.odds || {
               home: 2.0,
               draw: 3.0,
@@ -257,9 +260,18 @@ const App: React.FC = () => {
             },
             roundHash: m.round_hash || "",
             commitHash: m.commit_hash || "",
-            liveStartTime: m.live_start_time ? new Date(m.live_start_time).getTime() : undefined,
+            liveStartTime: m.live_start_time
+              ? new Date(m.live_start_time).getTime()
+              : undefined,
             events: m.events,
-            result: (m.homeScore !== null && m.awayScore !== null) ? { homeScore: m.homeScore, awayScore: m.awayScore, events: m.events || [] } : undefined
+            result:
+              m.homeScore !== null && m.awayScore !== null
+                ? {
+                    homeScore: m.homeScore,
+                    awayScore: m.awayScore,
+                    events: m.events || [],
+                  }
+                : undefined,
           };
         });
 
@@ -327,8 +339,15 @@ const App: React.FC = () => {
         setDebugStatus(`OK: ${userData.username}`);
 
         // Use server-provided isNew flag, or default to false if we found a profile
-        const isNew = typeof data.isNew !== 'undefined' ? data.isNew : (typeof userData.isNew !== 'undefined' ? userData.isNew : false);
-        console.log(`[PROFILE] Synced. Username: ${userData.username}, isNew: ${isNew}`);
+        const isNew =
+          typeof data.isNew !== "undefined"
+            ? data.isNew
+            : typeof userData.isNew !== "undefined"
+              ? userData.isNew
+              : false;
+        console.log(
+          `[PROFILE] Synced. Username: ${userData.username}, isNew: ${isNew}`,
+        );
         setIsNewUser(isNew);
 
         setUserStats((prev) => ({
@@ -386,7 +405,7 @@ const App: React.FC = () => {
         setAppView("onboarding");
       }
     }
-  };
+  }
 
   function handleStateTransition() {
     if (gameState === "BETTING") {
@@ -401,10 +420,7 @@ const App: React.FC = () => {
             status: "LIVE",
             liveStartTime: Date.now(), // Track when match went live for 10-second betting window
             blockHash,
-            result: generateMatchResult(
-              { ...m, blockHash },
-              seed,
-            ),
+            result: generateMatchResult({ ...m, blockHash }, seed),
             currentScore: { home: 0, away: 0 },
           };
         }),
@@ -426,7 +442,7 @@ const App: React.FC = () => {
       setSeasonId(nextSeason);
       generateRoundMatches(nextRound, nextSeason, generateHash());
     }
-  };
+  }
 
   async function generateRoundMatches(
     round: number,
@@ -468,7 +484,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to save matches:", err);
     }
-  };
+  }
 
   function updateLiveScores() {
     const progress = (MATCH_DURATION_SEC - timer) / MATCH_DURATION_SEC;
@@ -483,7 +499,9 @@ const App: React.FC = () => {
           a = 0;
         events.forEach((e) => {
           if (e.minute <= currentMin && e.type === "goal") {
-            const teamId = e.teamId || ((e as any).side === 'home' ? m.homeTeam.id : m.awayTeam.id);
+            const teamId =
+              e.teamId ||
+              ((e as any).side === "home" ? m.homeTeam.id : m.awayTeam.id);
             if (teamId === m.homeTeam.id) h++;
             else a++;
           }
@@ -491,7 +509,7 @@ const App: React.FC = () => {
         return { ...m, currentScore: { home: h, away: a } };
       }),
     );
-  };
+  }
 
   async function processResults() {
     const finishedMatches = matches.map((m) => {
@@ -509,13 +527,13 @@ const App: React.FC = () => {
           homeScore: m.homeScore!,
           awayScore: m.awayScore!,
           events: m.events || [],
-          summary: "Match finished"
+          summary: "Match finished",
         };
         return {
           ...m,
           status: "FINISHED" as const,
           result: pseudoResult,
-          currentScore: { home: m.homeScore!, away: m.awayScore! }
+          currentScore: { home: m.homeScore!, away: m.awayScore! },
         };
       }
       return { ...m, status: "FINISHED" as const };
@@ -676,7 +694,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to fetch standings:", err);
     }
-  };
+  }
 
   function addTransaction(
     type: Transaction["type"],
@@ -920,8 +938,6 @@ const App: React.FC = () => {
     }
   }
 
-
-
   // Bet Slip Handlers
   function handleAddToBetSlip(
     match: Match,
@@ -959,7 +975,6 @@ const App: React.FC = () => {
     );
   }
 
-
   function handleClearBetSlip() {
     setBetSlipSelections([]);
   }
@@ -973,7 +988,7 @@ const App: React.FC = () => {
     try {
       if (betType === "single") {
         // Place each selection as a separate bet
-        // Note: This logic assumes all succeed or we handle partials. 
+        // Note: This logic assumes all succeed or we handle partials.
         // For simplicity, we return true if at least the process finished without exception.
 
         let successCount = 0;
@@ -1107,10 +1122,10 @@ const App: React.FC = () => {
         quests: prev.quests.map((q) =>
           q.id === id
             ? {
-              ...q,
-              status: "VERIFYING",
-              verifiedAt: Date.now() + (q.verificationTime || 60000),
-            }
+                ...q,
+                status: "VERIFYING",
+                verifiedAt: Date.now() + (q.verificationTime || 60000),
+              }
             : q,
         ),
       }));
@@ -1314,7 +1329,7 @@ const App: React.FC = () => {
       {activeTab === "home" && (
         <div className="p-3 max-w-md mx-auto w-full">
           {/* League Selector */}
-          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mb-4">
+          {/* <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mb-4">
             {LEAGUES.map((l) => (
               <button
                 key={l.id}
@@ -1324,7 +1339,7 @@ const App: React.FC = () => {
                 {l.name}
               </button>
             ))}
-          </div>
+          </div> */}
 
           {/* Timer Banner */}
           <div className="bg-gradient-to-r from-brand-dark to-dark rounded-xl p-4 text-center mb-6 shadow-card border-l-4 border-pitch relative overflow-hidden">
@@ -1348,7 +1363,8 @@ const App: React.FC = () => {
                   match={m}
                   minute={getCurrentGameMinute()}
                   displayScore={
-                    (m.status === 'FINISHED' || m.status === 'RESULT') && m.result
+                    (m.status === "FINISHED" || m.status === "RESULT") &&
+                    m.result
                       ? { home: m.result.homeScore, away: m.result.awayScore }
                       : m.currentScore
                   }
@@ -1402,7 +1418,9 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                        {b.betType === 'accumulator' ? 'Accumulator Selection' : 'Single Bet'}
+                        {b.betType === "accumulator"
+                          ? "Accumulator Selection"
+                          : "Single Bet"}
                       </div>
                       <div className="font-bold text-dark text-sm">
                         {b.homeTeamName} vs {b.awayTeamName}
@@ -1412,12 +1430,13 @@ const App: React.FC = () => {
                       </div>
                     </div>
                     <div
-                      className={`text-[9px] font-bold uppercase px-2 py-1 rounded border shadow-sm ${b.status === "won"
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : b.status === "lost"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                        }`}
+                      className={`text-[9px] font-bold uppercase px-2 py-1 rounded border shadow-sm ${
+                        b.status === "won"
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : b.status === "lost"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                      }`}
                     >
                       {b.status}
                     </div>
@@ -1426,15 +1445,19 @@ const App: React.FC = () => {
                   <div className="flex items-end justify-between pt-2 border-t border-gray-50">
                     <div>
                       <div className="font-mono text-xs font-bold text-dark">
-                        {b.selection.toUpperCase()} <span className="text-gray-300 mx-1">@</span> <span className="text-brand">{b.odds}</span>
+                        {b.selection.toUpperCase()}{" "}
+                        <span className="text-gray-300 mx-1">@</span>{" "}
+                        <span className="text-brand">{b.odds}</span>
                       </div>
                       <div className="text-[10px] font-mono text-gray-400 mt-1">
                         Stake: {b.stake} KOR • Return: {b.potentialReturn} KOR
                       </div>
                     </div>
-                    {(b.homeScore !== null && b.awayScore !== null) && (
+                    {b.homeScore !== null && b.awayScore !== null && (
                       <div className="text-right">
-                        <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Score</div>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
+                          Score
+                        </div>
                         <div className="font-mono font-bold text-dark bg-gray-50 px-2 py-1 rounded">
                           {b.homeScore} - {b.awayScore}
                         </div>
@@ -1471,7 +1494,7 @@ const App: React.FC = () => {
           }}
           currentBalance={balance}
           userStats={userStats}
-          onWalkReward={() => { }}
+          onWalkReward={() => {}}
         />
       )}
       {showSwapConfirm && (

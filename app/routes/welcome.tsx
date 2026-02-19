@@ -16,11 +16,11 @@ function WelcomeRoute() {
     navigate({ to: "/dashboard" });
   };
 
-  if (isNewUser) {
-    return (
-      <WelcomeScreen username={userStats.username} onProceed={handleProceed} />
-    );
-  }
+  // if (isNewUser) {
+  //   return (
+  //     <WelcomeScreen username={userStats.username} onProceed={handleProceed} />
+  //   );
+  // }
 
   return (
     <ReturningUserWelcome

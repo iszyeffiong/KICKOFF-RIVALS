@@ -848,6 +848,8 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
 
       // Deduct balance
       const newBalance = (user.doodlBalance || 0) - data.stake;
+      console.log(`[ACCUMULATOR] Deducting stake ${data.stake} from ${user.doodlBalance}. New Balance: ${newBalance}`);
+
       await db
         .update(users)
         .set({
@@ -855,6 +857,8 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
           totalBets: (user.totalBets || 0) + 1,
         })
         .where(eq(users.walletAddress, normalized));
+
+      console.log(`[ACCUMULATOR] User balance updated in DB`);
 
       // Log transaction
       await db.insert(transactions).values({
@@ -943,7 +947,8 @@ export const settleBets = createServerFn({ method: "POST" })
             const allBetsInAccumulator = await db
               .select()
               .from(bets)
-              .where(eq(bets.accumulatorId, bet.accumulatorId));
+              .where(eq(bets.accumulatorId, bet.accumulatorId))
+              .orderBy(bets.createdAt); // Consistent order
 
             const allSettled = allBetsInAccumulator.every(
               (b) => b.status !== "pending",
@@ -953,11 +958,10 @@ export const settleBets = createServerFn({ method: "POST" })
             );
 
             if (allSettled && allWon) {
-              // Pay out accumulator - only once per accumulator
-              const paidOut = allBetsInAccumulator.some(
-                (b) => b.id !== bet.id && b.status === "won",
-              );
-              if (!paidOut) {
+              // Pay out only once — only if THIS bet is the FIRST leg of the accumulator
+              const isFirstLeg = allBetsInAccumulator[0]?.id === bet.id;
+              if (isFirstLeg) {
+                // Use potentialReturn from first leg which = stake * totalOdds
                 await db
                   .update(users)
                   .set({
@@ -973,11 +977,12 @@ export const settleBets = createServerFn({ method: "POST" })
                   type: "win",
                   amount: bet.potentialReturn,
                   currency: "kor",
-                  description: `Accumulator win @ ${bet.odds}`,
+                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${bet.potentialReturn} KOR`,
                 });
               }
             }
           } else {
+
             // Single bet - pay out immediately
             await db
               .update(users)

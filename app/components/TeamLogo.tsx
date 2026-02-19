@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "../lib/utils";
 
 interface TeamLogoProps {
@@ -30,24 +31,28 @@ export function TeamLogo({
     lg: "w-16 h-16 text-lg",
   };
 
-  if (logo) {
+  // State to track if image loading failed
+  const [imageError, setImageError] = useState(false);
+
+  // If we have a logo and it hasn't failed to load
+  if (logo && !imageError) {
     return (
-      <div
+      <img
+        src={logo}
+        alt={name}
         className={cn(
-          "relative flex items-center justify-center shrink-0 overflow-hidden rounded-full bg-white shadow-sm p-1 border-2 border-white/50",
-          sizeClasses[size],
+          "object-contain",
+          size === "sm" && "w-8 h-8",
+          size === "md" && "w-12 h-12",
+          size === "lg" && "w-16 h-16",
           className,
         )}
-      >
-        <img
-          src={logo}
-          alt={name}
-          className="w-full h-full object-cover rounded-full"
-        />
-      </div>
+        onError={() => setImageError(true)}
+      />
     );
   }
 
+  // Fallback (or if logo is missing/broken)
   return (
     <div
       className={cn(

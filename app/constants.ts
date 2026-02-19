@@ -319,7 +319,7 @@ export const TEAMS: Record<string, Team[]> = {
 };
 
 export const INITIAL_BALANCE = 1000;
-export const ROUND_DURATION_SEC = 240; // 4 minutes
+export const ROUND_DURATION_SEC = 480; // 8 minutes
 export const MATCH_DURATION_SEC = 120; // 2 minutes
 export const RESULT_DURATION_SEC = 240; // 4 minutes
 

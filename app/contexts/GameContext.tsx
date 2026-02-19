@@ -6,6 +6,8 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import { useAccount } from "wagmi";
+import toast from "react-hot-toast";
 import {
   TEAMS,
   INITIAL_BALANCE,
@@ -56,6 +58,7 @@ interface GameContextType {
   // Wallet
   walletState: WalletState;
   setWalletState: React.Dispatch<React.SetStateAction<WalletState>>;
+  isInitializing: boolean;
 
   // User
   userStats: UserStats;
@@ -205,6 +208,13 @@ export function useGame() {
 // ==========================================
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const {
+    address: wagmiAddress,
+    isConnected: isWagmiConnected,
+    status: wagmiStatus,
+  } = useAccount();
+  const [isInitializing, setIsInitializing] = useState(true);
+
   // Session token management
   const adminSessionTokenRef = useRef<string | null>(null);
 
@@ -329,38 +339,44 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         `${API_URL}/api/user/profile?walletAddress=${address.toLowerCase()}`,
       );
       const data = await res.json();
-      if (data.success && data.user) {
-        const u = data.user;
+      console.log("[refreshProfile] API response:", data);
+      // The API returns fields FLAT (not nested under data.user)
+      if (data.success && data.username) {
         setUserStats((prev) => ({
           ...prev,
-          username: u.username || prev.username,
-          walletAddress: u.wallet_address || address.toLowerCase(),
-          coins: u.coins ?? prev.coins,
-          korBalance: u.doodl_balance ?? prev.korBalance,
-          totalBets: u.total_bets ?? prev.totalBets,
-          wins: u.wins ?? prev.wins,
-          biggestWin: u.biggest_win ?? prev.biggestWin,
-          currentStreak: u.current_streak ?? prev.currentStreak,
-          longestStreak: u.longest_streak ?? prev.longestStreak,
-          bestOddsWon: u.best_odds_won ?? prev.bestOddsWon,
-          level: u.level ?? prev.level,
-          xp: u.xp ?? prev.xp,
-          loginStreak: u.login_streak ?? prev.loginStreak,
-          referralCode: u.referral_code || prev.referralCode,
-          referralCount: u.referral_count ?? prev.referralCount,
-          referralEarnings: u.referral_earnings ?? prev.referralEarnings,
-          dailyWalkPoints: u.daily_walk_points ?? prev.dailyWalkPoints,
-          lastWalkDate: u.last_walk_date || prev.lastWalkDate,
-          allianceLeagueId: u.alliance_league_id || prev.allianceLeagueId,
-          allianceTeamId: u.alliance_team_id || prev.allianceTeamId,
+          username: data.username || prev.username,
+          walletAddress: data.walletAddress || address.toLowerCase(),
+          coins: data.coins ?? prev.coins,
+          korBalance: data.korBalance ?? prev.korBalance,
+          totalBets: data.totalBets ?? prev.totalBets,
+          wins: data.wins ?? prev.wins,
+          referralCode: data.referralCode || prev.referralCode,
+          referralCount: data.referralCount ?? prev.referralCount,
+          referralEarnings: data.referralEarnings ?? prev.referralEarnings,
+          allianceLeagueId: data.allianceLeagueId || prev.allianceLeagueId,
+          allianceTeamId: data.allianceTeamId || prev.allianceTeamId,
           unclaimedAllianceRewards:
-            u.unclaimed_alliance_rewards ?? prev.unclaimedAllianceRewards,
+            data.unclaimedAllianceRewards ?? prev.unclaimedAllianceRewards,
         }));
-        setBalance(u.doodl_balance ?? INITIAL_BALANCE);
-        setIsNewUser(false);
+        setBalance(data.korBalance ?? INITIAL_BALANCE);
+        setIsNewUser(data.isNew ?? false);
+      } else {
+        // Fallback: wallet connected but profile fetch failed
+        const shortAddr = address.slice(0, 6);
+        setUserStats((prev) => ({
+          ...prev,
+          username: prev.username || `User_${shortAddr}`,
+          walletAddress: prev.walletAddress || address.toLowerCase(),
+        }));
       }
     } catch (err) {
       console.error("Profile refresh failed:", err);
+      const shortAddr = address.slice(0, 6);
+      setUserStats((prev) => ({
+        ...prev,
+        username: prev.username || `User_${shortAddr}`,
+        walletAddress: prev.walletAddress || address.toLowerCase(),
+      }));
     }
   }, []);
 
@@ -427,6 +443,89 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
     localStorage.removeItem("onboarding_complete");
   }, []);
+
+  // ==========================================
+  // SYNC WAGMI STATE
+  // ==========================================
+
+  useEffect(() => {
+    const sync = async () => {
+      console.log("Sync Check:", {
+        wagmiStatus,
+        isWagmiConnected,
+        wagmiAddress,
+        currentWallet: walletState.address,
+        isInitializing,
+      });
+
+      if (
+        wagmiStatus === "reconnecting" ||
+        (wagmiStatus === "connecting" && !walletState.isConnected)
+      ) {
+        console.log(
+          "[SYNC] Wagmi reconnecting or connecting without walletState.isConnected. Skipping sync.",
+        );
+        return;
+      }
+
+      if (isWagmiConnected && wagmiAddress) {
+        if (walletState.address !== wagmiAddress) {
+          console.log("[SYNC] Address mismatch/init. Syncing...", wagmiAddress);
+          setWalletState((prev) => ({
+            ...prev,
+            address: wagmiAddress,
+            isConnected: true,
+          }));
+          try {
+            await refreshProfile(wagmiAddress);
+          } catch (e) {
+            console.error("[SYNC] Profile refresh failed", e);
+          }
+        } else {
+          // Address matches, but make sure we have a username
+          // If username is missing, we MUST refresh the profile, even (and especially) during initialization
+          if (!userStats.username) {
+            console.log(
+              "[SYNC] Address matched but no username. Refreshing profile...",
+            );
+            await refreshProfile(wagmiAddress);
+          }
+        }
+      } else if (wagmiStatus === "disconnected") {
+        console.log("[SYNC] Wagmi disconnected.");
+        if (walletState.isConnected) {
+          console.log("[SYNC] Wallet was connected, logging out.");
+          handleLogout();
+        } else {
+          // Check local storage for manual onboarding completion if needed
+          const completed = localStorage.getItem("onboarding_complete");
+          if (completed === "true") {
+            // If we were manually onboarded but disconnected, maybe we shouldn't fully logout?
+            // For now, let's allow the disconnect to handle state clean up
+          }
+        }
+      }
+
+      // Delay finishing initialization slightly to ensure state propagation
+      if (isInitializing) {
+        console.log(
+          "[SYNC] Initialization complete. Setting isInitializing to false in 500ms.",
+        );
+        setTimeout(() => setIsInitializing(false), 500);
+      }
+    };
+    sync();
+  }, [
+    wagmiAddress,
+    isWagmiConnected,
+    wagmiStatus,
+    refreshProfile,
+    handleLogout,
+    walletState.address,
+    walletState.isConnected,
+    userStats.username,
+    isInitializing,
+  ]);
 
   // ==========================================
   // BETTING HANDLERS
@@ -537,14 +636,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setBetSlipSelections([]);
   }, []);
 
+  const fetchActiveBets = useCallback(async () => {
+    const activeAddress =
+      walletState.address ||
+      userStats.walletAddress ||
+      (userStats.username ? `guest-${userStats.username}` : "guest-user");
+
+    // Don't fetch if no valid user/guest identifier found
+    if (!activeAddress) return;
+
+    try {
+      const res = await fetch(
+        `${API_URL}/api/bets/active?walletAddress=${activeAddress}`,
+      );
+      const data = await res.json();
+      if (data.success && Array.isArray(data.bets)) {
+        setActiveBets(data.bets);
+      }
+    } catch (error) {
+      console.error("Failed to fetch active bets:", error);
+    }
+  }, [walletState.address, userStats.walletAddress, userStats.username]);
+
   const handlePlaceBetSlip = useCallback(
     async (stake: number, betType: "single" | "accumulator") => {
       if (betSlipSelections.length === 0) return false;
 
+      // Determine the best wallet address to use
       const userWallet =
         walletState.address ||
         userStats.walletAddress ||
         (userStats.username ? `guest-${userStats.username}` : "guest-user");
+
+      console.log("Placing bet slip:", { betType, stake, userWallet });
 
       try {
         if (betType === "single") {
@@ -553,12 +677,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                walletAddress:
-                  walletState.address ||
-                  userStats.walletAddress ||
-                  (userStats.username
-                    ? `guest-${userStats.username}`
-                    : "guest-user"),
+                walletAddress: userWallet,
                 matchId: sel.matchId,
                 selection: sel.selection,
                 stake,
@@ -590,6 +709,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   korBalance: data.newBalance,
                 }));
               }
+            } else {
+              console.error("Single bet failed:", data);
             }
           }
           const totalStake = stake * betSlipSelections.length;
@@ -607,21 +728,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           setBetSlipSelections([]); // Clear slip on success
           return true;
         } else {
+          // Accumulator Logic
           const accumulatorId = `acc-${Date.now()}`;
           const totalOdds = betSlipSelections.reduce(
             (acc, sel) => acc * sel.odds,
             1,
           );
+
+          console.log("Placing accumulator bet:", {
+            accumulatorId,
+            stake,
+            totalOdds,
+            selections: betSlipSelections.length,
+            userWallet,
+          });
+
           const res = await fetch(`${API_URL}/api/minigame/bet-accumulator`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              walletAddress:
-                walletState.address ||
-                userStats.walletAddress ||
-                (userStats.username
-                  ? `guest-${userStats.username}`
-                  : "guest-user"),
+              walletAddress: userWallet,
               selections: betSlipSelections.map((sel) => ({
                 matchId: sel.matchId,
                 selection: sel.selection,
@@ -633,35 +759,47 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             }),
           });
           const data = await res.json();
+
+          if (!data.success) {
+            console.error("Accumulator bet failed (server response):", data);
+            // Assuming 'toast' is available in the scope, e.g., from a library like react-hot-toast
+            toast.error(data.error || "Failed to place bet. Please try again.");
+            return false;
+          }
+
           if (data.success) {
-            betSlipSelections.forEach((sel) => {
-              setActiveBets((prev) => [
-                ...prev,
-                {
-                  id: `${accumulatorId}-${sel.matchId}`,
-                  matchId: sel.matchId,
-                  selection: sel.selection,
-                  odds: sel.odds,
-                  stake,
-                  potentialReturn: stake * totalOdds,
-                  status: "pending",
-                  timestamp: Date.now(),
-                  txHash: generateHash(),
-                  betType: "accumulator",
-                  accumulatorId,
-                },
-              ]);
-            });
+            console.log(
+              "[ACCUMULATOR] Bet success, new balance:",
+              data.newBalance,
+            );
+            const newBets: Bet[] = betSlipSelections.map((sel) => ({
+              id: `${accumulatorId}-${sel.matchId}`,
+              matchId: sel.matchId,
+              selection: sel.selection,
+              odds: sel.odds,
+              stake,
+              potentialReturn: stake * totalOdds,
+              status: "pending",
+              timestamp: Date.now(),
+              txHash: generateHash(),
+              betType: "accumulator",
+              accumulatorId,
+            }));
+
+            // Batch update active bets
+            setActiveBets((prev) => [...newBets, ...prev]);
+
             if (data.newBalance !== undefined) {
               setBalance(data.newBalance);
-              setUserStats((prev) => ({
-                ...prev,
-                korBalance: data.newBalance,
-              }));
             }
-            setUserStats((s) => ({
-              ...s,
-              totalBets: s.totalBets + 1,
+
+            setUserStats((prev) => ({
+              ...prev,
+              korBalance:
+                data.newBalance !== undefined
+                  ? data.newBalance
+                  : prev.korBalance,
+              totalBets: prev.totalBets + 1,
             }));
 
             addTransaction(
@@ -678,11 +816,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setBetSlipSelections([]);
         return true;
       } catch (e) {
-        console.error("Bet slip placement failed", e);
+        console.error("Bet slip placement execution error:", e);
         return false;
       }
     },
-    [betSlipSelections, userStats.walletAddress, addTransaction],
+    [
+      betSlipSelections,
+      walletState.address,
+      userStats.walletAddress,
+      userStats.username,
+      addTransaction,
+      fetchActiveBets,
+    ],
   );
 
   // ==========================================
@@ -876,7 +1021,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               const finishedEndTime = matchEndTime + RESULT_DURATION_SEC * 1000;
               if (serverTime < finishedEndTime) {
                 setGameState("FINISHED");
-                const remaining = Math.max(0, Math.floor((finishedEndTime - serverTime) / 1000));
+                const remaining = Math.max(
+                  0,
+                  Math.floor((finishedEndTime - serverTime) / 1000),
+                );
                 setTimer(remaining);
               } else {
                 // Round truly over, waiting for next generation
@@ -911,27 +1059,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch matches:", error);
     }
   }, [selectedLeagueId, gameState, timer]); // Added dependencies
-
-  const fetchActiveBets = useCallback(async () => {
-    const activeAddress =
-      walletState.address ||
-      userStats.walletAddress ||
-      (userStats.username ? `guest-${userStats.username}` : "guest-user");
-
-    if (!activeAddress) return;
-
-    try {
-      const res = await fetch(
-        `${API_URL}/api/bets/active?walletAddress=${activeAddress}`,
-      );
-      const data = await res.json();
-      if (data.success) {
-        setActiveBets(data.bets);
-      }
-    } catch (error) {
-      console.error("Failed to fetch active bets:", error);
-    }
-  }, [walletState.address, userStats.walletAddress, userStats.username]);
 
   // Define fetchActiveBets before useEffect
 
@@ -1069,6 +1196,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       value={{
         walletState,
         setWalletState,
+        isInitializing,
         userStats,
         setUserStats,
         isNewUser,

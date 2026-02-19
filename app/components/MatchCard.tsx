@@ -99,6 +99,7 @@ export function MatchCard({
           <TeamLogo
             name={match.homeTeam.name}
             color={match.homeTeam.color}
+            logo={match.homeTeam.logo}
             size="md"
             className="shrink-0"
           />
@@ -122,6 +123,7 @@ export function MatchCard({
           <TeamLogo
             name={match.awayTeam.name}
             color={match.awayTeam.color}
+            logo={match.awayTeam.logo}
             size="md"
             className="shrink-0"
           />

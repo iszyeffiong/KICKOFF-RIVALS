@@ -74,7 +74,7 @@ export function WalletModal({
               "flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all",
               activeTab === "balance"
                 ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             Balance
@@ -85,7 +85,7 @@ export function WalletModal({
               "flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all",
               activeTab === "history"
                 ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             History
@@ -170,14 +170,15 @@ export function WalletModal({
 
                 <button
                   onClick={onSwapRequest}
-                  disabled={!canConvert}
+                  disabled
                   className={cn(
                     "btn w-full h-11",
-                    canConvert ? "btn-primary" : "btn-secondary opacity-50"
+                    canConvert ? "btn-primary" : "btn-secondary opacity-50",
                   )}
                 >
                   <IconRefresh className="w-4 h-4 mr-2" />
-                  {canConvert ? "Convert Now" : "Not Enough Coins"}
+                  {/* {canConvert ? "Convert Now" : "Not Enough Coins"} */}
+                  Coming Soon
                 </button>
               </div>
 

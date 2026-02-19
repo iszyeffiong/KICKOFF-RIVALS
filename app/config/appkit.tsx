@@ -29,42 +29,35 @@ const metadata = {
 // 3. Set the networks
 const networks = [avalanche] as any;
 
-// 4. Create Wagmi Adapter - only on client
-let wagmiAdapter: WagmiAdapter | null = null;
+// 4. Create Wagmi Adapter
+export const wagmiAdapter = new WagmiAdapter({
+  networks,
+  projectId,
+  ssr: true,
+});
 
-function getWagmiAdapter() {
-  if (!wagmiAdapter && typeof window !== "undefined" && projectId) {
-    wagmiAdapter = new WagmiAdapter({
-      networks,
-      projectId,
-      ssr: true, // Enable SSR mode for TanStack Start
-    });
+// 5. Create modal - only on client
+if (typeof window !== "undefined") {
+  const appKit = createAppKit({
+    adapters: [wagmiAdapter],
+    networks,
+    projectId,
+    metadata,
+    features: {
+      analytics: true,
+      email: false,
+      socials: false,
+    },
+    themeMode: "dark",
+    themeVariables: {
+      "--w3m-accent": "#1d4ed8",
+      "--w3m-border-radius-master": "1px",
+    },
+  });
 
-    // 5. Create modal
-    const appKit = createAppKit({
-      adapters: [wagmiAdapter],
-      networks,
-      projectId,
-      metadata,
-      features: {
-        analytics: true,
-        email: false,
-        socials: false,
-      },
-      themeMode: "dark",
-      themeVariables: {
-        "--w3m-accent": "#1d4ed8",
-        "--w3m-border-radius-master": "1px",
-      },
-    });
-
-    // Expose appKit for global access
-    if (typeof window !== "undefined") {
-      (window as any).appKit = appKit;
-      console.log("AppKit initialized and attached to window");
-    }
-  }
-  return wagmiAdapter;
+  // Expose appKit for global access
+  (window as any).appKit = appKit;
+  console.log("AppKit initialized and attached to window");
 }
 
 // 6. Create query client
@@ -81,24 +74,8 @@ export { queryClient };
 
 // 7. Export provider wrapper with SSR support
 export function AppKitProvider({ children }: { children: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  const [adapter, setAdapter] = useState<WagmiAdapter | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    const wa = getWagmiAdapter();
-    setAdapter(wa);
-  }, []);
-
-  // During SSR or before hydration, render children without wallet providers
-  if (!mounted || !adapter) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  }
-
   return (
-    <WagmiProvider config={adapter.wagmiConfig}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );

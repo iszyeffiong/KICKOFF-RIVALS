@@ -31,9 +31,12 @@ export function BetSlip({
 }: BetSlipProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [stake, setStake] = useState(10);
-  const [betType, setBetType] = useState<"single" | "accumulator">(
-    selections.length > 1 ? "accumulator" : "single",
-  );
+  const [betType, setBetType] = useState<"single" | "accumulator">("single");
+
+  // Update default bet type when selections change
+  if (selections.length > 1 && betType === "single" && !isExpanded) {
+    setBetType("accumulator");
+  }
   const [isLoading, setIsLoading] = useState(false);
 
   if (selections.length === 0) {
@@ -52,14 +55,20 @@ export function BetSlip({
     if (canPlaceBet) {
       setIsLoading(true);
       try {
+        // For singles, we're placing multiple bets, so the stake passed to onPlaceBet
+        // should be the PER BET stake, which is what the state 'stake' holds.
+        // For accumulator, 'stake' holds the total stake.
+        // The parent handler (GameContext) expects 'stake' to be the amount wagered on THAT transaction.
+
         const success = await onPlaceBet(stake, betType);
         if (success) {
           toast.success("Bets placed successfully!");
-          // onClearAll(); // Usually handled by parent or context logic
+          // onClearAll(); // usually handled by context
         } else {
           toast.error("Failed to place bets.");
         }
       } catch (error) {
+        console.error(error);
         toast.error("An error occurred.");
       } finally {
         setIsLoading(false);
@@ -205,7 +214,7 @@ export function BetSlip({
               <label className="text-sm font-medium text-muted-foreground">
                 {betType === "single" ? "Stake per bet" : "Total Stake"}
               </label>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sma text-muted-foreground">
                 Balance: {balance.toLocaleString()} KOR
               </span>
             </div>

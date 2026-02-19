@@ -42,12 +42,12 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <GameProvider>
-        <AppKitProvider>
+      <AppKitProvider>
+        <GameProvider>
           <Outlet />
           <Toaster position="top-center" />
-        </AppKitProvider>
-      </GameProvider>
+        </GameProvider>
+      </AppKitProvider>
     </RootDocument>
   );
 }

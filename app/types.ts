@@ -102,7 +102,7 @@ export interface LeagueEntry {
 
 export interface Transaction {
   id: string;
-  type: 'deposit' | 'bet' | 'win' | 'withdrawal' | 'bonus' | 'refund' | 'convert' | 'redeem';
+  type: 'deposit' | 'bet' | 'win' | 'withdrawal' | 'bonus' | 'refund' | 'convert' | 'redeem' | 'referral' | 'sign_in' | 'sign_up';
   amount: number;
   currency: 'kor' | 'coins';
   description: string;
