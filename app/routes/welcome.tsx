@@ -18,10 +18,7 @@ function WelcomeRoute() {
 
   if (isNewUser) {
     return (
-      <WelcomeScreen
-        username={userStats.username}
-        onProceed={handleProceed}
-      />
+      <WelcomeScreen username={userStats.username} onProceed={handleProceed} />
     );
   }
 
@@ -31,7 +28,6 @@ function WelcomeRoute() {
       totalBets={userStats.totalBets}
       wins={userStats.wins}
       korBalance={userStats.korBalance}
-      loginStreak={userStats.loginStreak}
       onProceed={handleProceed}
     />
   );
