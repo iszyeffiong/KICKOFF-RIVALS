@@ -85,7 +85,7 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
         allianceLeagueId: data.leagueId || null,
         allianceTeamId: data.teamId || null,
         referralCode,
-        coins: 1000,
+        coins: 5000,
         doodlBalance: 1000,
       })
       .returning();
@@ -107,7 +107,7 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
           allianceLeagueId: data.leagueId || null,
           allianceTeamId: data.teamId || null,
           referralCode,
-          coins: 1000,
+          coins: 5000,
           doodlBalance: 1000,
         })
         .returning();

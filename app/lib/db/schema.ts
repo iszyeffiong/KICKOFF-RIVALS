@@ -62,7 +62,7 @@ export const users = pgTable(
   {
     walletAddress: varchar("wallet_address", { length: 42 }).primaryKey(),
     username: varchar("username", { length: 50 }).notNull().unique(),
-    coins: integer("coins").default(1000).notNull(),
+    coins: integer("coins").default(5000).notNull(),
     doodlBalance: integer("doodl_balance").default(1000).notNull(),
     allianceLeagueId: varchar("alliance_league_id", { length: 10 }).references(
       () => leagues.id
