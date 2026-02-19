@@ -1,0 +1,22 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="westhamMaroon" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9f1239" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 30 L50 50 V110 C50 145 75 175 100 185 C125 175 150 145 150 110 V50 L100 30 Z" fill="url(#westhamMaroon)" filter="url(#shadow)" stroke="#60a5fa" stroke-width="4"/>
+  
+  <!-- Hammers (Abstract) -->
+  <path d="M80 70 L120 130 M120 70 L80 130" stroke="#60a5fa" stroke-width="8" stroke-linecap="round"/>
+  <rect x="70" y="65" width="20" height="10" fill="#60a5fa" transform="rotate(-35 80 70)"/>
+  <rect x="110" y="65" width="20" height="10" fill="#60a5fa" transform="rotate(35 120 70)"/>
+  
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#60a5fa" text-anchor="middle">IRON</text>
+</svg>

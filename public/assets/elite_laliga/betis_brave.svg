@@ -1,0 +1,25 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="betisGreen" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#16a34a" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Triangle Shape -->
+  <path d="M100 20 L180 160 H20 L100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#16a34a" stroke-width="4"/>
+  
+  <!-- Stripes -->
+  <path d="M100 20 L100 160" stroke="#16a34a" stroke-width="12"/>
+  <path d="M80 60 L60 160" stroke="#16a34a" stroke-width="12"/>
+  <path d="M120 60 L140 160" stroke="#16a34a" stroke-width="12"/>
+  
+  <!-- Crown (Abstract) -->
+  <path d="M85 90 L100 70 L115 90 H85 Z" fill="#eab308"/>
+  
+  <!-- Text -->
+  <text x="100" y="140" font-family="Arial, sans-serif" font-weight="900" font-size="24" fill="#14532d" text-anchor="middle" stroke="#ffffff" stroke-width="1">BB</text>
+</svg>

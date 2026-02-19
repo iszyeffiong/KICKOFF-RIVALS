@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="batOrange" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 40 L40 60 V120 C40 150 70 175 100 185 C130 175 160 150 160 120 V60 L100 40 Z" fill="#ffffff" filter="url(#shadow)" stroke="#f97316" stroke-width="4"/>
+  
+  <!-- Bat Wings (Stylized) -->
+  <path d="M40 60 C40 30 70 20 100 40 C130 20 160 30 160 60 L100 80 L40 60 Z" fill="#000000"/>
+  
+  <!-- Stripes -->
+  <path d="M60 80 H140 V120 H60 V80 Z" fill="url(#batOrange)"/>
+  <path d="M70 80 V120 M90 80 V120 M110 80 V120 M130 80 V120" stroke="#fbbf24" stroke-width="8"/>
+  
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#000000" text-anchor="middle" letter-spacing="1">VICTORY</text>
+</svg>

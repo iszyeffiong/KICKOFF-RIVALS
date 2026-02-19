@@ -1,0 +1,28 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sevillaRed" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Crest Shape -->
+  <path d="M100 20 C60 20 40 50 40 80 V120 C40 150 70 175 100 180 C130 175 160 150 160 120 V80 C160 50 140 20 100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#dc2626" stroke-width="4"/>
+  
+  <!-- Inner Design -->
+  <path d="M40 80 H160" stroke="#dc2626" stroke-width="4"/>
+  <path d="M100 20 V80" stroke="#dc2626" stroke-width="4"/>
+  
+  <!-- Bottom Fill -->
+  <path d="M42 82 H158 V120 C158 148 130 171 100 176 C70 171 42 148 42 120 V82 Z" fill="url(#sevillaRed)"/>
+  
+  <!-- Ball Icon -->
+  <circle cx="70" cy="50" r="15" fill="#dc2626"/>
+  
+  <!-- Text -->
+  <text x="130" y="55" font-family="Arial, sans-serif" font-weight="900" font-size="24" fill="#dc2626" text-anchor="middle">S</text>
+  <text x="100" y="135" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#ffffff" text-anchor="middle">STRIKER</text>
+</svg>

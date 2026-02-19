@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chelseaBlue" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e40af" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Circle Shape -->
+  <circle cx="100" cy="100" r="70" fill="url(#chelseaBlue)" filter="url(#shadow)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Lion Icon (Abstract) -->
+  <path d="M80 60 C90 50 110 50 120 60 L130 90 L110 110 L130 140 H70 L90 110 L70 90 L80 60 Z" fill="#ffffff"/>
+  <circle cx="90" cy="80" r="5" fill="#2563eb"/>
+  
+  <!-- Staff -->
+  <rect x="135" y="70" width="10" height="80" fill="#dc2626"/>
+
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#ffffff" text-anchor="middle">VECTOR</text>
+</svg>

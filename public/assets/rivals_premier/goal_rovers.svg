@@ -1,0 +1,23 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenGradient" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Roundel Shape -->
+  <circle cx="100" cy="100" r="85" fill="white" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="75" fill="url(#greenGradient)" stroke="#86efac" stroke-width="2"/>
+  
+  <!-- Ball/Net Pattern -->
+  <path d="M60 60 H140 M60 100 H140 M60 140 H140 M60 60 V140 M100 60 V140 M140 60 V140" stroke="#14532d" stroke-width="2" opacity="0.2"/>
+  <circle cx="100" cy="100" r="30" fill="#ffffff"/>
+  
+  <!-- Text -->
+  <text x="100" y="108" font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="#15803d" text-anchor="middle">GR</text>
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="10" fill="#ffffff" text-anchor="middle" letter-spacing="1">GOAL ROVERS</text>
+</svg>

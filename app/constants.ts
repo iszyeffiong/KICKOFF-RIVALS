@@ -5,9 +5,20 @@ export const LEAGUES = [
     id: "l1",
     name: "Rivals Premier",
     color: "bg-purple-100 border-purple-300",
+    logo: "/assets/rivals_premier.svg",
   },
-  { id: "l2", name: "Elite LaLiga", color: "bg-yellow-100 border-yellow-300" },
-  { id: "l3", name: "Prime Serie A", color: "bg-green-100 border-green-300" },
+  {
+    id: "l2",
+    name: "Elite LaLiga",
+    color: "bg-yellow-100 border-yellow-300",
+    logo: "/assets/elite_laliga.svg",
+  },
+  {
+    id: "l3",
+    name: "Prime Serie A",
+    color: "bg-green-100 border-green-300",
+    logo: "/assets/prime_serie_a.svg",
+  },
 ];
 
 export const TEAMS: Record<string, Team[]> = {
@@ -18,7 +29,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 88,
       leagueId: "l1",
       color: "#ef4444",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Rivals%20Utd",
+      logo: "/assets/rivals_premier/rivals_utd.svg",
     }, // Red
     {
       id: "t2",
@@ -26,7 +37,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 90,
       leagueId: "l1",
       color: "#0ea5e9",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=KOR%20City",
+      logo: "/assets/rivals_premier/kor_city.svg",
     }, // Sky Blue
     {
       id: "t3",
@@ -34,7 +45,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 75,
       leagueId: "l1",
       color: "#111827",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Elite%20FC",
+      logo: "/assets/rivals_premier/elite_fc.svg",
     }, // Dark
     {
       id: "t4",
@@ -42,7 +53,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 78,
       leagueId: "l1",
       color: "#f97316",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Striker%20Athletic",
+      logo: "/assets/rivals_premier/striker_athletic.svg",
     }, // Orange
     {
       id: "t5",
@@ -50,7 +61,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 70,
       leagueId: "l1",
       color: "#22c55e",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Goal%20Rovers",
+      logo: "/assets/rivals_premier/goal_rovers.svg",
     }, // Green
     {
       id: "t6",
@@ -58,7 +69,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 82,
       leagueId: "l1",
       color: "#1e3a8a",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Pitch%20Hotspur",
+      logo: "/assets/rivals_premier/pitch_hotspur.svg",
     }, // Navy
     {
       id: "t19",
@@ -66,7 +77,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 84,
       leagueId: "l1",
       color: "#2563eb",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Vector%20Chelsea",
+      logo: "/assets/rivals_premier/vector_chelsea.svg",
     }, // Blue
     {
       id: "t20",
@@ -74,7 +85,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 79,
       leagueId: "l1",
       color: "#7f1d1d",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Villa%20Vibe",
+      logo: "/assets/rivals_premier/villa_vibe.svg",
     }, // Claret
     {
       id: "t21",
@@ -82,7 +93,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 81,
       leagueId: "l1",
       color: "#000000",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Newcastle%20Net",
+      logo: "/assets/rivals_premier/newcastle_net.svg",
     }, // Black
     {
       id: "t22",
@@ -90,7 +101,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 76,
       leagueId: "l1",
       color: "#2dd4bf",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Brighton%20Ballers",
+      logo: "/assets/rivals_premier/brighton_ballers.svg",
     }, // Teal
     {
       id: "t23",
@@ -98,7 +109,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 74,
       leagueId: "l1",
       color: "#9f1239",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=West%20Ham%20Win",
+      logo: "/assets/rivals_premier/west_ham_win.svg",
     }, // Maroon
     {
       id: "t24",
@@ -106,7 +117,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 72,
       leagueId: "l1",
       color: "#1d4ed8",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Everton%20Edge",
+      logo: "/assets/rivals_premier/everton_edge.svg",
     }, // Royal Blue
   ],
   l2: [
@@ -116,7 +127,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 92,
       leagueId: "l2",
       color: "#eab308",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Real%20Rivals",
+      logo: "/assets/elite_laliga/real_rivals.svg",
     }, // Gold
     {
       id: "t8",
@@ -124,7 +135,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 89,
       leagueId: "l2",
       color: "#be185d",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Barca%20Bold",
+      logo: "/assets/elite_laliga/barca_bold.svg",
     }, // Pink/Red
     {
       id: "t9",
@@ -132,7 +143,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 80,
       leagueId: "l2",
       color: "#ef4444",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Atletico%20Ace",
+      logo: "/assets/elite_laliga/atletico_ace.svg",
     }, // Red
     {
       id: "t10",
@@ -140,7 +151,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 76,
       leagueId: "l2",
       color: "#dc2626",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Sevilla%20Striker",
+      logo: "/assets/elite_laliga/sevilla_striker.svg",
     }, // Red
     {
       id: "t11",
@@ -148,7 +159,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 74,
       leagueId: "l2",
       color: "#f97316",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Valencia%20Victory",
+      logo: "/assets/elite_laliga/valencia_victory.svg",
     }, // Orange
     {
       id: "t12",
@@ -156,7 +167,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 72,
       leagueId: "l2",
       color: "#facc15",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Villarreal%20Vision",
+      logo: "/assets/elite_laliga/villarreal_vision.svg",
     }, // Yellow
     {
       id: "t25",
@@ -164,7 +175,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 77,
       leagueId: "l2",
       color: "#16a34a",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Betis%20Brave",
+      logo: "/assets/elite_laliga/betis_brave.svg",
     }, // Green
     {
       id: "t26",
@@ -172,7 +183,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 78,
       leagueId: "l2",
       color: "#3b82f6",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Sociedad%20Sharp",
+      logo: "/assets/elite_laliga/sociedad_sharp.svg",
     }, // Blue
     {
       id: "t27",
@@ -180,7 +191,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 75,
       leagueId: "l2",
       color: "#dc2626",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Bilbao%20Blast",
+      logo: "/assets/elite_laliga/bilbao_blast.svg",
     }, // Red
     {
       id: "t28",
@@ -188,7 +199,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 70,
       leagueId: "l2",
       color: "#2563eb",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Getafe%20Glory",
+      logo: "/assets/elite_laliga/getafe_glory.svg",
     }, // Blue
     {
       id: "t29",
@@ -196,7 +207,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 71,
       leagueId: "l2",
       color: "#60a5fa",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Celta%20Champion",
+      logo: "/assets/elite_laliga/celta_champion.svg",
     }, // Light Blue
     {
       id: "t30",
@@ -204,7 +215,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 69,
       leagueId: "l2",
       color: "#b91c1c",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Mallorca%20Master",
+      logo: "/assets/elite_laliga/mallorca_master.svg",
     }, // Red
   ],
   l3: [
@@ -214,7 +225,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 85,
       leagueId: "l3",
       color: "#000000",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Juve%20Jet",
+      logo: "/assets/prime_serie_a/juve_jet.svg",
     }, // Black
     {
       id: "t14",
@@ -222,7 +233,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 84,
       leagueId: "l3",
       color: "#b91c1c",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Milan%20Master",
+      logo: "/assets/prime_serie_a/milan_master.svg",
     }, // Red
     {
       id: "t15",
@@ -230,7 +241,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 86,
       leagueId: "l3",
       color: "#1e3a8a",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Inter%20Icon",
+      logo: "/assets/prime_serie_a/inter_icon.svg",
     }, // Blue
     {
       id: "t16",
@@ -238,7 +249,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 77,
       leagueId: "l3",
       color: "#9f1239",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Roma%20Royal",
+      logo: "/assets/prime_serie_a/roma_royal.svg",
     }, // Maroon
     {
       id: "t17",
@@ -246,7 +257,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 81,
       leagueId: "l3",
       color: "#0ea5e9",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Napoli%20Noble",
+      logo: "/assets/prime_serie_a/napoli_noble.svg",
     }, // Sky Blue
     {
       id: "t18",
@@ -254,7 +265,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 73,
       leagueId: "l3",
       color: "#06b6d4",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Lazio%20Legend",
+      logo: "/assets/prime_serie_a/lazio_legend.svg",
     }, // Cyan
     {
       id: "t31",
@@ -262,7 +273,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 79,
       leagueId: "l3",
       color: "#1e40af",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Atalanta%20Ace",
+      logo: "/assets/prime_serie_a/atalanta_ace.svg",
     }, // Blue
     {
       id: "t32",
@@ -270,7 +281,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 76,
       leagueId: "l3",
       color: "#7e22ce",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Fiorentina%20Flash",
+      logo: "/assets/prime_serie_a/fiorentina_flash.svg",
     }, // Purple
     {
       id: "t33",
@@ -278,7 +289,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 72,
       leagueId: "l3",
       color: "#991b1b",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Torino%20Titan",
+      logo: "/assets/prime_serie_a/torino_titan.svg",
     }, // Dark Red
     {
       id: "t34",
@@ -286,7 +297,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 74,
       leagueId: "l3",
       color: "#be123c",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Bologna%20Bold",
+      logo: "/assets/prime_serie_a/bologna_bold.svg",
     }, // Red
     {
       id: "t35",
@@ -294,7 +305,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 70,
       leagueId: "l3",
       color: "#dc2626",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Monza%20Major",
+      logo: "/assets/prime_serie_a/monza_major.svg",
     }, // Red
     {
       id: "t36",
@@ -302,7 +313,7 @@ export const TEAMS: Record<string, Team[]> = {
       strength: 71,
       leagueId: "l3",
       color: "#15803d",
-      logo: "https://api.dicebear.com/9.x/shapes/svg?seed=Sassuolo%20Star",
+      logo: "/assets/prime_serie_a/sassuolo_star.svg",
     }, // Green
   ],
 };

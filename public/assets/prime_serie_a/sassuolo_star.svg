@@ -1,0 +1,25 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sassuoloGreen" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#000000" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape (Split) -->
+  <path d="M100 20 C60 20 40 50 40 80 V120 C40 150 70 175 100 180 C130 175 160 150 160 120 V80 C160 50 140 20 100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#15803d" stroke-width="4"/>
+  
+  <!-- Quadrants -->
+  <path d="M100 20 V180" stroke="#000000" stroke-width="2"/>
+  <path d="M40 100 H160" stroke="#000000" stroke-width="2"/>
+  
+  <path d="M42 80 V100 H100 V22 C100 22 60 22 42 80 Z" fill="#15803d"/>
+  <path d="M100 100 H158 V120 C158 150 130 175 100 180 V100 Z" fill="#000000"/>
+  
+  <!-- Text -->
+  <text x="130" y="70" font-family="Arial, sans-serif" font-weight="900" font-size="16" fill="#000000" text-anchor="middle">U.S.</text>
+  <text x="70" y="150" font-family="Arial, sans-serif" font-weight="900" font-size="16" fill="#15803d" text-anchor="middle">S.C.</text>
+</svg>

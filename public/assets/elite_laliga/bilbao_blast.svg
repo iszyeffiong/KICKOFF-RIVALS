@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 20 L40 50 V120 L100 180 L160 120 V50 L100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#dc2626" stroke-width="4"/>
+  
+  <!-- Stripes (Vertical) -->
+  <path d="M60 50 V140 M85 50 V155 M115 50 V155 M140 50 V140" stroke="#dc2626" stroke-width="10"/>
+  
+  <!-- Diagonal Band -->
+  <path d="M40 50 L160 120 V140 L40 70 Z" fill="#ffffff" fill-opacity="0.8"/>
+  
+  <!-- Text -->
+  <text x="100" y="110" font-family="Arial, sans-serif" font-weight="900" font-size="18" fill="#000000" text-anchor="middle" transform="rotate(28 100 110)">ATH</text>
+</svg>

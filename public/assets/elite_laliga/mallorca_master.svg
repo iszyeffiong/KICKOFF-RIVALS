@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mallorcaRed" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#b91c1c" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 30 L40 60 V120 C40 150 70 175 100 185 C130 175 160 150 160 120 V60 L100 30 Z" fill="url(#mallorcaRed)" filter="url(#shadow)" stroke="#eab308" stroke-width="4"/>
+  
+  <!-- Crown -->
+  <path d="M70 60 L80 40 L100 60 L120 40 L130 60 H70 Z" fill="#eab308"/>
+  
+  <!-- Letters -->
+  <text x="100" y="130" font-family="Arial, sans-serif" font-weight="900" font-size="40" fill="#eab308" text-anchor="middle">M</text>
+  
+  <!-- Wreath (Abstract) -->
+  <path d="M60 120 Q50 140 70 160" stroke="#eab308" stroke-width="3" fill="none"/>
+  <path d="M140 120 Q150 140 130 160" stroke="#eab308" stroke-width="3" fill="none"/>
+</svg>

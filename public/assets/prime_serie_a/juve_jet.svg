@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 20 L40 50 V110 C40 145 70 175 100 185 C130 175 160 145 160 110 V50 L100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#000000" stroke-width="4"/>
+  
+  <!-- Stripes -->
+  <path d="M60 20 V185 M80 20 V185 M100 20 V185 M120 20 V185 M140 20 V185" stroke="#000000" stroke-width="10"/>
+  
+  <!-- Stylized J -->
+  <path d="M110 50 H130 V120 C130 140 115 150 100 150 C85 150 70 140 70 120 V110" stroke="#ffffff" stroke-width="12" stroke-linecap="round" fill="none"/>
+  
+  <!-- Text -->
+  <text x="100" y="45" font-family="Arial, sans-serif" font-weight="900" font-size="14" fill="#000000" text-anchor="middle" letter-spacing="1">JJ</text>
+</svg>

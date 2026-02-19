@@ -1,0 +1,25 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="evertonBlue" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 25 C60 25 40 50 40 90 C40 140 70 170 100 180 C130 170 160 140 160 90 C160 50 140 25 100 25 Z" fill="url(#evertonBlue)" filter="url(#shadow)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Tower (Abstract) -->
+  <path d="M85 140 H115 V90 L100 70 L85 90 V140 Z" fill="#ffffff"/>
+  <path d="M85 90 H115" stroke="#1d4ed8" stroke-width="2"/>
+  
+  <!-- Laurel Wreaths (Abstract) -->
+  <path d="M55 100 Q45 120 65 140" stroke="#ffffff" stroke-width="3" fill="none"/>
+  <path d="M145 100 Q155 120 135 140" stroke="#ffffff" stroke-width="3" fill="none"/>
+  
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="900" font-size="12" fill="#ffffff" text-anchor="middle">1878</text>
+</svg>

@@ -192,18 +192,29 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white",
-                        league.id === "l1"
-                          ? "bg-purple-600"
-                          : league.id === "l2"
-                            ? "bg-yellow-600"
-                            : "bg-green-600"
-                      )}
-                    >
-                      {league.name.charAt(0)}
-                    </div>
+                    {/* league logo or fallback initial */}
+                    {league.logo ? (
+                      <div className="w-10 h-10 flex items-center justify-center">
+                        <img
+                          src={league.logo}
+                          alt={`${league.name} logo`}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-white",
+                          league.id === "l1"
+                            ? "bg-purple-600"
+                            : league.id === "l2"
+                              ? "bg-yellow-600"
+                              : "bg-green-600"
+                        )}
+                      >
+                        {league.name.charAt(0)}
+                      </div>
+                    )}
                     <div className="text-left">
                       <div className="font-semibold text-white">
                         {league.name}
@@ -240,7 +251,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                   onClick={() => handleTeamSelect(team.id)}
                   className={cn(
                     "p-4 rounded-xl border transition-all",
-                    "flex flex-col items-center gap-2",
+                    "flex flex-col items-center gap-2 relative",
                     "hover:border-primary",
                     selectedTeam === team.id
                       ? "border-primary bg-primary/10 ring-2 ring-primary/50"
@@ -248,10 +259,18 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                   )}
                 >
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg overflow-hidden"
                     style={{ backgroundColor: team.color }}
                   >
-                    {team.name.charAt(0)}
+                    {team.logo ? (
+                      <img
+                        src={team.logo}
+                        alt={`${team.name} logo`}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      team.name.charAt(0)
+                    )}
                   </div>
                   <span className="text-white text-sm font-medium text-center">
                     {team.name}

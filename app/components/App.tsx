@@ -44,6 +44,7 @@ const AdminPortal = lazy(() =>
 import { AdminAuth } from "./AdminAuth";
 import { SignMessage } from "./SignMessage";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { ReturningUserScreen } from "./ReturningUserScreen";
 import {
   hasValidAdminSession,
   getSessionToken,
@@ -324,7 +325,12 @@ const App: React.FC = () => {
         const userData = data.user || data;
 
         setDebugStatus(`OK: ${userData.username}`);
-        setIsNewUser(false);
+
+        // Use server-provided isNew flag, or default to false if we found a profile
+        const isNew = typeof data.isNew !== 'undefined' ? data.isNew : (typeof userData.isNew !== 'undefined' ? userData.isNew : false);
+        console.log(`[PROFILE] Synced. Username: ${userData.username}, isNew: ${isNew}`);
+        setIsNewUser(isNew);
+
         setUserStats((prev) => ({
           ...prev,
           walletAddress: address,
@@ -361,15 +367,23 @@ const App: React.FC = () => {
     // Always proceed to next view if we have an address
     if (address) {
       const isVerified = localStorage.getItem(`verified_${address}`) === "true";
-      if (isVerified) {
-        setWalletState((prev) => ({
-          ...prev,
-          isVerified: true,
-          verificationTimestamp: Date.now(),
-        }));
-        setAppView("main");
+
+      // Check if user exists in DB before proceeding
+      if (data?.success) {
+        if (isVerified) {
+          setWalletState((prev) => ({
+            ...prev,
+            isVerified: true,
+            verificationTimestamp: Date.now(),
+          }));
+          // Route to welcome screen so they see ReturningUserScreen
+          setAppView("welcome");
+        } else {
+          setAppView("sign");
+        }
       } else {
-        setAppView("sign");
+        // User not in DB -> Send to Sign Up (Onboarding)
+        setAppView("onboarding");
       }
     }
   };
@@ -702,7 +716,7 @@ const App: React.FC = () => {
       localStorage.setItem(`verified_${walletState.address}`, "true");
     }
 
-    setAppView("welcome");
+    setAppView("main");
   }
 
   // Check for existing admin session on mount
@@ -838,12 +852,12 @@ const App: React.FC = () => {
     match: Match,
     selection: Bet["selection"],
     stake: number,
-  ) {
-    if (!match) return;
-    if (stake > userStats.korBalance) return; // Use userStats which is synced
+  ): Promise<boolean> {
+    if (!match) return false;
+    if (stake > userStats.korBalance) return false; // Use userStats which is synced
     if (!match.odds) {
       console.error("Invalid match or odds data:", match);
-      return;
+      return false;
     }
 
     // Call API to place bet
@@ -892,15 +906,18 @@ const App: React.FC = () => {
               : q,
           ),
         }));
+
+        setBettingOn(null);
+        return true;
       } else {
         alert("Bet Failed: " + data.error);
+        return false;
       }
     } catch (e) {
       console.error("Bet placement failed", e);
       alert("Failed to place bet");
+      return false;
     }
-
-    setBettingOn(null);
   }
 
 
@@ -950,12 +967,17 @@ const App: React.FC = () => {
   async function handlePlaceBetSlip(
     stake: number,
     betType: "single" | "accumulator",
-  ) {
-    if (betSlipSelections.length === 0) return;
+  ): Promise<boolean> {
+    if (betSlipSelections.length === 0) return false;
 
     try {
       if (betType === "single") {
         // Place each selection as a separate bet
+        // Note: This logic assumes all succeed or we handle partials. 
+        // For simplicity, we return true if at least the process finished without exception.
+
+        let successCount = 0;
+
         for (const sel of betSlipSelections) {
           const oddValue = sel.odds;
           const res = await fetch(`${API_URL}/api/minigame/bet`, {
@@ -972,6 +994,7 @@ const App: React.FC = () => {
           });
           const data = await res.json();
           if (data.success) {
+            successCount++;
             const newBet: Bet = {
               id: data.betId || `bet-${Date.now()}-${Math.random()}`,
               matchId: sel.matchId,
@@ -1057,14 +1080,19 @@ const App: React.FC = () => {
             "kor",
             `Accumulator (${betSlipSelections.length} selections)`,
           );
+        } else {
+          alert("Accumulator Bet Failed: " + data.error);
+          return false;
         }
       }
 
       // Clear bet slip after placing
       setBetSlipSelections([]);
+      return true;
     } catch (e) {
       console.error("Bet slip placement failed", e);
       alert("Failed to place bets");
+      return false;
     }
   }
 
@@ -1216,11 +1244,17 @@ const App: React.FC = () => {
       />
     );
   if (appView === "welcome")
-    return (
+    return isNewUser ? (
       <WelcomeScreen
         username={userStats.username}
-        isNew={isNewUser}
         onProceed={handleProceedFromWelcome}
+      />
+    ) : (
+      <ReturningUserScreen
+        username={userStats.username}
+        onProceed={handleProceedFromWelcome}
+        coins={userStats.coins}
+        korBalance={userStats.korBalance}
       />
     );
 

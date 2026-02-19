@@ -1,0 +1,21 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="torinoMaroon" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#991b1b" />
+      <stop offset="100%" stop-color="#7f1d1d" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape (Detailed) -->
+  <path d="M100 20 C60 20 40 50 40 80 V110 C40 140 70 170 100 180 C130 170 160 140 160 110 V80 C160 50 140 20 100 20 Z" fill="url(#torinoMaroon)" filter="url(#shadow)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Bull (Abstract) -->
+  <path d="M80 100 C70 90 70 70 80 60 C90 70 110 70 120 60 C130 70 130 90 120 100 L100 130 L80 100 Z" fill="#ffffff"/>
+  
+  <!-- Text -->
+  <text x="100" y="50" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#ffffff" text-anchor="middle">TORINO</text>
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#ffffff" text-anchor="middle">1906</text>
+</svg>

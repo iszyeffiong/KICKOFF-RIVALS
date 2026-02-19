@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lazioCyan" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#67e8f9" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Hexagon Shape (Modified) -->
+  <path d="M100 30 L160 60 V140 L100 170 L40 140 V60 L100 30 Z" fill="#ffffff" filter="url(#shadow)" stroke="#06b6d4" stroke-width="4"/>
+  
+  <!-- Inner Fill -->
+  <path d="M45 65 L100 38 L155 65 V135 L100 162 L45 135 V65 Z" fill="url(#lazioCyan)"/>
+  <path d="M45 100 H155" stroke="#ffffff" stroke-width="2"/>
+  
+  <!-- Eagle Wings (Abstract) -->
+  <path d="M60 80 Q100 60 140 80 L100 120 Z" fill="#ffffff"/>
+  
+  <!-- Text -->
+  <text x="100" y="150" font-family="Arial, sans-serif" font-weight="900" font-size="14" fill="#ffffff" text-anchor="middle">LAZIO</text>
+</svg>

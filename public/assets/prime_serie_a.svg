@@ -1,0 +1,21 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenGradient" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#14532d" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Badge Shape -->
+  <path d="M100 20 C60 20 40 50 40 90 V130 C40 160 70 185 100 190 C130 185 160 160 160 130 V90 C160 50 140 20 100 20 Z" fill="url(#greenGradient)" filter="url(#shadow)" stroke="#bbf7d0" stroke-width="4"/>
+  
+  <!-- Stylized A -->
+  <path d="M100 45 L70 120 H85 L92 100 H108 L115 120 H130 L100 45 Z M100 70 L105 85 H95 L100 70 Z" fill="#ffffff"/>
+  
+  <!-- Text -->
+  <text x="100" y="145" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#bbf7d0" text-anchor="middle" letter-spacing="1">PRIME</text>
+  <text x="100" y="165" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#ffffff" text-anchor="middle" letter-spacing="1">SERIE A</text>
+</svg>

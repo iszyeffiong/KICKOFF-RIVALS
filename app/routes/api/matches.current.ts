@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getCurrentMatches } from "../../server/matches";
+import { getCurrentMatchesInternal } from "../../server/matches";
 
 export const Route = createFileRoute("/api/matches/current")({
   server: {
@@ -9,10 +9,8 @@ export const Route = createFileRoute("/api/matches/current")({
         const leagueId = url.searchParams.get("leagueId") || undefined;
 
         try {
-          const result = await getCurrentMatches({
-            data: {
-              leagueId,
-            },
+          const result = await getCurrentMatchesInternal({
+            leagueId,
           });
 
           return Response.json(result);

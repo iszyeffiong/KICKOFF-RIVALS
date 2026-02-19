@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orangeGradient" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Hexagon Shape -->
+  <path d="M100 20 L170 60 V140 L100 180 L30 140 V60 L100 20 Z" fill="url(#orangeGradient)" filter="url(#shadow)" stroke="#fed7aa" stroke-width="4"/>
+  
+  <!-- Bolt -->
+  <path d="M110 50 L70 100 H100 L90 150 L130 100 H100 L110 50 Z" fill="#ffffff"/>
+  
+  <!-- Text -->
+  <text x="100" y="130" font-family="Arial, sans-serif" font-weight="900" font-size="24" fill="#ffffff" text-anchor="middle" transform="rotate(-15, 100, 130)" opacity="0.2">SA</text>
+</svg>

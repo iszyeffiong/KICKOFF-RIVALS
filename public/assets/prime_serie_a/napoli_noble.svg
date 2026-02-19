@@ -1,0 +1,18 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="napoliBlue" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Circle Shape -->
+  <circle cx="100" cy="100" r="70" fill="url(#napoliBlue)" filter="url(#shadow)" stroke="#0ea5e9" stroke-width="4"/>
+  <circle cx="100" cy="100" r="60" fill="url(#napoliBlue)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- N Letter -->
+  <text x="100" y="135" font-family="Arial, sans-serif" font-weight="900" font-size="80" fill="#ffffff" text-anchor="middle">N</text>
+</svg>

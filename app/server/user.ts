@@ -42,6 +42,10 @@ function generateReferralCode(): string {
 // GET OR CREATE USER
 // ==========================================
 
+// ==========================================
+// INTERNAL LOGIC (Decoupled from createServerFn)
+// ==========================================
+
 const getOrCreateUserSchema = z.object({
   walletAddress: z.string().min(1),
   username: z.string().optional(),
@@ -49,34 +53,57 @@ const getOrCreateUserSchema = z.object({
   teamId: z.string().optional(),
 });
 
-export const getOrCreateUser = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => getOrCreateUserSchema.parse(data))
-  .handler(async ({ data }) => {
-    const normalized = data.walletAddress.toLowerCase();
+type GetOrCreateUserInput = z.infer<typeof getOrCreateUserSchema>;
 
-    // Try to find existing user
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.walletAddress, normalized),
-    });
+// Internal function to be used by other server functions
+export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
+  const normalized = data.walletAddress.toLowerCase();
 
-    if (existingUser) {
-      return {
-        success: true,
-        user: existingUser,
-        isNew: false,
-      };
-    }
+  // Try to find existing user
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.walletAddress, normalized),
+  });
 
-    // Create new user
-    const username = data.username || generateUniqueUsername();
-    const referralCode = generateReferralCode();
+  if (existingUser) {
+    return {
+      success: true,
+      user: existingUser,
+      isNew: false,
+    };
+  }
 
-    try {
+  // Create new user
+  const username = data.username || generateUniqueUsername();
+  const referralCode = generateReferralCode();
+
+  try {
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        walletAddress: normalized,
+        username,
+        allianceLeagueId: data.leagueId || null,
+        allianceTeamId: data.teamId || null,
+        referralCode,
+        coins: 1000,
+        doodlBalance: 1000,
+      })
+      .returning();
+
+    return {
+      success: true,
+      user: newUser,
+      isNew: true,
+    };
+  } catch (error: any) {
+    // Handle username conflict
+    if (error.code === "23505" && error.message?.includes("username")) {
+      const retryUsername = `${username}${Math.floor(100 + Math.random() * 900)}`;
       const [newUser] = await db
         .insert(users)
         .values({
           walletAddress: normalized,
-          username,
+          username: retryUsername,
           allianceLeagueId: data.leagueId || null,
           allianceTeamId: data.teamId || null,
           referralCode,
@@ -90,31 +117,19 @@ export const getOrCreateUser = createServerFn({ method: "POST" })
         user: newUser,
         isNew: true,
       };
-    } catch (error: any) {
-      // Handle username conflict
-      if (error.code === "23505" && error.message?.includes("username")) {
-        const retryUsername = `${username}${Math.floor(100 + Math.random() * 900)}`;
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            walletAddress: normalized,
-            username: retryUsername,
-            allianceLeagueId: data.leagueId || null,
-            allianceTeamId: data.teamId || null,
-            referralCode,
-            coins: 1000,
-            doodlBalance: 1000,
-          })
-          .returning();
-
-        return {
-          success: true,
-          user: newUser,
-          isNew: true,
-        };
-      }
-      throw error;
     }
+    throw error;
+  }
+}
+
+// ==========================================
+// GET OR CREATE USER (Server Function)
+// ==========================================
+
+export const getOrCreateUser = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => getOrCreateUserSchema.parse(data))
+  .handler(async ({ data }) => {
+    return await getOrCreateUserInternal(data);
   });
 
 // ==========================================
@@ -131,7 +146,13 @@ const getUserProfileSchema = z.object({
 export const getUserProfile = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => getUserProfileSchema.parse(data))
   .handler(async ({ data }) => {
-    const result = await getOrCreateUser({ data });
+    // Call internal function directly to avoid nested Server Function issues
+    const result = await getOrCreateUserInternal({
+      walletAddress: data.walletAddress,
+      username: data.username,
+      leagueId: data.leagueId,
+      teamId: data.teamId
+    });
 
     if (!result.success || !result.user) {
       return { success: false, error: "Failed to get user" };
@@ -167,6 +188,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
       referralCode: user.referralCode,
       referralCount: user.referralCount,
       referralEarnings: user.referralEarnings,
+      isNew: result.isNew,
     };
   });
 

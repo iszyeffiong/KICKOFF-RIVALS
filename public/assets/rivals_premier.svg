@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="purpleGradient" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7e22ce" />
+      <stop offset="100%" stop-color="#581c87" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Background Shield -->
+  <path d="M100 20 L30 50 V110 C30 150 60 185 100 195 C140 185 170 150 170 110 V50 L100 20 Z" fill="url(#purpleGradient)" filter="url(#shadow)" stroke="#d8b4fe" stroke-width="4"/>
+  
+  <!-- Crown Icon -->
+  <path d="M70 110 L60 80 L80 90 L100 60 L120 90 L140 80 L130 110 H70 Z" fill="#ffffff" />
+  
+  <!-- Text -->
+  <text x="100" y="145" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#ffffff" text-anchor="middle" letter-spacing="1">RIVALS</text>
+  <text x="100" y="165" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#d8b4fe" text-anchor="middle" letter-spacing="1">PREMIER</text>
+</svg>

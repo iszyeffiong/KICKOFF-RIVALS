@@ -1,0 +1,23 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="navyGradient" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Classic Shield -->
+  <path d="M100 20 L40 50 V110 C40 140 60 170 100 190 C140 170 160 140 160 110 V50 L100 20 Z" fill="url(#navyGradient)" filter="url(#shadow)" stroke="#bfdbfe" stroke-width="4"/>
+  
+  <!-- Diagonal Stripe -->
+  <path d="M40 50 L160 110 L160 130 L40 70 Z" fill="#ffffff" fill-opacity="0.2"/>
+  
+  <!-- Stylized H -->
+  <path d="M80 70 V130 M120 70 V130 M80 100 H120" stroke="#bfdbfe" stroke-width="8" stroke-linecap="square"/>
+  
+  <!-- Text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#bfdbfe" text-anchor="middle" letter-spacing="1">HOTSPUR</text>
+</svg>

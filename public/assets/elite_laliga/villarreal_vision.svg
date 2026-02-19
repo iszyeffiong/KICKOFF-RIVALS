@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="submarineYellow" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#eab308" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Circle Shape -->
+  <circle cx="100" cy="100" r="80" fill="url(#submarineYellow)" filter="url(#shadow)" stroke="#fef08a" stroke-width="4"/>
+  
+  <!-- V Shape -->
+  <path d="M60 60 L100 140 L140 60 H110 L100 100 L90 60 H60 Z" fill="#1e3a8a"/>
+  
+  <!-- Text -->
+  <text x="100" y="170" font-family="Arial, sans-serif" font-weight="bold" font-size="14" fill="#1e3a8a" text-anchor="middle" letter-spacing="1">VISION</text>
+</svg>

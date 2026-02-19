@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape (Pointed) -->
+  <path d="M100 20 L40 50 V100 C40 140 70 170 100 185 C130 170 160 140 160 100 V50 L100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#dc2626" stroke-width="6"/>
+  
+  <!-- Stripe (Vertical) -->
+  <path d="M85 25 V180 H115 V25" fill="#dc2626"/>
+  
+  <!-- Sword/Cross Icon -->
+  <path d="M100 60 V140 M80 80 H120" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Text -->
+  <text x="60" y="120" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#dc2626" text-anchor="middle">A</text>
+  <text x="140" y="120" font-family="Arial, sans-serif" font-weight="900" font-size="20" fill="#dc2626" text-anchor="middle">C</text>
+</svg>

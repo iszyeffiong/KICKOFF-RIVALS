@@ -1,0 +1,24 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="celtaSky" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape (Elongated) -->
+  <path d="M100 30 L50 60 V120 C50 155 75 180 100 190 C125 180 150 155 150 120 V60 L100 30 Z" fill="url(#celtaSky)" filter="url(#shadow)" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Cross of Saint James -->
+  <path d="M100 50 L110 70 H90 L100 50 Z M100 70 V150" fill="#dc2626" stroke="#dc2626" stroke-width="8"/>
+  <path d="M80 90 H120" stroke="#dc2626" stroke-width="8"/>
+  
+  <!-- Crown Overlay (Top) -->
+  <path d="M80 30 L90 10 L100 30 L110 10 L120 30 Z" fill="#eab308"/>
+  
+  <!-- Text -->
+  <text x="100" y="170" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#ffffff" text-anchor="middle">VIGO</text>
+</svg>

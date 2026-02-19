@@ -1,0 +1,27 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="milanRed" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Oval Shape -->
+  <ellipse cx="100" cy="100" rx="60" ry="80" fill="#ffffff" filter="url(#shadow)" stroke="#000000" stroke-width="4"/>
+  
+  <!-- Stripes -->
+  <path d="M60 40 V160 M80 30 V170 M100 20 V180 M120 30 V170 M140 40 V160" stroke="#000000" stroke-width="8"/>
+  <path d="M70 35 V165 M90 25 V175 M110 25 V175 M130 35 V165" stroke="url(#milanRed)" stroke-width="8"/>
+  
+  <!-- Cross (St George) -->
+  <rect x="85" y="40" width="30" height="120" fill="#ffffff"/>
+  <rect x="50" y="85" width="100" height="30" fill="#ffffff"/>
+  <rect x="95" y="40" width="10" height="120" fill="#dc2626"/>
+  <rect x="50" y="95" width="100" height="10" fill="#dc2626"/>
+  
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="12" fill="#000000" text-anchor="middle">MM</text>
+</svg>

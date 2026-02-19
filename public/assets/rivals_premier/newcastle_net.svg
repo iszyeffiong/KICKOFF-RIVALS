@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  
+  <!-- Shield Shape -->
+  <path d="M100 20 C60 20 40 50 40 80 V120 C40 150 70 175 100 180 C130 175 160 150 160 120 V80 C160 50 140 20 100 20 Z" fill="#ffffff" filter="url(#shadow)" stroke="#000000" stroke-width="4"/>
+  
+  <!-- Stripes -->
+  <path d="M70 20 V175 M100 20 V180 M130 20 V175" stroke="#000000" stroke-width="15"/>
+  
+  <!-- Seahorses (Abstract) -->
+  <path d="M45 80 Q35 60 55 50" stroke="#fbbf24" stroke-width="4" fill="none"/>
+  <path d="M155 80 Q165 60 145 50" stroke="#fbbf24" stroke-width="4" fill="none"/>
+  
+  <!-- Text -->
+  <text x="100" y="160" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#fbbf24" stroke="#000000" stroke-width="1" text-anchor="middle">NUFC</text>
+</svg>
