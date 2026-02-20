@@ -11,12 +11,24 @@ import {
 
 interface AllianceSetupProps {
   apiUrl: string;
-  onComplete: (data: { username: string; leagueId: string; teamId: string }) => void;
+  initialUsername?: string; // pre-filled from onboarding
+  onComplete: (data: {
+    username: string;
+    leagueId: string;
+    teamId: string;
+  }) => void;
 }
 
-export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
-  const [step, setStep] = useState<"username" | "league" | "team">("username");
-  const [username, setUsername] = useState("");
+export function AllianceSetup({
+  apiUrl,
+  initialUsername,
+  onComplete,
+}: AllianceSetupProps) {
+  // If username was already collected during onboarding, skip straight to league
+  const [step, setStep] = useState<"username" | "league" | "team">(
+    initialUsername ? "league" : "username",
+  );
+  const [username, setUsername] = useState(initialUsername ?? "");
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +83,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
   const selectedLeagueData = LEAGUES.find((l) => l.id === selectedLeague);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
@@ -102,10 +114,9 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                 "flex-1 h-1 rounded-full transition-colors",
                 step === s
                   ? "bg-primary"
-                  : index <
-                      ["username", "league", "team"].indexOf(step)
+                  : index < ["username", "league", "team"].indexOf(step)
                     ? "bg-primary/50"
-                    : "bg-slate-700"
+                    : "bg-slate-700",
               )}
             />
           ))}
@@ -141,7 +152,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                   className={cn(
                     "input w-full h-14 text-lg bg-slate-800 border-slate-600",
                     "focus:border-primary focus:ring-primary",
-                    "placeholder:text-slate-500 text-white"
+                    "placeholder:text-slate-500 text-white",
                   )}
                 />
                 {error && (
@@ -157,7 +168,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                 disabled={username.trim().length < 3}
                 className={cn(
                   "btn btn-primary w-full h-12 font-semibold",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                 )}
               >
                 Continue
@@ -188,7 +199,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                     "hover:border-primary hover:bg-primary/5",
                     selectedLeague === league.id
                       ? "border-primary bg-primary/10"
-                      : "border-slate-700 bg-slate-800/50"
+                      : "border-slate-700 bg-slate-800/50",
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -209,7 +220,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                             ? "bg-purple-600"
                             : league.id === "l2"
                               ? "bg-yellow-600"
-                              : "bg-green-600"
+                              : "bg-green-600",
                         )}
                       >
                         {league.name.charAt(0)}
@@ -255,7 +266,7 @@ export function AllianceSetup({ apiUrl, onComplete }: AllianceSetupProps) {
                     "hover:border-primary",
                     selectedTeam === team.id
                       ? "border-primary bg-primary/10 ring-2 ring-primary/50"
-                      : "border-slate-700 bg-slate-800/50"
+                      : "border-slate-700 bg-slate-800/50",
                   )}
                 >
                   <div

@@ -8,13 +8,21 @@ export const Route = createFileRoute("/alliance")({
 
 function AllianceRoute() {
   const navigate = useNavigate();
-  const { setRegistrationData } = useGame();
+  const { registrationData, setRegistrationData } = useGame();
 
   return (
     <AllianceSetup
       apiUrl=""
+      // Pass the username already collected during onboarding so AllianceSetup
+      // skips its own username step and goes straight to league/team selection
+      initialUsername={registrationData?.username ?? ""}
       onComplete={(data) => {
-        setRegistrationData(data);
+        // Merge league + team with the username that was set during onboarding
+        setRegistrationData({
+          username: registrationData?.username || data.username,
+          leagueId: data.leagueId,
+          teamId: data.teamId,
+        });
         navigate({ to: "/connect" });
       }}
     />
