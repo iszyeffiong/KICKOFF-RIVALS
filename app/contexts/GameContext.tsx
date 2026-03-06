@@ -8,6 +8,8 @@ import React, {
 } from "react";
 import { useAccount } from "wagmi";
 import toast from "react-hot-toast";
+import { useUserStore } from "../stores/userStore";
+import { useProfile } from "../hooks/useProfile";
 import {
   TEAMS,
   INITIAL_BALANCE,
@@ -50,21 +52,12 @@ const generateHash = () =>
 const generate6DigitCode = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
-// ==========================================
-// CONTEXT TYPE
-// ==========================================
-
 interface GameContextType {
-  // Wallet
-  walletState: WalletState;
-  setWalletState: React.Dispatch<React.SetStateAction<WalletState>>;
   isInitializing: boolean;
-
-  // User
-  userStats: UserStats;
-  setUserStats: React.Dispatch<React.SetStateAction<UserStats>>;
+  walletState: any; 
+  profile: any;
   isNewUser: boolean;
-  setIsNewUser: React.Dispatch<React.SetStateAction<boolean>>;
+
 
   // Registration
   registrationData: {
@@ -126,11 +119,11 @@ interface GameContextType {
   setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>;
 
   // Handlers
-  handleWalletConnected: (address: string) => void;
+  handleWalletConnected: (address: string, checkOnly?: boolean) => void;
   handleMessageSigned: () => void;
   handleProceedFromWelcome: () => void;
   handleLogout: () => void;
-  refreshProfile: (address: string) => Promise<void>;
+  refreshProfile: (address: string, checkOnly?: boolean) => Promise<void>;
   handleBetPlacement: (
     match: Match,
     selection: Bet["selection"],
@@ -215,55 +208,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   } = useAccount();
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Session token management
+  // New storage integration
+  const { 
+    walletState, 
+    setWalletAddress, 
+    setWalletVerified, 
+    setIsNewUser: setStoreIsNewUser,
+    isNewUser: storeIsNewUser,
+    logout: storeLogout 
+  } = useUserStore();
+  const { profile, refresh: refreshProfileQuery } = useProfile();
+
   const adminSessionTokenRef = useRef<string | null>(null);
 
-  // Wallet
-  const [walletState, setWalletState] = useState<WalletState>({
-    address: null,
-    isConnected: false,
-    chainId: null,
-    isVerified: false,
-    verificationSignature: null,
-    verificationTimestamp: null,
-  });
 
-  // User
-  const [isNewUser, setIsNewUser] = useState(true);
-  const [userStats, setUserStats] = useState<UserStats>({
-    username: "",
-    level: 1,
-    xp: 0,
-    totalBets: 0,
-    wins: 0,
-    biggestWin: 0,
-    walletAddress: "",
-    currentStreak: 0,
-    longestStreak: 0,
-    bestOddsWon: 0,
-    dailyWalkPoints: 0,
-    lastWalkDate: "",
-    coins: 5000,
-    korBalance: 1000,
-    referralCode: generate6DigitCode(),
-    hasReferred: false,
-    referralCount: 0,
-    referralEarnings: 0,
-    loginStreak: 1,
-    lastLoginDate: "",
-    quests: [...INITIAL_QUESTS],
-    activeTheme: "default",
-    unclaimedAllianceRewards: 0,
-  });
-
-  // Registration
-  const [registrationData, setRegistrationData] = useState<{
-    username: string;
-    leagueId: string;
-    teamId: string;
-  } | null>(null);
-
-  // Balance
+  // Balance (Local state for game loop UI)
   const [balance, setBalance] = useState(INITIAL_BALANCE);
 
   // Game State
@@ -335,136 +294,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(
     async (address: string) => {
-      try {
-        // Build query — include username/leagueId/teamId from registrationData
-        // so the server creates the user with the correct name on first call
-        const params = new URLSearchParams({
-          walletAddress: address.toLowerCase(),
-        });
-        if (registrationData?.username)
-          params.set("username", registrationData.username);
-        if (registrationData?.leagueId)
-          params.set("leagueId", registrationData.leagueId);
-        if (registrationData?.teamId)
-          params.set("teamId", registrationData.teamId);
-
-        console.log("[refreshProfile] Calling with params:", params.toString());
-
-        const res = await fetch(
-          `${API_URL}/api/user/profile?${params.toString()}`,
-        );
-        const data = await res.json();
-        console.log("[refreshProfile] API response:", data);
-
-        // The API returns fields FLAT (not nested under data.user)
-        if (data.success && data.username) {
-          setUserStats((prev) => ({
-            ...prev,
-            username: data.username || prev.username,
-            walletAddress: data.walletAddress || address.toLowerCase(),
-            coins: data.coins ?? prev.coins,
-            korBalance: data.korBalance ?? prev.korBalance,
-            totalBets: data.totalBets ?? prev.totalBets,
-            wins: data.wins ?? prev.wins,
-            referralCode: data.referralCode || prev.referralCode,
-            referralCount: data.referralCount ?? prev.referralCount,
-            referralEarnings: data.referralEarnings ?? prev.referralEarnings,
-            allianceLeagueId: data.allianceLeagueId || prev.allianceLeagueId,
-            allianceTeamId: data.allianceTeamId || prev.allianceTeamId,
-            unclaimedAllianceRewards:
-              data.unclaimedAllianceRewards ?? prev.unclaimedAllianceRewards,
-          }));
-          setBalance(data.korBalance ?? INITIAL_BALANCE);
-          setIsNewUser(data.isNew ?? false);
-          // Clear registration data after it has been consumed by the server
-          if (data.isNew) {
-            setRegistrationData(null);
-          }
-        } else {
-          // Fallback: wallet connected but profile fetch failed
-          const shortAddr = address.slice(0, 6);
-          setUserStats((prev) => ({
-            ...prev,
-            username: prev.username || `User_${shortAddr}`,
-            walletAddress: prev.walletAddress || address.toLowerCase(),
-          }));
-        }
-      } catch (err) {
-        console.error("Profile refresh failed:", err);
-        const shortAddr = address.slice(0, 6);
-        setUserStats((prev) => ({
-          ...prev,
-          username: prev.username || `User_${shortAddr}`,
-          walletAddress: prev.walletAddress || address.toLowerCase(),
-        }));
-      }
+      refreshProfileQuery();
     },
-    [registrationData], // re-create when registrationData changes so new users get their chosen name
+    [refreshProfileQuery],
   );
 
   const handleWalletConnected = useCallback(
     (address: string) => {
-      setWalletState((prev) => ({ ...prev, address, isConnected: true }));
-      refreshProfile(address);
+      setWalletAddress(address);
+      refreshProfileQuery();
     },
-    [refreshProfile],
+    [setWalletAddress, refreshProfileQuery],
   );
 
   const handleMessageSigned = useCallback(() => {
-    setWalletState((prev) => ({
-      ...prev,
-      isVerified: true,
-      verificationTimestamp: Date.now(),
-    }));
-    if (walletState.address) {
-      localStorage.setItem(`verified_${walletState.address}`, "true");
-    }
-  }, [walletState.address]);
+    setWalletVerified(true);
+  }, [setWalletVerified]);
 
   const handleProceedFromWelcome = useCallback(() => {
-    localStorage.setItem(`user_${userStats.walletAddress}`, userStats.username);
+    if (!profile?.walletAddress) return;
+    localStorage.setItem(`user_${profile.walletAddress}`, profile.username);
     localStorage.setItem("onboarding_complete", "true");
-  }, [userStats.walletAddress, userStats.username]);
+  }, [profile?.walletAddress, profile?.username]);
 
   const handleLogout = useCallback(() => {
     setBalance(INITIAL_BALANCE);
     setActiveBets([]);
     setTransactions([]);
-    setUserStats({
-      username: "",
-      level: 1,
-      xp: 0,
-      totalBets: 0,
-      wins: 0,
-      biggestWin: 0,
-      walletAddress: "",
-      currentStreak: 0,
-      longestStreak: 0,
-      bestOddsWon: 0,
-      dailyWalkPoints: 0,
-      lastWalkDate: "",
-      coins: 5000,
-      korBalance: 1000,
-      referralCode: generate6DigitCode(),
-      hasReferred: false,
-      referralCount: 0,
-      referralEarnings: 0,
-      loginStreak: 1,
-      lastLoginDate: "",
-      quests: [...INITIAL_QUESTS],
-      activeTheme: "default",
-      unclaimedAllianceRewards: 0,
-    });
-    setWalletState({
-      address: null,
-      isConnected: false,
-      chainId: null,
-      isVerified: false,
-      verificationSignature: null,
-      verificationTimestamp: null,
-    });
+    storeLogout();
     localStorage.removeItem("onboarding_complete");
-  }, []);
+  }, [storeLogout]);
 
   // ==========================================
   // SYNC WAGMI STATE
@@ -493,11 +352,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (isWagmiConnected && wagmiAddress) {
         if (walletState.address !== wagmiAddress) {
           console.log("[SYNC] Address mismatch/init. Syncing...", wagmiAddress);
-          setWalletState((prev) => ({
-            ...prev,
-            address: wagmiAddress,
-            isConnected: true,
-          }));
+          setWalletAddress(wagmiAddress);
           try {
             await refreshProfile(wagmiAddress);
           } catch (e) {
@@ -506,7 +361,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         } else {
           // Address matches, but make sure we have a username
           // If username is missing, we MUST refresh the profile, even (and especially) during initialization
-          if (!userStats.username) {
+          if (!profile?.username) {
             console.log(
               "[SYNC] Address matched but no username. Refreshing profile...",
             );
@@ -545,7 +400,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     handleLogout,
     walletState.address,
     walletState.isConnected,
-    userStats.username,
     isInitializing,
   ]);
 
@@ -555,7 +409,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleBetPlacement = useCallback(
     async (match: Match, selection: Bet["selection"], stake: number) => {
-      if (stake > userStats.korBalance) return false;
+      if (stake > (profile?.korBalance || 0)) return false;
       if (!match.odds) return false;
 
       try {
@@ -567,9 +421,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             walletAddress:
               walletState.address ||
-              userStats.walletAddress ||
-              (userStats.username
-                ? `guest-${userStats.username}`
+              profile?.walletAddress ||
+              (profile?.username
+                ? `guest-${profile.username}`
                 : "guest-user"),
             matchId: match.id,
             selection,
@@ -580,7 +434,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (data.success) {
           setBalance(data.newBalance);
-          setUserStats((prev) => ({ ...prev, korBalance: data.newBalance }));
           const bet: Bet = {
             id: data.bet.id,
             matchId: match.id,
@@ -594,14 +447,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
           setActiveBets((prev) => [bet, ...prev]);
           addTransaction("bet", stake, "kor", "Match wager");
-          setUserStats((prev) => ({
-            ...prev,
-            quests: prev.quests.map((q) =>
-              q.type === "bet"
-                ? { ...q, progress: q.progress + Number(stake) }
-                : q,
-            ),
-          }));
+          refreshProfileQuery();
           return true;
         } else {
           return false;
@@ -611,7 +457,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [userStats.korBalance, userStats.walletAddress, addTransaction],
+    [profile?.korBalance, profile?.walletAddress, profile?.username, walletState.address, addTransaction, refreshProfileQuery],
   );
 
   const handleAddToBetSlip = useCallback(
@@ -661,8 +507,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const fetchActiveBets = useCallback(async () => {
     const activeAddress =
       walletState.address ||
-      userStats.walletAddress ||
-      (userStats.username ? `guest-${userStats.username}` : "guest-user");
+      profile?.walletAddress ||
+      (profile?.username ? `guest-${profile.username}` : "guest-user");
 
     // Don't fetch if no valid user/guest identifier found
     if (!activeAddress) return;
@@ -678,7 +524,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to fetch active bets:", error);
     }
-  }, [walletState.address, userStats.walletAddress, userStats.username]);
+  }, [walletState.address, profile?.walletAddress, profile?.username]);
 
   const handlePlaceBetSlip = useCallback(
     async (stake: number, betType: "single" | "accumulator") => {
@@ -687,8 +533,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // Determine the best wallet address to use
       const userWallet =
         walletState.address ||
-        userStats.walletAddress ||
-        (userStats.username ? `guest-${userStats.username}` : "guest-user");
+        profile?.walletAddress ||
+        (profile?.username ? `guest-${profile.username}` : "guest-user");
 
       console.log("Placing bet slip:", { betType, stake, userWallet });
 
@@ -726,20 +572,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               ]);
               if (data.newBalance !== undefined) {
                 setBalance(data.newBalance);
-                setUserStats((prev) => ({
-                  ...prev,
-                  korBalance: data.newBalance,
-                }));
               }
             } else {
               console.error("Single bet failed:", data);
             }
           }
           const totalStake = stake * betSlipSelections.length;
-          setUserStats((s) => ({
-            ...s,
-            totalBets: s.totalBets + betSlipSelections.length,
-          }));
+          // Stats will be updated via backend + useProfile refresh
 
           addTransaction(
             "bet",
@@ -815,15 +654,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               setBalance(data.newBalance);
             }
 
-            setUserStats((prev) => ({
-              ...prev,
-              korBalance:
-                data.newBalance !== undefined
-                  ? data.newBalance
-                  : prev.korBalance,
-              totalBets: prev.totalBets + 1,
-            }));
-
             addTransaction(
               "bet",
               stake,
@@ -845,8 +675,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [
       betSlipSelections,
       walletState.address,
-      userStats.walletAddress,
-      userStats.username,
+      profile?.walletAddress,
+      profile?.username,
       addTransaction,
       fetchActiveBets,
     ],
@@ -857,33 +687,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // ==========================================
 
   const handleQuestAction = useCallback((id: string) => {
-    setUserStats((prev) => ({
-      ...prev,
-      quests: prev.quests.map((q) =>
-        q.id === id && q.type === "click"
-          ? { ...q, progress: q.target, completed: true }
-          : q,
-      ),
-    }));
+    // Quests are handled by backend/useProfile now
   }, []);
 
   const handleQuestClaim = useCallback(
     (id: string) => {
-      const quest = userStats.quests.find((q) => q.id === id);
-      if (!quest || !quest.completed) return;
-      setUserStats((prev) => ({
-        ...prev,
-        coins: prev.coins + quest.reward,
-        quests: prev.quests.filter((q) => q.id !== id),
-      }));
-      addTransaction(
-        "bonus",
-        quest.reward,
-        "coins",
-        `Quest reward: ${quest.title}`,
-      );
+      // Quests are claimed via backend now
     },
-    [userStats.quests, addTransaction],
+    [],
   );
 
   const handleRedeem = useCallback(
@@ -894,25 +705,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             code,
-            walletAddress: userStats.walletAddress,
+            walletAddress: profile?.walletAddress,
           }),
         });
         const data = await res.json();
         if (data.success) {
-          if (data.type === "coins") {
-            setUserStats((prev) => ({
-              ...prev,
-              coins: prev.coins + data.value,
-            }));
-            addTransaction(
-              "redeem",
-              data.value,
-              "coins",
-              `Redeemed code: ${code}`,
-            );
-          } else if (data.type === "theme") {
-            setUserStats((prev) => ({ ...prev, activeTheme: data.value }));
-          }
+          // Success handled by backend, we just notify user
           return { success: true, message: data.message || "Code redeemed!" };
         }
         return { success: false, message: data.error || "Invalid code" };
@@ -920,7 +718,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return { success: false, message: "Connection failed" };
       }
     },
-    [userStats.walletAddress, addTransaction],
+    [profile?.walletAddress, addTransaction],
   );
 
   const handleReferral = useCallback(
@@ -948,22 +746,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleClaimAllianceRewards = useCallback(async () => {
     try {
+      if (!profile?.walletAddress) return;
       const res = await fetch(`${API_URL}/api/user/claim-alliance-rewards`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: userStats.walletAddress }),
+        body: JSON.stringify({ walletAddress: profile.walletAddress }),
       });
       const data = await res.json();
       if (data.success) {
         alert(`SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`);
-        if (userStats.walletAddress) refreshProfile(userStats.walletAddress);
+        refreshProfileQuery();
       } else {
         alert(data.error || "Claim failed");
       }
     } catch (e) {
       console.error("Claim error", e);
     }
-  }, [userStats.walletAddress, refreshProfile]);
+  }, [profile?.walletAddress, refreshProfileQuery]);
 
   // ==========================================
   // ADMIN HANDLERS
@@ -1118,6 +917,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [dashboardMounted, fetchMatches, gameState]);
 
+  // Refresh profile when matches are finished to reflect winnings/xp
+  useEffect(() => {
+    if (gameState === "FINISHED" && walletState.address) {
+      console.log("[GAME] Matches finished. Refreshing profile...");
+      refreshProfile(walletState.address);
+      fetchActiveBets(); // Refresh history too
+    }
+  }, [gameState, walletState.address, refreshProfile, fetchActiveBets]);
+
   // Unused placeholders kept to satisfy interface
   const generateRoundMatches = useCallback(async () => {
     console.log("Client generation disabled - waiting for server");
@@ -1217,14 +1025,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     <GameContext.Provider
       value={{
         walletState,
-        setWalletState,
         isInitializing,
-        userStats,
-        setUserStats,
-        isNewUser,
-        setIsNewUser,
-        registrationData,
-        setRegistrationData,
+        profile,
+        isNewUser: storeIsNewUser,
+        registrationData: null, // Legacy compatibility
+        setRegistrationData: () => {}, // Legacy
         balance,
         setBalance,
         gameState,

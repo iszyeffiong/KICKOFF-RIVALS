@@ -170,15 +170,14 @@ export function WalletModal({
 
                 <button
                   onClick={onSwapRequest}
-                  disabled
+                  disabled={!canConvert}
                   className={cn(
                     "btn w-full h-11",
                     canConvert ? "btn-primary" : "btn-secondary opacity-50",
                   )}
                 >
-                  <IconRefresh className="w-4 h-4 mr-2" />
-                  {/* {canConvert ? "Convert Now" : "Not Enough Coins"} */}
-                  Coming Soon
+                  <IconArrowDown className="w-4 h-4 mr-2" />
+                  {canConvert ? "Convert to KOR (One-way)" : "Not Enough Coins"}
                 </button>
               </div>
 

@@ -11,7 +11,9 @@ function EntryRoute() {
   return (
     <EntryChoice
       onNewUser={() => navigate({ to: "/onboarding" })}
-      onReturningUser={() => navigate({ to: "/connect" })}
+      onReturningUser={() =>
+        navigate({ to: "/connect", search: { intent: "returning" } as any })
+      }
     />
   );
 }

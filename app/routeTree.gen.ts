@@ -19,6 +19,11 @@ import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AllianceRouteImport } from './routes/alliance'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
+import { Route as DashboardLeagueRouteImport } from './routes/dashboard/league'
+import { Route as DashboardHomeRouteImport } from './routes/dashboard/home'
+import { Route as DashboardBetsRouteImport } from './routes/dashboard/bets'
 import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.register-referral'
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
@@ -83,6 +88,31 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLeagueRoute = DashboardLeagueRouteImport.update({
+  id: '/league',
+  path: '/league',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardHomeRoute = DashboardHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardBetsRoute = DashboardBetsRouteImport.update({
+  id: '/bets',
+  path: '/bets',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const ApiUserRegisterReferralRoute = ApiUserRegisterReferralRouteImport.update({
   id: '/api/user/register-referral',
@@ -162,12 +192,17 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/alliance': typeof AllianceRoute
   '/connect': typeof ConnectRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/entry': typeof EntryRoute
   '/onboarding': typeof OnboardingRoute
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/dashboard/bets': typeof DashboardBetsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/league': typeof DashboardLeagueRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/bets/active': typeof ApiBetsActiveRoute
   '/api/bets/settle': typeof ApiBetsSettleRoute
   '/api/coupons/verify': typeof ApiCouponsVerifyRoute
@@ -188,12 +223,16 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/alliance': typeof AllianceRoute
   '/connect': typeof ConnectRoute
-  '/dashboard': typeof DashboardRoute
   '/entry': typeof EntryRoute
   '/onboarding': typeof OnboardingRoute
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/dashboard/bets': typeof DashboardBetsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/league': typeof DashboardLeagueRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/api/bets/active': typeof ApiBetsActiveRoute
   '/api/bets/settle': typeof ApiBetsSettleRoute
   '/api/coupons/verify': typeof ApiCouponsVerifyRoute
@@ -215,12 +254,17 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/alliance': typeof AllianceRoute
   '/connect': typeof ConnectRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/entry': typeof EntryRoute
   '/onboarding': typeof OnboardingRoute
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/dashboard/bets': typeof DashboardBetsRoute
+  '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/league': typeof DashboardLeagueRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/bets/active': typeof ApiBetsActiveRoute
   '/api/bets/settle': typeof ApiBetsSettleRoute
   '/api/coupons/verify': typeof ApiCouponsVerifyRoute
@@ -249,6 +293,11 @@ export interface FileRouteTypes {
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/dashboard/bets'
+    | '/dashboard/home'
+    | '/dashboard/league'
+    | '/dashboard/profile'
+    | '/dashboard/'
     | '/api/bets/active'
     | '/api/bets/settle'
     | '/api/coupons/verify'
@@ -269,12 +318,16 @@ export interface FileRouteTypes {
     | '/admin'
     | '/alliance'
     | '/connect'
-    | '/dashboard'
     | '/entry'
     | '/onboarding'
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/dashboard/bets'
+    | '/dashboard/home'
+    | '/dashboard/league'
+    | '/dashboard/profile'
+    | '/dashboard'
     | '/api/bets/active'
     | '/api/bets/settle'
     | '/api/coupons/verify'
@@ -301,6 +354,11 @@ export interface FileRouteTypes {
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/dashboard/bets'
+    | '/dashboard/home'
+    | '/dashboard/league'
+    | '/dashboard/profile'
+    | '/dashboard/'
     | '/api/bets/active'
     | '/api/bets/settle'
     | '/api/coupons/verify'
@@ -322,7 +380,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AllianceRoute: typeof AllianceRoute
   ConnectRoute: typeof ConnectRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   EntryRoute: typeof EntryRoute
   OnboardingRoute: typeof OnboardingRoute
   PlayRoute: typeof PlayRoute
@@ -415,6 +473,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/league': {
+      id: '/dashboard/league'
+      path: '/league'
+      fullPath: '/dashboard/league'
+      preLoaderRoute: typeof DashboardLeagueRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/home': {
+      id: '/dashboard/home'
+      path: '/home'
+      fullPath: '/dashboard/home'
+      preLoaderRoute: typeof DashboardHomeRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/bets': {
+      id: '/dashboard/bets'
+      path: '/bets'
+      fullPath: '/dashboard/bets'
+      preLoaderRoute: typeof DashboardBetsRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/api/user/register-referral': {
       id: '/api/user/register-referral'
@@ -517,12 +610,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardBetsRoute: typeof DashboardBetsRoute
+  DashboardHomeRoute: typeof DashboardHomeRoute
+  DashboardLeagueRoute: typeof DashboardLeagueRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardBetsRoute: DashboardBetsRoute,
+  DashboardHomeRoute: DashboardHomeRoute,
+  DashboardLeagueRoute: DashboardLeagueRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AllianceRoute: AllianceRoute,
   ConnectRoute: ConnectRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   EntryRoute: EntryRoute,
   OnboardingRoute: OnboardingRoute,
   PlayRoute: PlayRoute,

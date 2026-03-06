@@ -96,15 +96,16 @@ export function BetSlip({
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border shadow-lg transition-all duration-300",
-        isExpanded ? "max-h-[70vh]" : "max-h-20",
+        "fixed z-[100] bg-background transition-all duration-300 flex flex-col",
+        // Mobile (bottom sheet)
+        "bottom-0 left-0 right-0 border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.1)]",
+        isExpanded ? "max-h-[85vh] h-[85vh]" : "max-h-[72px] h-[72px]",
+        // Desktop (right sidebar)
+        "lg:top-0 lg:bottom-0 lg:left-auto lg:right-0 lg:w-[400px] lg:h-screen lg:max-h-screen lg:border-l lg:border-t-0 lg:shadow-[-4px_0_20px_rgba(0,0,0,0.1)]"
       )}
     >
       {/* Header - Always Visible */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-      >
+      <div className="w-full flex items-center justify-between p-4 bg-background border-b border-muted">
         <div className="flex items-center gap-3">
           <div className="relative">
             <IconTicket className="w-6 h-6 text-primary" />
@@ -113,7 +114,7 @@ export function BetSlip({
             </span>
           </div>
           <div className="text-left">
-            <p className="font-semibold text-foreground">Bet Slip</p>
+            <p className="font-semibold text-foreground leading-tight">Bet Slip</p>
             <p className="text-xs text-muted-foreground">
               {selections.length} selection{selections.length > 1 ? "s" : ""}
             </p>
@@ -122,22 +123,32 @@ export function BetSlip({
 
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">Potential Win</p>
-            <p className="font-bold text-primary">
+            <p className="text-xs text-muted-foreground leading-tight">Potential Win</p>
+            <p className="font-bold text-primary leading-tight">
               {potentialWin.toFixed(2)} KOR
             </p>
           </div>
-          {isExpanded ? (
-            <IconChevronDown className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <IconChevronUp className="w-5 h-5 text-muted-foreground" />
-          )}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="lg:hidden p-2 hover:bg-muted rounded-full transition-colors"
+          >
+            {isExpanded ? (
+              <IconChevronDown className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <IconChevronUp className="w-5 h-5 text-muted-foreground" />
+            )}
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Expanded Content */}
-      {isExpanded && (
-        <div className="px-4 pb-4 max-h-[calc(70vh-5rem)] overflow-y-auto">
+      <div 
+        className={cn(
+          "px-4 py-4 overflow-y-auto flex-1 bg-muted/10",
+          // Hidden on mobile if not expanded, but always visible on desktop
+          isExpanded ? "flex flex-col" : "hidden lg:flex lg:flex-col"
+        )}
+      >
           {/* Bet Type Toggle */}
           {selections.length > 1 && (
             <div className="flex gap-1 p-1 bg-muted rounded-lg mb-4">
@@ -225,7 +236,7 @@ export function BetSlip({
                   onClick={() => setStake(amount)}
                   disabled={amount > balance}
                   className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
+                    "flex-1 py-2  px-4 rounded-lg text-sm font-medium transition-all",
                     stake === amount
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover:bg-muted/80",
@@ -281,24 +292,28 @@ export function BetSlip({
             </button>
             <button
               onClick={handlePlaceBet}
-              disabled={!canPlaceBet}
+              disabled={!canPlaceBet || isLoading}
               className={cn(
                 "btn btn-primary flex-1 h-12 font-semibold",
-                !canPlaceBet && "opacity-50 cursor-not-allowed",
+                (!canPlaceBet || isLoading) && "opacity-50 cursor-not-allowed",
               )}
             >
-              <IconCheck className="w-5 h-5 mr-2" />
               {isLoading ? (
-                <span className="loading loading-spinner loading-sm"></span>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Placing...</span>
+                </div>
               ) : stake > balance ? (
                 "Insufficient Balance"
               ) : (
-                `Place ${betType === "single" ? "Bets" : "Bet"}`
+                <>
+                  <IconCheck className="w-5 h-5 mr-2" />
+                  {`Place ${betType === "single" ? "Bets" : "Bet"}`}
+                </>
               )}
             </button>
           </div>
         </div>
-      )}
     </div>
   );
 }

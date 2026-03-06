@@ -9,11 +9,12 @@ export const Route = createFileRoute("/connect")({
 function ConnectRoute() {
   const navigate = useNavigate();
   const { handleWalletConnected } = useGame();
+  const { intent } = Route.useSearch() as { intent?: string };
 
   return (
     <ConnectWallet
       onConnected={(address: string) => {
-        handleWalletConnected(address);
+        handleWalletConnected(address, intent === "returning");
         navigate({ to: "/sign" });
       }}
     />

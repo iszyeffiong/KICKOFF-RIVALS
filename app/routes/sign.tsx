@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { SignMessage } from "../components/SignMessage";
 import { useGame } from "../contexts/GameContext";
+import { useUserStore } from "../stores/userStore";
 
 export const Route = createFileRoute("/sign")({
   component: SignRoute,
@@ -8,17 +9,19 @@ export const Route = createFileRoute("/sign")({
 
 function SignRoute() {
   const navigate = useNavigate();
-  const { userStats, handleMessageSigned, handleLogout } = useGame();
+  const { walletState, logout: storeLogout } = useUserStore();
+  const { handleMessageSigned, handleLogout: contextLogout } = useGame();
 
   return (
     <SignMessage
-      address={userStats.walletAddress}
+      address={walletState.address || ""}
       onSigned={() => {
         handleMessageSigned();
         navigate({ to: "/welcome" });
       }}
       onCancel={() => {
-        handleLogout();
+        storeLogout();
+        contextLogout();
         navigate({ to: "/" });
       }}
     />

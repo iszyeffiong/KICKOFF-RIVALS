@@ -9,7 +9,7 @@ import {
   users,
   transactions,
 } from "../lib/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, lte, not } from "drizzle-orm";
 import { z } from "zod";
 
 // ==========================================
@@ -283,7 +283,8 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
           .where(
             and(
               eq(matches.seasonId, activeSeason.id),
-              eq(matches.round, currentRound),
+              lte(matches.round, currentRound),
+              not(eq(matches.status, "FINISHED")),
             ),
           );
 
@@ -344,11 +345,17 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
               .where(eq(bets.id, bet.id));
 
             if (won && bet.betType === "single") {
+              const potentialReturn = Math.floor(bet.potentialReturn);
+              const odds = Number(bet.odds);
+
               await db
                 .update(users)
                 .set({
-                  doodlBalance: sql`${users.doodlBalance} + ${bet.potentialReturn}`,
+                  doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
                   wins: sql`${users.wins} + 1`,
+                  biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                  bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
+                  xp: sql`${users.xp} + 15`, // +15 XP for a win
                 })
                 .where(eq(users.walletAddress, bet.walletAddress));
 
@@ -356,10 +363,18 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
                 id: `tx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
                 walletAddress: bet.walletAddress,
                 type: "win",
-                amount: bet.potentialReturn,
+                amount: potentialReturn,
                 currency: "kor",
-                description: `Bet win (Auto)`,
+                description: `Bet win (Auto) - ${odds}x`,
               });
+            } else if (!won && bet.betType === "single") {
+              // XP for participation
+              await db
+                .update(users)
+                .set({
+                  xp: sql`${users.xp} + 2`, // +2 XP for a loss
+                })
+                .where(eq(users.walletAddress, bet.walletAddress));
             }
           }
         }
@@ -1039,12 +1054,19 @@ export const settleBets = createServerFn({ method: "POST" })
               // Pay out only once — only if THIS bet is the FIRST leg of the accumulator
               const isFirstLeg = allBetsInAccumulator[0]?.id === bet.id;
               if (isFirstLeg) {
-                // Use potentialReturn from first leg which = stake * totalOdds
+                const potentialReturn = Math.floor(bet.potentialReturn);
+                // For accumulators, we don't really have a single "odds" easily but we can use totalOdds if we want.
+                // However, bet.potentialReturn / bet.stake gives us the decimal odds for the whole accumulator.
+                const effectiveOdds = bet.stake > 0 ? potentialReturn / bet.stake : 1;
+
                 await db
                   .update(users)
                   .set({
-                    doodlBalance: sql`${users.doodlBalance} + ${bet.potentialReturn}`,
+                    doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
                     wins: sql`${users.wins} + 1`,
+                    biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                    bestOddsWon: sql`CASE WHEN ${effectiveOdds} > ${users.bestOddsWon} THEN ${effectiveOdds} ELSE ${users.bestOddsWon} END`,
+                    xp: sql`${users.xp} + 50`, // +50 XP for a big accumulator win!
                   })
                   .where(eq(users.walletAddress, bet.walletAddress));
 
@@ -1053,9 +1075,9 @@ export const settleBets = createServerFn({ method: "POST" })
                   id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                   walletAddress: bet.walletAddress,
                   type: "win",
-                  amount: bet.potentialReturn,
+                  amount: potentialReturn,
                   currency: "kor",
-                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${bet.potentialReturn} KOR`,
+                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} KOR`,
                 });
               }
             }

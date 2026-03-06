@@ -315,7 +315,10 @@ export function BetModal({
             ) : stake > balance ? (
               "Insufficient Balance"
             ) : isLoading ? (
-              <span className="loading loading-spinner loading-md"></span>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Placing Bet...</span>
+              </div>
             ) : (
               <>
                 <IconCheck className="w-5 h-5 mr-2" />

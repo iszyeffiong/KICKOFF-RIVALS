@@ -88,14 +88,15 @@ export function ProfileScreen({
   };
 
   const copyReferralCode = () => {
+    if (!stats?.referralCode) return;
     navigator.clipboard.writeText(stats.referralCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const winRate =
-    stats.totalBets > 0
-      ? Math.round((stats.wins / stats.totalBets) * 100)
+    stats?.totalBets > 0
+      ? Math.round(((stats?.wins || 0) / stats.totalBets) * 100)
       : 0;
 
   return (
@@ -111,16 +112,16 @@ export function ProfileScreen({
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-foreground truncate">
-              {stats.username}
+              {stats?.username || "Guest User"}
             </h2>
             <p className="text-sm text-muted-foreground font-mono">
-              {truncateAddress(stats.walletAddress)}
+              {truncateAddress(stats?.walletAddress || "")}
             </p>
             <div className="flex items-center gap-2 mt-2">
               <span className="badge badge-default text-xs">
-                Level {stats.level}
+                Level {stats?.level || 1}
               </span>
-              {stats.loginStreak > 0 && (
+              {(stats?.loginStreak || 0) > 0 && (
                 <span className="badge badge-secondary text-xs flex items-center gap-1">
                   <IconFlame className="w-3 h-3" />
                   {stats.loginStreak} day streak
@@ -143,14 +144,14 @@ export function ProfileScreen({
           <div className="flex items-center justify-between text-xs mb-1">
             <span className="text-muted-foreground">Experience</span>
             <span className="text-foreground font-medium">
-              {stats.xp} / {(stats.level + 1) * 1000} XP
+              {stats?.xp || 0} / {((stats?.level || 1) + 1) * 1000} XP
             </span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500"
               style={{
-                width: `${(stats.xp / ((stats.level + 1) * 1000)) * 100}%`,
+                width: `${((stats?.xp || 0) / (((stats?.level || 1) + 1) * 1000)) * 100}%`,
               }}
             />
           </div>
@@ -165,10 +166,10 @@ export function ProfileScreen({
             <span className="text-sm text-muted-foreground">Coins</span>
           </div>
           <p className="text-2xl font-bold text-foreground">
-            {formatNumber(stats.coins)}
+            {formatNumber(stats?.coins || 0)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {Math.floor(stats.coins / CONVERSION_RATE) * CONVERSION_YIELD} KOR
+            {Math.floor((stats?.coins || 0) / CONVERSION_RATE) * CONVERSION_YIELD} KOR
             available
           </p>
         </div>
@@ -179,14 +180,14 @@ export function ProfileScreen({
             <span className="text-sm text-muted-foreground">KOR Tokens</span>
           </div>
           <p className="text-2xl font-bold text-foreground">
-            {formatNumber(stats.korBalance)}
+            {formatNumber(stats?.korBalance || 0)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">Available balance</p>
         </div>
       </div>
 
       {/* Alliance Rewards Banner */}
-      {stats.unclaimedAllianceRewards > 0 && (
+      { (stats?.unclaimedAllianceRewards || 0) > 0 && (
         <button
           onClick={onClaimAllianceRewards}
           className="card p-4 w-full bg-primary/10 border-primary/30 hover:bg-primary/20 transition-colors"
@@ -241,19 +242,19 @@ export function ProfileScreen({
               Betting Stats
             </h3>
             <div className="grid grid-cols-3 gap-4">
-              <StatItem label="Total Bets" value={stats.totalBets} />
-              <StatItem label="Wins" value={stats.wins} highlight="green" />
+              <StatItem label="Total Bets" value={stats?.totalBets || 0} />
+              <StatItem label="Wins" value={stats?.wins || 0} highlight="green" />
               <StatItem label="Win Rate" value={`${winRate}%`} />
               <StatItem
                 label="Biggest Win"
-                value={formatNumber(stats.biggestWin)}
+                value={formatNumber(stats?.biggestWin || 0)}
                 highlight="yellow"
               />
-              <StatItem label="Best Odds" value={stats.bestOddsWon.toFixed(2)} />
+              <StatItem label="Best Odds" value={(stats?.bestOddsWon || 0).toFixed(2)} />
               <StatItem
                 label="Current Streak"
-                value={stats.currentStreak}
-                highlight={stats.currentStreak > 0 ? "green" : undefined}
+                value={stats?.currentStreak || 0}
+                highlight={(stats?.currentStreak || 0) > 0 ? "green" : undefined}
               />
             </div>
           </div>
@@ -271,22 +272,22 @@ export function ProfileScreen({
               <AchievementBadge
                 icon={<IconStar />}
                 label="First Win"
-                unlocked={stats.wins > 0}
+                unlocked={(stats?.wins || 0) > 0}
               />
               <AchievementBadge
                 icon={<IconFlame />}
                 label="Hot Streak"
-                unlocked={stats.longestStreak >= 5}
+                unlocked={(stats?.longestStreak || 0) >= 5}
               />
               <AchievementBadge
                 icon={<IconTarget />}
                 label="Sharpshooter"
-                unlocked={winRate >= 60}
+                unlocked={(winRate || 0) >= 60}
               />
               <AchievementBadge
                 icon={<IconTrophy />}
                 label="High Roller"
-                unlocked={stats.totalBets >= 100}
+                unlocked={(stats?.totalBets || 0) >= 100}
               />
             </div>
           </div>
@@ -300,13 +301,13 @@ export function ProfileScreen({
           <div className="flex items-center justify-between opacity-50 blur-[1px]">
             <h3 className="font-semibold text-foreground">Daily Quests</h3>
             <span className="text-xs text-muted-foreground">
-              {stats.quests.filter((q) => q.completed).length}/{stats.quests.length}{" "}
-              completed
+              {(stats?.quests || []).filter((q) => q.completed).length}/
+              {(stats?.quests || []).length} completed
             </span>
           </div>
 
           <div className="opacity-50 blur-[1px] space-y-3">
-            {stats.quests.map((quest) => (
+            { (stats?.quests || []).map((quest) => (
               <QuestCard
                 key={quest.id}
                 quest={quest}

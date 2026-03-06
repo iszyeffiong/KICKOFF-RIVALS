@@ -51,6 +51,7 @@ const getOrCreateUserSchema = z.object({
   username: z.string().optional(),
   leagueId: z.string().optional(),
   teamId: z.string().optional(),
+  checkOnly: z.boolean().optional(),
 });
 
 type GetOrCreateUserInput = z.infer<typeof getOrCreateUserSchema>;
@@ -69,6 +70,14 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
       success: true,
       user: existingUser,
       isNew: false,
+    };
+  }
+
+  if (data.checkOnly) {
+    return {
+      success: false,
+      error: "User not found",
+      isNew: true,
     };
   }
 
@@ -141,6 +150,7 @@ const getUserProfileSchema = z.object({
   username: z.string().optional(),
   leagueId: z.string().optional(),
   teamId: z.string().optional(),
+  checkOnly: z.boolean().optional(),
 });
 
 export const getUserProfile = createServerFn({ method: "GET" })
@@ -151,7 +161,8 @@ export const getUserProfile = createServerFn({ method: "GET" })
       walletAddress: data.walletAddress,
       username: data.username,
       leagueId: data.leagueId,
-      teamId: data.teamId
+      teamId: data.teamId,
+      checkOnly: data.checkOnly,
     });
 
     if (!result.success || !result.user) {

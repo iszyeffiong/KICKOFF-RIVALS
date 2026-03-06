@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
 import { useGame } from "../contexts/GameContext";
+import { useProfile } from "../hooks/useProfile";
 import { AdminAuth } from "../components/AdminAuth";
 
 const AdminPortal = lazy(() =>
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/admin")({
 
 function AdminRoute() {
   const navigate = useNavigate();
+  const { profile } = useProfile();
   const {
     adminSessionValid,
     adminSessionToken,
@@ -22,8 +24,6 @@ function AdminRoute() {
     handleAdminLogout,
     coupons,
     setCoupons,
-    userStats,
-    setUserStats,
     matches,
     fetchMatches,
   } = useGame();
@@ -58,8 +58,8 @@ function AdminRoute() {
       <AdminPortal
         coupons={coupons}
         setCoupons={setCoupons}
-        quests={userStats.quests}
-        setQuests={(q) => setUserStats((p) => ({ ...p, quests: q }))}
+        quests={profile?.quests || []}
+        setQuests={() => {}}
         onClose={async () => {
           await handleAdminLogout();
           navigate({ to: "/dashboard" });
