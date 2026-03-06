@@ -6,7 +6,7 @@ async function main() {
     const { ethers } = hre;
 
     // Avalanche Fuji VRF v2.5 Coordinator (official Chainlink address)
-    const vrfCoordinator = "0x2eD832Ba664535e5886b75D64C46EB9a228C2610";
+    const vrfCoordinator = "0x5C210eF41CD1a72de73bF76eC39637bB0d3d7BEE";
 
     // Subscription ID from .env
     const subscriptionId = process.env.VRF_SUBSCRIPTION_ID || "0";
@@ -16,7 +16,7 @@ async function main() {
 
     // Gas lane: 300 gwei key hash for Fuji
     const keyHash =
-        "0x354d2f95da55398f44b7cff77da56283d9c6c829a4bdf1bbcaf2ad6a4d081f61";
+        "0xc799bd1e3bd4d1a41cd4968997a4e03dfd2a3c7c04b695881138580163f42887";
 
     console.log("Deploying MatchVRFConsumer to Avalanche Fuji...");
     console.log("Using Subscription ID:", subscriptionId);
