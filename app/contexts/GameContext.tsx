@@ -215,7 +215,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setWalletVerified, 
     setIsNewUser: setStoreIsNewUser,
     isNewUser: storeIsNewUser,
-    logout: storeLogout 
+    logout: storeLogout,
+    setOnboardingComplete
   } = useUserStore();
   const { profile, refresh: refreshProfileQuery } = useProfile();
 
@@ -314,15 +315,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const handleProceedFromWelcome = useCallback(() => {
     if (!profile?.walletAddress) return;
     localStorage.setItem(`user_${profile.walletAddress}`, profile.username);
-    localStorage.setItem("onboarding_complete", "true");
-  }, [profile?.walletAddress, profile?.username]);
+    setOnboardingComplete(true);
+  }, [profile?.walletAddress, profile?.username, setOnboardingComplete]);
 
   const handleLogout = useCallback(() => {
     setBalance(INITIAL_BALANCE);
     setActiveBets([]);
     setTransactions([]);
     storeLogout();
-    localStorage.removeItem("onboarding_complete");
   }, [storeLogout]);
 
   // ==========================================

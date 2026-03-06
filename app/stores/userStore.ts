@@ -46,6 +46,10 @@ export const useUserStore = create<UserState>()(
             ...state.walletState,
             address,
             isConnected: !!address,
+            // Reset verification only if switching to a DIFFERENT non-null address
+            isVerified: (state.walletState.address && address && state.walletState.address !== address)
+              ? false
+              : state.walletState.isVerified,
           },
         })),
       setWalletVerified: (verified) =>
@@ -81,8 +85,8 @@ export const useUserStore = create<UserState>()(
       partialize: (state) => ({
         onboardingComplete: state.onboardingComplete,
         walletState: {
-          ...state.walletState,
-          // We might want to persist verification for a session
+          address: state.walletState.address,
+          isConnected: state.walletState.isConnected,
           isVerified: state.walletState.isVerified,
         },
       }),
