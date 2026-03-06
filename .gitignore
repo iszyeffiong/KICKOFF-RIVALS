@@ -54,3 +54,7 @@ coverage
 .cache
 .temp
 *.pem
+tmp/
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/

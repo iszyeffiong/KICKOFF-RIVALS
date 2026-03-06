@@ -59,6 +59,9 @@ export interface Match {
   seasonId: number;
   round: number;
   events?: MatchEvent[]; // Add events
+  vrfRequestId?: string;
+  vrfSeed?: string;
+  isVerifiable?: boolean;
 }
 
 export interface Bet {

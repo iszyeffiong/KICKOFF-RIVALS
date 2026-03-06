@@ -1,6 +1,6 @@
 import { cn } from "../lib/utils";
 import { Match } from "../types";
-import { IconClock, IconPlay, IconCheck, IconPlus } from "./Icons";
+import { IconClock, IconPlay, IconCheck, IconPlus, IconShield } from "./Icons";
 import { TeamLogo } from "./TeamLogo";
 
 interface MatchCardProps {
@@ -57,7 +57,7 @@ export function MatchCard({
   return (
     <div
       className={cn(
-        "card p-4 transition-all duration-200 hover:shadow-md",
+        "card p-4 transition-all duration-200 hover:shadow-md group/match",
         isLive && "ring-2 ring-red-500/50 shadow-lg",
       )}
     >
@@ -73,6 +73,24 @@ export function MatchCard({
             <StatusIcon className="w-3 h-3" />
             {status.label}
           </span>
+
+          {match.isVerifiable && (
+            <div className="relative group/vrf">
+              <span className="badge bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1 text-[10px] cursor-help">
+                <IconShield className="w-3 h-3" />
+                Verifiable
+              </span>
+
+              {/* Tooltip on hover */}
+              <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[9px] rounded shadow-xl opacity-0 group-hover/vrf:opacity-100 transition-opacity z-50 pointer-events-none">
+                <div className="font-bold mb-1 text-blue-400">Chainlink VRF Secured</div>
+                <div className="truncate text-gray-300">ID: {match.vrfRequestId || 'Pending...'}</div>
+                <div className="truncate text-gray-300">Seed: {match.vrfSeed || 'Generated on-chain'}</div>
+                <div className="mt-1 text-gray-500 text-[8px]">Deterministic & Tamper-proof</div>
+              </div>
+            </div>
+          )}
+
           {isLive && minute !== undefined && (
             <span className="font-mono text-sm font-bold text-red-500 animate-pulse">
               {minute}'

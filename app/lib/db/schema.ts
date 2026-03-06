@@ -52,6 +52,8 @@ export const seasons = pgTable("seasons", {
   endedAt: timestamp("ended_at"),
   isActive: boolean("is_active").default(true).notNull(),
   currentRound: integer("current_round").default(1).notNull(),
+  vrfRequestId: varchar("vrf_request_id", { length: 100 }),
+  vrfSeed: varchar("vrf_seed", { length: 100 }),
 });
 
 // ==========================================
@@ -134,6 +136,9 @@ export const matches = pgTable(
     roundHash: varchar("round_hash", { length: 100 }),
     commitHash: varchar("commit_hash", { length: 100 }),
     blockHash: varchar("block_hash", { length: 100 }),
+    vrfRequestId: varchar("vrf_request_id", { length: 100 }),
+    vrfSeed: varchar("vrf_seed", { length: 100 }),
+    isVerifiable: boolean("is_verifiable").default(false).notNull(),
     events: json("events").$type<MatchEvent[]>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -372,17 +377,17 @@ export type MatchEvent = {
   minute: number;
   description: string;
   type:
-    | "goal"
-    | "card"
-    | "yellow_card"
-    | "red_card"
-    | "foul"
-    | "substitution"
-    | "chance"
-    | "whistle"
-    | "injury"
-    | "penalty_shout"
-    | "near_miss";
+  | "goal"
+  | "card"
+  | "yellow_card"
+  | "red_card"
+  | "foul"
+  | "substitution"
+  | "chance"
+  | "whistle"
+  | "injury"
+  | "penalty_shout"
+  | "near_miss";
   teamId?: string;
 };
 

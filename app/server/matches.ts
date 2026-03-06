@@ -24,6 +24,7 @@ const getCurrentMatchesSchema = z.object({
 // AUTO-GAME LOOP HELPERS
 // ==========================================
 
+import seedrandom from "seedrandom";
 import {
   ROUND_DURATION_SEC,
   MATCH_DURATION_SEC,
@@ -31,6 +32,7 @@ import {
   TEAMS,
   LEAGUES,
 } from "../constants";
+import { requestVRFSeed, getVRFSeedResult } from "./chainlink";
 
 // Helper to simulation events
 function generateMatchEvents(
@@ -38,13 +40,14 @@ function generateMatchEvents(
   awayTeamId: string,
   homeScore: number,
   awayScore: number,
+  rng: seedrandom.PRNG,
 ) {
   const events = [];
 
   // Generate Home Goals
   for (let i = 0; i < homeScore; i++) {
     events.push({
-      minute: Math.floor(Math.random() * 90) + 1,
+      minute: Math.floor(rng() * 90) + 1,
       type: "goal",
       teamId: homeTeamId,
       description: "Goal triggered by simulation",
@@ -54,7 +57,7 @@ function generateMatchEvents(
   // Generate Away Goals
   for (let i = 0; i < awayScore; i++) {
     events.push({
-      minute: Math.floor(Math.random() * 90) + 1,
+      minute: Math.floor(rng() * 90) + 1,
       type: "goal",
       teamId: awayTeamId,
       description: "Goal triggered by simulation",
@@ -65,22 +68,38 @@ function generateMatchEvents(
 }
 
 // Helper to simulate match result
-function simulateMatchResult(homeTeamId: string, awayTeamId: string) {
+function simulateMatchResult(
+  homeTeamId: string,
+  awayTeamId: string,
+  seed?: string,
+) {
+  const isVerifiable = !!seed;
+  const finalSeed = seed || Math.random().toString();
+  const rng = seedrandom(finalSeed);
+
   // Simple simulation
-  const homeScore = Math.floor(Math.random() * 5); // 0-4 goals
-  const awayScore = Math.floor(Math.random() * 5); // 0-4 goals
+  const homeScore = Math.floor(rng() * 5); // 0-4 goals
+  const awayScore = Math.floor(rng() * 5); // 0-4 goals
   const events = generateMatchEvents(
     homeTeamId,
     awayTeamId,
     homeScore,
     awayScore,
+    rng,
   );
 
-  return { homeScore, awayScore, events };
+  return { homeScore, awayScore, events, seed: finalSeed, isVerifiable };
 }
 
+import crypto from "node:crypto";
+
 // Helper to start live match
-async function startLiveMatch(seasonId: number, round: number) {
+async function startLiveMatch(
+  seasonId: number,
+  round: number,
+  roundSeed?: string,
+  vrfRequestId?: string,
+) {
   const pendingMatches = await db
     .select()
     .from(matches)
@@ -93,10 +112,22 @@ async function startLiveMatch(seasonId: number, round: number) {
     );
 
   for (const m of pendingMatches) {
-    const { homeScore, awayScore, events } = simulateMatchResult(
-      m.homeTeamId,
-      m.awayTeamId,
-    );
+    // derive match-specific seed if roundSeed exists
+    let matchSeed = m.vrfSeed;
+    if (roundSeed) {
+      matchSeed = crypto
+        .createHash("sha256")
+        .update(roundSeed + m.id)
+        .digest("hex");
+    }
+
+    const {
+      homeScore,
+      awayScore,
+      events,
+      seed: usedSeed,
+      isVerifiable,
+    } = simulateMatchResult(m.homeTeamId, m.awayTeamId, matchSeed || undefined);
 
     await db
       .update(matches)
@@ -106,6 +137,9 @@ async function startLiveMatch(seasonId: number, round: number) {
         awayScore,
         events: events as any,
         liveStartTime: new Date(),
+        vrfSeed: usedSeed,
+        vrfRequestId: vrfRequestId || m.vrfRequestId,
+        isVerifiable,
       })
       .where(eq(matches.id, m.id));
   }
@@ -335,19 +369,56 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         shouldProcessNextRound = true;
       } else if (now > bettingEndTime && now <= matchEndTime) {
         // LIVE Phase start
-        const scheduledMatches = await db
-          .select()
-          .from(matches)
-          .where(
-            and(
-              eq(matches.seasonId, activeSeason.id),
-              eq(matches.round, currentRound),
-              eq(matches.status, "SCHEDULED"),
-            ),
-          );
+        let roundSeed = activeSeason.vrfSeed;
 
-        if (scheduledMatches.length > 0) {
-          await startLiveMatch(activeSeason.id, currentRound);
+        if (!activeSeason.vrfSeed) {
+          if (!activeSeason.vrfRequestId) {
+            // Step 1: Request VRF Seed
+            const requestId = await requestVRFSeed();
+            if (requestId) {
+              await db
+                .update(seasons)
+                .set({ vrfRequestId: requestId })
+                .where(eq(seasons.id, activeSeason.id));
+              console.log(`VRF Requested (Round ${currentRound}): ${requestId}`);
+            }
+          } else {
+            // Step 2: Check for fulfillment
+            const seed = await getVRFSeedResult(activeSeason.vrfRequestId);
+            if (seed) {
+              roundSeed = seed;
+              await db
+                .update(seasons)
+                .set({ vrfSeed: seed })
+                .where(eq(seasons.id, activeSeason.id));
+              console.log(`VRF Seed Fulfilled (Round ${currentRound}): ${seed}`);
+            }
+          }
+        }
+
+        // Only move to LIVE if we have a seed (or if VRF is disabled - fallback)
+        // For production, you might want to wait indefinitely for VRF,
+        // but here we can add a fallback or just wait.
+        if (roundSeed || !process.env.NEXT_PUBLIC_VRF_CONTRACT_ADDRESS) {
+          const scheduledMatches = await db
+            .select()
+            .from(matches)
+            .where(
+              and(
+                eq(matches.seasonId, activeSeason.id),
+                eq(matches.round, currentRound),
+                eq(matches.status, "SCHEDULED"),
+              ),
+            );
+
+          if (scheduledMatches.length > 0) {
+            await startLiveMatch(
+              activeSeason.id,
+              currentRound,
+              roundSeed || undefined,
+              activeSeason.vrfRequestId || undefined,
+            );
+          }
         }
       }
     }
@@ -364,7 +435,11 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         await db.insert(matches).values(newMatchesData);
         await db
           .update(seasons)
-          .set({ currentRound: nextRound })
+          .set({
+            currentRound: nextRound,
+            vrfRequestId: null,
+            vrfSeed: null,
+          })
           .where(eq(seasons.id, activeSeason.id));
       }
     }
@@ -407,6 +482,9 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         roundHash: matches.roundHash,
         commitHash: matches.commitHash,
         blockHash: matches.blockHash,
+        vrfRequestId: matches.vrfRequestId,
+        vrfSeed: matches.vrfSeed,
+        isVerifiable: matches.isVerifiable,
         events: matches.events,
       })
       .from(matches)

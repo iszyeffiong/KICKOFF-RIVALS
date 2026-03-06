@@ -207,13 +207,13 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         </div>
 
         {/* Stats Bar */}
-        <div id="stats" className="flex items-center gap-6 md:gap-12">
+        {/* <div id="stats" className="flex items-center gap-6 md:gap-12">
           <StatItem value="10K+" label="Players" />
           <div className="w-px h-10 bg-white/10" />
           <StatItem value="1M+" label="Bets Placed" />
           <div className="w-px h-10 bg-white/10" />
           <StatItem value="500K+" label="KOR Won" />
-        </div>
+        </div> */}
       </section>
 
       {/* Features Section */}
@@ -296,7 +296,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <StepCard
               step={2}
               icon={<IconShield className="w-6 h-6" />}
-              title="Build Your Squad"
+              title="Select Your Squad"
               description="Draft your virtual team, pick your league, and join an alliance."
             />
             <StepCard
