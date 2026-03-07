@@ -53,6 +53,8 @@ export function GameSelection({ onSelectFootball }: GameSelectionProps) {
             description="Fast-paced basketball action with quarter-by-quarter predictions"
             icon={
               <svg
+                width="24"
+                height="24"
                 className="w-14 h-14"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -74,6 +76,8 @@ export function GameSelection({ onSelectFootball }: GameSelectionProps) {
             description="Set-by-set tennis betting with live match tracking and analysis"
             icon={
               <svg
+                width="24"
+                height="24"
                 className="w-14 h-14"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -155,11 +159,11 @@ function GameCard({
         "glass-card",
         isActive
           ? cn(
-              "cursor-pointer hover:translate-y-[-6px]",
-              "hover:shadow-2xl",
-              styles.glow,
-              styles.border,
-            )
+            "cursor-pointer hover:translate-y-[-6px]",
+            "hover:shadow-2xl",
+            styles.glow,
+            styles.border,
+          )
           : "cursor-not-allowed opacity-50",
       )}
     >

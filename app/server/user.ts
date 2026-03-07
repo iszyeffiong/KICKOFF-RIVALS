@@ -201,6 +201,12 @@ export const getUserProfile = createServerFn({ method: "GET" })
       referralEarnings: user.referralEarnings,
       totalBets: user.totalBets,
       wins: user.wins,
+      level: user.level || 1,
+      xp: user.xp || 0,
+      biggestWin: user.biggestWin || 0,
+      currentStreak: user.currentStreak || 0,
+      longestStreak: user.longestStreak || 0,
+      bestOddsWon: user.bestOddsWon || 0,
       isNew: result.isNew,
     };
   });

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { IconHome, IconTicket, IconUser, IconTable, IconCoins, IconZap } from "../Icons";
+import { IconHome, IconTicket, IconUser, IconTable, IconCoins, IconZap, IconRefresh } from "../Icons";
 import { useUserStore } from "../../stores/userStore";
 import { useProfile } from "../../hooks/useProfile";
 import { formatNumber } from "../../lib/utils";
@@ -29,7 +29,7 @@ const NAV_TABS = [
 
 export function DashboardHeader() {
   const { walletState } = useUserStore();
-  const { profile, isLoading } = useProfile();
+  const { profile, isLoading, refresh, isFetching } = useProfile();
 
   return (
     <header className="bg-dark text-white sticky top-0 z-110 shadow-md">
@@ -56,18 +56,30 @@ export function DashboardHeader() {
               </div>
             </div>
 
-            {/* Profile Brief */}
-            <Link 
-              to="/dashboard/profile"
-              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-1 pr-3 rounded-full border border-white/10 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
-                <IconUser className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-bold truncate max-w-[80px]">
-                {isLoading ? "Loading..." : profile?.username || "Guest"}
-              </span>
-            </Link>
+            {/* Profile Brief & Refresh */}
+            <div className="flex items-center gap-2">
+              <Link
+                to="/dashboard/profile"
+                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 p-1 pr-3 rounded-full border border-white/10 transition-colors"
+                title="View Profile"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+                  <IconUser className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold truncate max-w-[80px]">
+                  {isLoading ? "Loading..." : profile?.username || "Guest"}
+                </span>
+              </Link>
+
+              <button
+                onClick={() => refresh()}
+                disabled={isFetching}
+                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${isFetching ? "opacity-50" : ""}`}
+                title="Refresh Balance"
+              >
+                <IconRefresh className={`w-4 h-4 ${isFetching ? "animate-spin text-pitch" : "text-gray-400"}`} />
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -138,6 +138,8 @@ export function IconFootball({ className, ...props }: LucideProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -159,6 +161,8 @@ export function IconGoal({ className, ...props }: LucideProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -180,6 +184,8 @@ export function IconWhistle({ className, ...props }: LucideProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -201,6 +207,8 @@ export function IconCard({ className, color = "yellow", ...props }: LucideProps 
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill={color === "yellow" ? "#fbbf24" : "#ef4444"}
       stroke="currentColor"

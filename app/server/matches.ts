@@ -344,35 +344,85 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
               .set({ status: won ? "won" : "lost", settledAt: new Date() })
               .where(eq(bets.id, bet.id));
 
-            if (won && bet.betType === "single") {
-              const potentialReturn = Math.floor(bet.potentialReturn);
-              const odds = Number(bet.odds);
+            if (won) {
+              if (bet.betType === "single") {
+                const potentialReturn = Math.floor(bet.potentialReturn);
+                const odds = Number(bet.odds);
 
+                await db
+                  .update(users)
+                  .set({
+                    doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                    wins: sql`${users.wins} + 1`,
+                    biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                    bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
+                    currentStreak: sql`${users.currentStreak} + 1`,
+                    longestStreak: sql`CASE WHEN ${users.currentStreak} + 1 > ${users.longestStreak} THEN ${users.currentStreak} + 1 ELSE ${users.longestStreak} END`,
+                    xp: sql`${users.xp} + 15`,
+                    level: sql`CASE WHEN ${users.xp} + 15 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
+                  })
+                  .where(eq(users.walletAddress, bet.walletAddress));
+
+                await db.insert(transactions).values({
+                  id: `tx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                  walletAddress: bet.walletAddress,
+                  type: "win",
+                  amount: potentialReturn,
+                  currency: "kor",
+                  description: `Bet win (Auto) - ${odds}x`,
+                });
+              } else if (bet.betType === "accumulator" && bet.accumulatorId) {
+                // Check if all selections in accumulator won
+                const allBets = await db
+                  .select()
+                  .from(bets)
+                  .where(eq(bets.accumulatorId, bet.accumulatorId))
+                  .orderBy(bets.createdAt);
+
+                const allSettled = allBets.every((b) => b.status !== "pending");
+                const allWon = allBets.every((b) => b.status === "won");
+
+                if (allSettled && allWon) {
+                  // Pay out on the first leg to avoid duplicates
+                  const isFirstLeg = allBets[0]?.id === bet.id;
+                  if (isFirstLeg) {
+                    const potentialReturn = Math.floor(bet.potentialReturn);
+                    const effectiveOdds = bet.stake > 0 ? potentialReturn / bet.stake : 1;
+
+                    await db
+                      .update(users)
+                      .set({
+                        doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                        wins: sql`${users.wins} + 1`,
+                        biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                        bestOddsWon: sql`CASE WHEN ${effectiveOdds} > ${users.bestOddsWon} THEN ${effectiveOdds} ELSE ${users.bestOddsWon} END`,
+                        currentStreak: sql`${users.currentStreak} + 1`,
+                        longestStreak: sql`CASE WHEN ${users.currentStreak} + 1 > ${users.longestStreak} THEN ${users.currentStreak} + 1 ELSE ${users.longestStreak} END`,
+                        xp: sql`${users.xp} + 50`,
+                        level: sql`CASE WHEN ${users.xp} + 50 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
+                      })
+                      .where(eq(users.walletAddress, bet.walletAddress));
+
+                    await db.insert(transactions).values({
+                      id: `tx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                      walletAddress: bet.walletAddress,
+                      type: "win",
+                      amount: potentialReturn,
+                      currency: "kor",
+                      description: `Accumulator win (${allBets.length} legs) — (Auto)`,
+                    });
+                  }
+                }
+              }
+            } else {
+              // Loss
+              const isAcc = bet.betType === "accumulator";
               await db
                 .update(users)
                 .set({
-                  doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                  wins: sql`${users.wins} + 1`,
-                  biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                  bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
-                  xp: sql`${users.xp} + 15`, // +15 XP for a win
-                })
-                .where(eq(users.walletAddress, bet.walletAddress));
-
-              await db.insert(transactions).values({
-                id: `tx-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-                walletAddress: bet.walletAddress,
-                type: "win",
-                amount: potentialReturn,
-                currency: "kor",
-                description: `Bet win (Auto) - ${odds}x`,
-              });
-            } else if (!won && bet.betType === "single") {
-              // XP for participation
-              await db
-                .update(users)
-                .set({
-                  xp: sql`${users.xp} + 2`, // +2 XP for a loss
+                  xp: sql`${users.xp} + ${isAcc ? 5 : 2}`,
+                  currentStreak: 0,
+                  level: sql`CASE WHEN ${users.xp} + ${isAcc ? 5 : 2} >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
                 })
                 .where(eq(users.walletAddress, bet.walletAddress));
             }
@@ -1066,7 +1116,10 @@ export const settleBets = createServerFn({ method: "POST" })
                     wins: sql`${users.wins} + 1`,
                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
                     bestOddsWon: sql`CASE WHEN ${effectiveOdds} > ${users.bestOddsWon} THEN ${effectiveOdds} ELSE ${users.bestOddsWon} END`,
-                    xp: sql`${users.xp} + 50`, // +50 XP for a big accumulator win!
+                    currentStreak: sql`${users.currentStreak} + 1`,
+                    longestStreak: sql`CASE WHEN ${users.currentStreak} + 1 > ${users.longestStreak} THEN ${users.currentStreak} + 1 ELSE ${users.longestStreak} END`,
+                    xp: sql`${users.xp} + 50`,
+                    level: sql`CASE WHEN ${users.xp} + 50 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
                   })
                   .where(eq(users.walletAddress, bet.walletAddress));
 
@@ -1083,12 +1136,18 @@ export const settleBets = createServerFn({ method: "POST" })
             }
           } else {
 
-            // Single bet - pay out immediately
+            const odds = Number(bet.odds);
             await db
               .update(users)
               .set({
                 doodlBalance: sql`${users.doodlBalance} + ${bet.potentialReturn}`,
                 wins: sql`${users.wins} + 1`,
+                biggestWin: sql`CASE WHEN ${bet.potentialReturn} > ${users.biggestWin} THEN ${bet.potentialReturn} ELSE ${users.biggestWin} END`,
+                bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
+                currentStreak: sql`${users.currentStreak} + 1`,
+                longestStreak: sql`CASE WHEN ${users.currentStreak} + 1 > ${users.longestStreak} THEN ${users.currentStreak} + 1 ELSE ${users.longestStreak} END`,
+                xp: sql`${users.xp} + 15`,
+                level: sql`CASE WHEN ${users.xp} + 15 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
               })
               .where(eq(users.walletAddress, bet.walletAddress));
 
@@ -1102,6 +1161,16 @@ export const settleBets = createServerFn({ method: "POST" })
               description: `Bet win @ ${bet.odds}`,
             });
           }
+        } else {
+          // Loss case for settleBets
+          await db
+            .update(users)
+            .set({
+              xp: sql`${users.xp} + 2`,
+              currentStreak: 0,
+              level: sql`CASE WHEN ${users.xp} + 2 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
+            })
+            .where(eq(users.walletAddress, bet.walletAddress));
         }
 
         settled++;
