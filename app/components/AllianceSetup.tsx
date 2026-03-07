@@ -24,31 +24,12 @@ export function AllianceSetup({
   initialUsername,
   onComplete,
 }: AllianceSetupProps) {
-  // If username was already collected during onboarding, skip straight to league
-  const [step, setStep] = useState<"username" | "league" | "team">(
-    initialUsername ? "league" : "username",
-  );
-  const [username, setUsername] = useState(initialUsername ?? "");
+  // Centralized onboarding flow: username is collected in Onboarding, then team in AllianceSetup.
+  const [step, setStep] = useState<"league" | "team">("league");
+  const [username] = useState(initialUsername ?? "");
   const [selectedLeague, setSelectedLeague] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleUsernameSubmit = () => {
-    if (username.trim().length < 3) {
-      setError("Username must be at least 3 characters");
-      return;
-    }
-    if (username.trim().length > 20) {
-      setError("Username must be less than 20 characters");
-      return;
-    }
-    if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
-      setError("Username can only contain letters, numbers, and underscores");
-      return;
-    }
-    setError(null);
-    setStep("league");
-  };
+  const [error] = useState<string | null>(null);
 
   const handleLeagueSelect = (leagueId: string) => {
     setSelectedLeague(leagueId);
@@ -73,8 +54,6 @@ export function AllianceSetup({
   const handleBack = () => {
     if (step === "team") {
       setStep("league");
-    } else if (step === "league") {
-      setStep("username");
     }
   };
 
@@ -93,7 +72,7 @@ export function AllianceSetup({
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between p-6">
         <RivalsLogo size="sm" variant="full" className="text-white" />
-        {step !== "username" && (
+        {step === "team" && (
           <button
             onClick={handleBack}
             className="flex items-center gap-1 text-slate-400 hover:text-white text-sm transition-colors"
@@ -107,14 +86,14 @@ export function AllianceSetup({
       {/* Progress */}
       <div className="relative z-10 px-6">
         <div className="max-w-md mx-auto flex items-center gap-2">
-          {["username", "league", "team"].map((s, index) => (
+          {["league", "team"].map((s, index) => (
             <div
               key={s}
               className={cn(
                 "flex-1 h-1 rounded-full transition-colors",
                 step === s
                   ? "bg-primary"
-                  : index < ["username", "league", "team"].indexOf(step)
+                  : index < ["league", "team"].indexOf(step)
                     ? "bg-primary/50"
                     : "bg-slate-700",
               )}
@@ -125,59 +104,6 @@ export function AllianceSetup({
 
       {/* Content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8">
-        {/* Username Step */}
-        {step === "username" && (
-          <div className="max-w-md w-full animate-fade-in">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 rounded-full bg-primary/20 text-primary">
-                <IconUsers className="w-12 h-12" />
-              </div>
-            </div>
-
-            <h1 className="text-2xl font-bold text-white text-center mb-2">
-              Choose Your Name
-            </h1>
-            <p className="text-slate-400 text-center mb-8">
-              This is how other players will see you
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  maxLength={20}
-                  className={cn(
-                    "input w-full h-14 text-lg bg-slate-800 border-slate-600",
-                    "focus:border-primary focus:ring-primary",
-                    "placeholder:text-slate-500 text-white",
-                  )}
-                />
-                {error && (
-                  <p className="text-destructive text-sm mt-2">{error}</p>
-                )}
-                <p className="text-slate-500 text-xs mt-2">
-                  3-20 characters, letters, numbers, and underscores only
-                </p>
-              </div>
-
-              <button
-                onClick={handleUsernameSubmit}
-                disabled={username.trim().length < 3}
-                className={cn(
-                  "btn btn-primary w-full h-12 font-semibold",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                )}
-              >
-                Continue
-                <IconChevronRight className="w-5 h-5 ml-2" />
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* League Step */}
         {step === "league" && (
           <div className="max-w-md w-full animate-fade-in">
@@ -310,9 +236,7 @@ export function AllianceSetup({
 
       {/* Footer */}
       <footer className="relative z-10 p-6 text-center text-slate-500 text-xs">
-        {step === "username" && "Step 1 of 3"}
-        {step === "league" && "Step 2 of 3"}
-        {step === "team" && "Step 3 of 3"}
+        {step === "league" ? "Step 1 of 2" : "Step 2 of 2"}
       </footer>
     </div>
   );
