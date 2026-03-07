@@ -7,7 +7,7 @@ const VRF_ABI = [
     "function lastRequestId() external view returns (uint256)"
 ];
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_VRF_CONTRACT_ADDRESS;
+const CONTRACT_ADDRESS = process.env.VITE_VRF_CONTRACT_ADDRESS;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const RPC_URL = "https://api.avax-test.network/ext/bc/C/rpc"; // Avalanche Fuji
 

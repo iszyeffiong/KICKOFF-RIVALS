@@ -12,6 +12,10 @@ import {
 import { eq, and, desc, sql, lte, not } from "drizzle-orm";
 import { z } from "zod";
 
+// Standings Cache
+let standingsCache: { data: any; timestamp: number } | null = null;
+const STANDINGS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
 // ==========================================
 // GET CURRENT MATCHES
 // ==========================================
@@ -464,7 +468,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         // Only move to LIVE if we have a seed (or if VRF is disabled - fallback)
         // For production, you might want to wait indefinitely for VRF,
         // but here we can add a fallback or just wait.
-        if (roundSeed || !process.env.NEXT_PUBLIC_VRF_CONTRACT_ADDRESS) {
+        if (roundSeed || !process.env.VITE_VRF_CONTRACT_ADDRESS) {
           const scheduledMatches = await db
             .select()
             .from(matches)
@@ -1259,6 +1263,15 @@ const getStandingsSchema = z.object({
 export const getLeagueStandings = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => getStandingsSchema.parse(data || {}))
   .handler(async ({ data }) => {
+    // Check Cache
+    const now = Date.now();
+    if (standingsCache && now - standingsCache.timestamp < STANDINGS_CACHE_TTL) {
+      // Filter by seasonId if requested
+      if (!data.seasonId || standingsCache.data.seasonId === data.seasonId) {
+        return standingsCache.data;
+      }
+    }
+
     try {
       // Get season
       let seasonId = data.seasonId;
@@ -1316,9 +1329,18 @@ export const getLeagueStandings = createServerFn({ method: "GET" })
         };
       });
 
-      // Process matches
+      // Process matches - Deduplicate by round and team pairing
+      const seenMatchPairings = new Set<string>();
+      
       finishedMatches.forEach((match) => {
         if (match.homeScore === null || match.awayScore === null) return;
+
+        // Create a unique key for the pairing in this round to prevent duplicates
+        const teams_key = [match.homeTeamId, match.awayTeamId].sort().join("-");
+        const pairingKey = `${match.round}-${teams_key}`;
+        
+        if (seenMatchPairings.has(pairingKey)) return;
+        seenMatchPairings.add(pairingKey);
 
         const home = standings[match.homeTeamId];
         const away = standings[match.awayTeamId];
@@ -1358,11 +1380,16 @@ export const getLeagueStandings = createServerFn({ method: "GET" })
         return b.goalsFor - a.goalsFor;
       });
 
-      return {
+      const result = {
         success: true,
         standings: standingsArray,
         seasonId,
       };
+
+      // Update Cache
+      standingsCache = { data: result, timestamp: Date.now() };
+
+      return result;
     } catch (error: any) {
       console.error("Failed to get standings:", error);
       return { success: false, error: error.message, standings: [] };

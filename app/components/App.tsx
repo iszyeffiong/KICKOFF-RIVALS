@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { cn } from "../lib/utils";
 import {
   TEAMS,
   INITIAL_BALANCE,
@@ -142,6 +143,12 @@ const App: React.FC = () => {
   ]);
 
   const serverSeedsRef = useRef<Record<string, string>>({});
+  const initialFetchRef = useRef(false);
+  const adminCheckRef = useRef(false);
+  const profileFetchInProgress = useRef<string | null>(null);
+  const standingsFetchRef = useRef<Record<number, boolean>>({});
+  const matchesFetchInProgress = useRef(false);
+  const processedMatchesRef = useRef<Set<string>>(new Set());
 
   const [userStats, setUserStats] = useState<UserStats>({
     username: "",
@@ -193,6 +200,8 @@ const App: React.FC = () => {
 
   // SYNC WITH SERVER STATE
   async function fetchMatches() {
+    if (matchesFetchInProgress.current) return;
+    matchesFetchInProgress.current = true;
     try {
       const res = await fetch(`${API_URL}/api/matches/current`); // Fetch ALL leagues
       const data = await res.json();
@@ -295,10 +304,14 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Sync failed, falling back", e);
       generateRoundMatches(1, 1, generateHash());
+    } finally {
+      matchesFetchInProgress.current = false;
     }
   }
 
   useEffect(() => {
+    if (initialFetchRef.current) return;
+    initialFetchRef.current = true;
     fetchMatches();
   }, []);
 
@@ -318,13 +331,23 @@ const App: React.FC = () => {
   }, [appView, gameState, timer]);
 
   async function refreshProfile(address: string) {
+    if (!address) return;
+
+    // Prevent overlapping fetches for the same address
+    if (profileFetchInProgress.current === address) return;
+    profileFetchInProgress.current = address;
+
     let data: any = null;
     try {
       // Include alliance data if we are in registration phase
       let url = `${API_URL}/api/user/profile?walletAddress=${address}`;
       if (registrationData) {
         const { username, leagueId, teamId } = registrationData;
-        url += `&username=${encodeURIComponent(username)}&leagueId=${encodeURIComponent(leagueId)}&teamId=${encodeURIComponent(teamId)}`;
+        url += `&username=${encodeURIComponent(
+          username,
+        )}&leagueId=${encodeURIComponent(leagueId)}&teamId=${encodeURIComponent(
+          teamId,
+        )}`;
       }
 
       // Fetch profile from Backend (Supabase)
@@ -343,8 +366,8 @@ const App: React.FC = () => {
           typeof data.isNew !== "undefined"
             ? data.isNew
             : typeof userData.isNew !== "undefined"
-              ? userData.isNew
-              : false;
+            ? userData.isNew
+            : false;
         console.log(
           `[PROFILE] Synced. Username: ${userData.username}, isNew: ${isNew}`,
         );
@@ -381,6 +404,8 @@ const App: React.FC = () => {
       console.error("Failed to sync profile", err);
       // Ensure address is set even on network error
       setUserStats((prev) => ({ ...prev, walletAddress: address }));
+    } finally {
+      profileFetchInProgress.current = null;
     }
 
     // Always proceed to next view if we have an address
@@ -453,7 +478,7 @@ const App: React.FC = () => {
     LEAGUES.forEach((league) => {
       const shuffled = [...TEAMS[league.id]].sort(() => 0.5 - Math.random());
       for (let i = 0; i < shuffled.length; i += 2) {
-        const mId = `m-${league.id}-${sId}-${round}-${i}`;
+        const mId = `m-${sId}-${round}-${league.id}-${i / 2}`;
         const serverSeed = generateHash();
         serverSeedsRef.current[mId] = serverSeed;
         newMatches.push({
@@ -542,7 +567,8 @@ const App: React.FC = () => {
 
     // Sync all match results to database and settle bets
     for (const match of finishedMatches) {
-      if (!match.result) continue;
+      if (!match.result || processedMatchesRef.current.has(match.id)) continue;
+      processedMatchesRef.current.add(match.id);
 
       try {
         // 1. Update match result in database
@@ -637,8 +663,11 @@ const App: React.FC = () => {
   }
 
   async function fetchStandings(overrideSeasonId?: number) {
+    const sid = overrideSeasonId || seasonId || 1;
+    if (standingsFetchRef.current[sid]) return;
+    standingsFetchRef.current[sid] = true;
+
     try {
-      const sid = overrideSeasonId || seasonId || 1;
       console.log(`[STANDINGS] Fetching for Season ID: ${sid}`);
       const res = await fetch(
         `${API_URL}/api/leagues/standings?seasonId=${sid}`,
@@ -693,6 +722,10 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to fetch standings:", err);
+    } finally {
+      setTimeout(() => {
+        standingsFetchRef.current[sid] = false;
+      }, 180000); // Allow re-fetch after 3 minutes
     }
   }
 
@@ -739,6 +772,9 @@ const App: React.FC = () => {
 
   // Check for existing admin session on mount
   useEffect(() => {
+    if (adminCheckRef.current) return;
+    adminCheckRef.current = true;
+
     const checkExistingSession = async () => {
       const hasSession = await hasValidAdminSession();
       if (hasSession) {
@@ -1276,9 +1312,13 @@ const App: React.FC = () => {
   // DEBUG OVERLAY
   return (
     <div
-      className={`min-h-screen font-sans text-dark bg-light flex flex-col ${themeTransition ? "blur-sm" : ""} transition-all`}
+      className={cn(
+        "min-h-screen font-sans text-dark bg-light flex flex-col transition-all",
+        themeTransition && "blur-sm",
+        betSlipSelections.length > 0 && "pb-20 lg:pb-0",
+      )}
     >
-      <header className="bg-dark text-white sticky top-0 z-[110] shadow-md">
+      <header className="bg-dark text-white sticky top-0 z-110 shadow-md">
         <div className="flex justify-between items-center p-3 h-16">
           <div className="font-sport font-black text-2xl italic tracking-tighter text-white">
             KICKOFF<span className="text-pitch">RIVALS</span>
@@ -1312,11 +1352,17 @@ const App: React.FC = () => {
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
-                className={`flex flex-col items-center flex-1 py-2 transition-all ${activeTab === t.id ? "text-pitch border-b-2 border-pitch" : "text-gray-400 hover:text-white"}`}
+                className={`flex flex-col items-center flex-1 py-2 transition-all ${
+                  activeTab === t.id
+                    ? "text-pitch border-b-2 border-pitch"
+                    : "text-gray-400 hover:text-white"
+                }`}
               >
                 {t.icon}
                 <span
-                  className={`text-[9px] font-bold uppercase mt-1 ${activeTab === t.id ? "opacity-100" : "opacity-70"}`}
+                  className={`text-[9px] font-bold uppercase mt-1 ${
+                    activeTab === t.id ? "opacity-100" : "opacity-70"
+                  }`}
                 >
                   {t.label}
                 </span>
@@ -1342,7 +1388,7 @@ const App: React.FC = () => {
           </div> */}
 
           {/* Timer Banner */}
-          <div className="bg-gradient-to-r from-brand-dark to-dark rounded-xl p-4 text-center mb-6 shadow-card border-l-4 border-pitch relative overflow-hidden">
+          <div className="bg-linear-to-r from-brand-dark to-dark rounded-xl p-4 text-center mb-6 shadow-card border-l-4 border-pitch relative overflow-hidden">
             <div className="absolute top-0 right-0 opacity-10 text-6xl font-sport font-black italic -rotate-12 translate-x-2 -translate-y-2">
               LIVE
             </div>
@@ -1392,13 +1438,21 @@ const App: React.FC = () => {
           <div className="flex bg-gray-200 p-1 rounded-xl overflow-hidden shadow-inner">
             <button
               onClick={() => setBetTab("ongoing")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${betTab === "ongoing" ? "bg-white text-brand shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                betTab === "ongoing"
+                  ? "bg-white text-brand shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
               Active
             </button>
             <button
               onClick={() => setBetTab("ended")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${betTab === "ended" ? "bg-white text-brand shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                betTab === "ended"
+                  ? "bg-white text-brand shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
               History
             </button>
@@ -1434,8 +1488,8 @@ const App: React.FC = () => {
                         b.status === "won"
                           ? "bg-green-50 text-green-700 border-green-200"
                           : b.status === "lost"
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
                       }`}
                     >
                       {b.status}
@@ -1563,7 +1617,7 @@ const App: React.FC = () => {
       {showAdmin && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 z-[600] flex items-center justify-center">
+            <div className="fixed inset-0 z-600 flex items-center justify-center">
               Loading admin...
             </div>
           }

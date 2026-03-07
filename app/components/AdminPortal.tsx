@@ -194,7 +194,7 @@ export function AdminPortal({
           if (i + 1 >= shuffled.length) break;
           const home = shuffled[i];
           const away = shuffled[i + 1];
-          const mId = `m-${league.id}-${roundId}-${i / 2}-${Date.now()}`;
+          const mId = `m-${seasonId}-${roundId}-${league.id}-${i / 2}`;
 
           // Basic odds calculation
           const totalStrength = home.strength + away.strength;
@@ -595,7 +595,11 @@ export function AdminPortal({
                     >
                       <div className="flex items-center gap-4">
                         <span
-                          className={`badge ${m.status === "LIVE" ? "bg-red-500/10 text-red-500" : "bg-muted"}`}
+                          className={`badge ${
+                            m.status === "LIVE"
+                              ? "bg-red-500/10 text-red-500"
+                              : "bg-muted"
+                          }`}
                         >
                           {m.status}
                         </span>
@@ -668,8 +672,8 @@ export function AdminPortal({
                         quest.completed
                           ? "bg-primary/10 text-primary"
                           : quest.status === "LIVE"
-                            ? "bg-green-500/10 text-green-500"
-                            : "bg-yellow-500/10 text-yellow-500",
+                          ? "bg-green-500/10 text-green-500"
+                          : "bg-yellow-500/10 text-yellow-500",
                       )}
                     >
                       {quest.completed ? "Completed" : quest.status}

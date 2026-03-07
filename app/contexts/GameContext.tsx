@@ -54,10 +54,9 @@ const generate6DigitCode = () =>
 
 interface GameContextType {
   isInitializing: boolean;
-  walletState: any; 
+  walletState: any;
   profile: any;
   isNewUser: boolean;
-
 
   // Registration
   registrationData: {
@@ -209,19 +208,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // New storage integration
-  const { 
-    walletState, 
-    setWalletAddress, 
-    setWalletVerified, 
+  const {
+    walletState,
+    setWalletAddress,
+    setWalletVerified,
     setIsNewUser: setStoreIsNewUser,
     isNewUser: storeIsNewUser,
     logout: storeLogout,
-    setOnboardingComplete
+    setOnboardingComplete,
   } = useUserStore();
   const { profile, refresh: refreshProfileQuery } = useProfile();
 
   const adminSessionTokenRef = useRef<string | null>(null);
-
 
   // Balance (Local state for game loop UI)
   const [balance, setBalance] = useState(INITIAL_BALANCE);
@@ -265,6 +263,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Dashboard tracking
   const [dashboardMounted, setDashboardMounted] = useState(false);
+
+  // Throttling / Rate limiting for API calls
+  const lastActiveBetsFetchRef = useRef<number>(0);
+  const lastMatchesFetchRef = useRef<number>(0);
+  const lastStandingsFetchRef = useRef<number>(0);
+
+  const isFetchingMatchesRef = useRef<boolean>(false);
+  const isFetchingStandingsRef = useRef<boolean>(false);
+  const isFetchingActiveBetsRef = useRef<boolean>(false);
+
+  const hasRefreshedThisRoundRef = useRef<boolean>(false);
+  const timerRef = useRef<number>(0);
+
+  // Sync timerRef with timer state
+  useEffect(() => {
+    timerRef.current = timer;
+  }, [timer]);
 
   // ==========================================
   // HANDLERS
@@ -422,9 +437,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             walletAddress:
               walletState.address ||
               profile?.walletAddress ||
-              (profile?.username
-                ? `guest-${profile.username}`
-                : "guest-user"),
+              (profile?.username ? `guest-${profile.username}` : "guest-user"),
             matchId: match.id,
             selection,
             stake,
@@ -457,7 +470,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [profile?.korBalance, profile?.walletAddress, profile?.username, walletState.address, addTransaction, refreshProfileQuery],
+    [
+      profile?.korBalance,
+      profile?.walletAddress,
+      profile?.username,
+      walletState.address,
+      addTransaction,
+      refreshProfileQuery,
+    ],
   );
 
   const handleAddToBetSlip = useCallback(
@@ -505,15 +525,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchActiveBets = useCallback(async () => {
+    if (isFetchingActiveBetsRef.current) return;
+    isFetchingActiveBetsRef.current = true;
+
     const activeAddress =
       walletState.address ||
       profile?.walletAddress ||
       (profile?.username ? `guest-${profile.username}` : "guest-user");
 
     // Don't fetch if no valid user/guest identifier found
-    if (!activeAddress) return;
+    if (!activeAddress) {
+      isFetchingActiveBetsRef.current = false;
+      return;
+    }
 
     try {
+      lastActiveBetsFetchRef.current = Date.now();
       const res = await fetch(
         `${API_URL}/api/bets/active?walletAddress=${activeAddress}`,
       );
@@ -523,6 +550,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to fetch active bets:", error);
+    } finally {
+      isFetchingActiveBetsRef.current = false;
     }
   }, [walletState.address, profile?.walletAddress, profile?.username]);
 
@@ -690,12 +719,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     // Quests are handled by backend/useProfile now
   }, []);
 
-  const handleQuestClaim = useCallback(
-    (id: string) => {
-      // Quests are claimed via backend now
-    },
-    [],
-  );
+  const handleQuestClaim = useCallback((id: string) => {
+    // Quests are claimed via backend now
+  }, []);
 
   const handleRedeem = useCallback(
     async (code: string): Promise<{ success: boolean; message?: string }> => {
@@ -806,7 +832,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // ==========================================
 
   const fetchMatches = useCallback(async () => {
+    if (isFetchingMatchesRef.current) return;
+    isFetchingMatchesRef.current = true;
     try {
+      lastMatchesFetchRef.current = Date.now();
       const res = await fetch(`${API_URL}/api/matches/current`);
       const data = await res.json();
       if (data.success) {
@@ -870,7 +899,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           // Keep it as FINISHED, but rely on time logic above for timer
           if (gameState !== "FINISHED") setGameState("FINISHED");
         } else {
-          if (gameState === "FINISHED" && timer === 0) {
+          if (gameState === "FINISHED" && timerRef.current === 0) {
             // Only switch to betting if we are done with finished phase
             setGameState("BETTING");
           }
@@ -878,53 +907,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to fetch matches:", error);
+    } finally {
+      isFetchingMatchesRef.current = false;
     }
-  }, [selectedLeagueId, gameState, timer]); // Added dependencies
+  }, [selectedLeagueId, gameState]); // Removed timer dependency
 
   // Define fetchActiveBets before useEffect
-
-  // Timer logic for visual countdown/countup
-  useEffect(() => {
-    if (!dashboardMounted) return;
-
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (gameState === "BETTING") {
-          if (prev <= 0) {
-            fetchMatches();
-            return 0;
-          }
-          return prev - 1;
-        } else if (gameState === "LIVE") {
-          // Count UP
-          if (prev >= MATCH_DURATION_SEC) {
-            fetchMatches();
-            return prev;
-          }
-          return prev + 1;
-        } else if (gameState === "FINISHED") {
-          // Count DOWN (Intermission)
-          if (prev <= 0) {
-            fetchMatches();
-            return 0;
-          }
-          return prev - 1;
-        }
-        return prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [dashboardMounted, fetchMatches, gameState]);
-
-  // Refresh profile when matches are finished to reflect winnings/xp
-  useEffect(() => {
-    if (gameState === "FINISHED" && walletState.address) {
-      console.log("[GAME] Matches finished. Refreshing profile...");
-      refreshProfile(walletState.address);
-      fetchActiveBets(); // Refresh history too
-    }
-  }, [gameState, walletState.address, refreshProfile, fetchActiveBets]);
 
   // Unused placeholders kept to satisfy interface
   const generateRoundMatches = useCallback(async () => {
@@ -942,7 +930,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [fetchMatches]);
   const fetchStandings = useCallback(
     async (overrideSeasonId?: number) => {
+      if (isFetchingStandingsRef.current) return;
+      isFetchingStandingsRef.current = true;
       try {
+        lastStandingsFetchRef.current = Date.now();
         // Use active seasonId if not overridden. If both are null/0, send undefined.
         // Server handles undefined by finding active season.
         const targetSeasonId = overrideSeasonId || seasonId;
@@ -976,10 +967,84 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error("Failed to fetch standings:", error);
+      } finally {
+        isFetchingStandingsRef.current = false;
       }
     },
     [seasonId],
   );
+
+  // ==========================================
+  // SIDE EFFECTS & POLLING
+  // ==========================================
+
+  // Timer logic for visual countdown/countup
+  useEffect(() => {
+    if (!dashboardMounted) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (gameState === "BETTING") {
+          if (prev <= 0) {
+            // Throttle even at 0: only check every 10 seconds if we're stuck
+            const now = Date.now();
+            if (now - lastMatchesFetchRef.current >= 10000) {
+              fetchMatches();
+            }
+            return 0;
+          }
+          return prev - 1;
+        } else if (gameState === "LIVE") {
+          // Count UP
+          if (prev >= MATCH_DURATION_SEC) {
+            fetchMatches();
+            return prev;
+          }
+          return prev + 1;
+        } else if (gameState === "FINISHED") {
+          // Count DOWN (Intermission)
+          if (prev <= 0) {
+            fetchMatches();
+            return 0;
+          }
+          return prev - 1;
+        }
+        return prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [dashboardMounted, fetchMatches, gameState]);
+
+  // Reset round-refresh flag when moving from RESULT back to BETTING
+  useEffect(() => {
+    if (gameState === "BETTING") {
+      hasRefreshedThisRoundRef.current = false;
+    }
+  }, [gameState]);
+
+  // Refresh profile when matches are finished to reflect winnings/xp
+  useEffect(() => {
+    if (
+      (gameState === "FINISHED" || gameState === "RESULT") &&
+      walletState.address
+    ) {
+      if (!hasRefreshedThisRoundRef.current) {
+        console.log("[GAME] Round ended. Triggering final sync...");
+        hasRefreshedThisRoundRef.current = true;
+        refreshProfile(walletState.address || "");
+        fetchActiveBets(); // Refresh history
+        fetchStandings(); // Final standings update
+      }
+    }
+  }, [
+    gameState,
+    walletState.address,
+    refreshProfile,
+    fetchActiveBets,
+    fetchStandings,
+  ]);
+
   // Poll for matches and bets
   useEffect(() => {
     if (!dashboardMounted) return;
@@ -987,17 +1052,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     fetchMatches();
     fetchStandings(); // Initial fetch
 
-    // Poll matches and standings
+    // Poll matches and standings: 3-minute interval (180,000ms)
     const interval = setInterval(() => {
-      fetchMatches();
-      fetchStandings();
-    }, 5000);
+      const now = Date.now();
+      // Only poll if it's been at least 3 minutes
+      if (now - lastMatchesFetchRef.current >= 180000) {
+        fetchMatches();
+        lastMatchesFetchRef.current = now;
+      }
+
+      if (now - lastStandingsFetchRef.current >= 180000) {
+        fetchStandings();
+        lastStandingsFetchRef.current = now;
+      }
+    }, 60000); // Check every minute, but obey 3-min cooldown
 
     // Poll bets if user is connected
     let betInterval: ReturnType<typeof setInterval>;
     if (walletState.isConnected && walletState.address) {
-      fetchActiveBets();
-      betInterval = setInterval(fetchActiveBets, 5000);
+      betInterval = setInterval(() => {
+        const now = Date.now();
+        if (now - lastActiveBetsFetchRef.current >= 180000) {
+          fetchActiveBets();
+          lastActiveBetsFetchRef.current = now;
+        }
+      }, 60000);
     }
 
     return () => {

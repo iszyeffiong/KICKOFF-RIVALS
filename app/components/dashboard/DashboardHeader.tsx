@@ -1,7 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { IconHome, IconTicket, IconUser, IconTable, IconCoins, IconZap, IconRefresh } from "../Icons";
+import {
+  IconHome,
+  IconTicket,
+  IconUser,
+  IconTable,
+  IconCoins,
+  IconZap,
+  IconRefresh,
+} from "../Icons";
 import { useUserStore } from "../../stores/userStore";
 import { useProfile } from "../../hooks/useProfile";
+import { useGame } from "../../contexts/GameContext";
 import { formatNumber } from "../../lib/utils";
 
 const NAV_TABS = [
@@ -30,6 +39,11 @@ const NAV_TABS = [
 export function DashboardHeader() {
   const { walletState } = useUserStore();
   const { profile, isLoading, refresh, isFetching } = useProfile();
+  const { gameState } = useGame();
+
+  const isRoundEnded = gameState === "FINISHED" || gameState === "RESULT";
+  // We can also check if it's "SYNCED" but for now let's just use the round state guard
+  const canRefresh = isRoundEnded && !isFetching;
 
   return (
     <header className="bg-dark text-white sticky top-0 z-110 shadow-md">
@@ -73,11 +87,23 @@ export function DashboardHeader() {
 
               <button
                 onClick={() => refresh()}
-                disabled={isFetching}
-                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${isFetching ? "opacity-50" : ""}`}
-                title="Refresh Balance"
+                disabled={!canRefresh}
+                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${
+                  !canRefresh
+                    ? "opacity-30 cursor-not-allowed"
+                    : "hover:scale-110 active:scale-95"
+                }`}
+                title={
+                  isRoundEnded
+                    ? "Refresh Balance"
+                    : "Refresh available after round ends"
+                }
               >
-                <IconRefresh className={`w-4 h-4 ${isFetching ? "animate-spin text-pitch" : "text-gray-400"}`} />
+                <IconRefresh
+                  className={`w-4 h-4 ${
+                    isFetching ? "animate-spin text-pitch" : "text-gray-400"
+                  }`}
+                />
               </button>
             </div>
           </div>
