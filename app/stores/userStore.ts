@@ -84,6 +84,8 @@ export const useUserStore = create<UserState>()(
       name: 'kickoff-user-storage',
       partialize: (state) => ({
         onboardingComplete: state.onboardingComplete,
+        isNewUser: state.isNewUser,
+        registrationData: state.registrationData,
         walletState: {
           address: state.walletState.address,
           isConnected: state.walletState.isConnected,

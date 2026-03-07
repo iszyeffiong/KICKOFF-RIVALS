@@ -64,13 +64,13 @@ interface GameContextType {
     leagueId: string;
     teamId: string;
   } | null;
-  setRegistrationData: React.Dispatch<
-    React.SetStateAction<{
+  setRegistrationData: (
+    data: {
       username: string;
       leagueId: string;
       teamId: string;
-    } | null>
-  >;
+    } | null,
+  ) => void;
 
   // Balance
   balance: number;
@@ -216,6 +216,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     isNewUser: storeIsNewUser,
     logout: storeLogout,
     setOnboardingComplete,
+    registrationData,
+    setRegistrationData,
   } = useUserStore();
   const { profile, refresh: refreshProfileQuery } = useProfile();
 
@@ -1107,8 +1109,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         isInitializing,
         profile,
         isNewUser: storeIsNewUser,
-        registrationData: null, // Legacy compatibility
-        setRegistrationData: () => {}, // Legacy
+        registrationData,
+        setRegistrationData,
         balance,
         setBalance,
         gameState,

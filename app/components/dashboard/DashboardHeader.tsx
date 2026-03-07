@@ -8,6 +8,7 @@ import {
   IconZap,
   IconRefresh,
 } from "../Icons";
+import { RivalsLogo } from "../RivalsLogo";
 import { useUserStore } from "../../stores/userStore";
 import { useProfile } from "../../hooks/useProfile";
 import { useGame } from "../../contexts/GameContext";
@@ -48,9 +49,7 @@ export function DashboardHeader() {
   return (
     <header className="bg-dark text-white sticky top-0 z-110 shadow-md">
       <div className="flex justify-between items-center p-3 h-16">
-        <div className="font-sport font-black text-2xl italic tracking-tighter text-white">
-          KICKOFF<span className="text-pitch">RIVALS</span>
-        </div>
+        <RivalsLogo variant="full" size="sm" />
 
         {walletState.isConnected && (
           <div className="flex items-center gap-3">
@@ -88,11 +87,10 @@ export function DashboardHeader() {
               <button
                 onClick={() => refresh()}
                 disabled={!canRefresh}
-                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${
-                  !canRefresh
-                    ? "opacity-30 cursor-not-allowed"
-                    : "hover:scale-110 active:scale-95"
-                }`}
+                className={`p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all ${!canRefresh
+                  ? "opacity-30 cursor-not-allowed"
+                  : "hover:scale-110 active:scale-95"
+                  }`}
                 title={
                   isRoundEnded
                     ? "Refresh Balance"
@@ -100,9 +98,8 @@ export function DashboardHeader() {
                 }
               >
                 <IconRefresh
-                  className={`w-4 h-4 ${
-                    isFetching ? "animate-spin text-pitch" : "text-gray-400"
-                  }`}
+                  className={`w-4 h-4 ${isFetching ? "animate-spin text-pitch" : "text-gray-400"
+                    }`}
                 />
               </button>
             </div>

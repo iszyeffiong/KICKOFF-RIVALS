@@ -7,32 +7,9 @@ import { z } from "zod";
 // HELPER FUNCTIONS
 // ==========================================
 
-function generateUniqueUsername(): string {
-  const adjectives = [
-    "Rival",
-    "Swift",
-    "Prime",
-    "Elite",
-    "Bold",
-    "Fierce",
-    "Sharp",
-    "Quick",
-  ];
-  const nouns = [
-    "Panda",
-    "Fox",
-    "Tiger",
-    "Eagle",
-    "Wolf",
-    "Bear",
-    "Lion",
-    "Falcon",
-  ];
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  const num = Math.floor(Math.random() * 999);
-  return `${adj}${noun}${num}`;
-}
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
 
 function generateReferralCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -66,6 +43,30 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   });
 
   if (existingUser) {
+    // If we have existing user BUT we are passing NEW registration data (username/league),
+    // we should update the existing record. This fixed the "not reflecting" issue.
+    if ((data.username && existingUser.username !== data.username) ||
+      (data.leagueId && !existingUser.allianceLeagueId) ||
+      (data.teamId && !existingUser.allianceTeamId)) {
+
+      const updateData: any = {};
+      if (data.username) updateData.username = data.username;
+      if (data.leagueId) updateData.allianceLeagueId = data.leagueId;
+      if (data.teamId) updateData.allianceTeamId = data.teamId;
+
+      const [updatedUser] = await db
+        .update(users)
+        .set(updateData)
+        .where(eq(users.walletAddress, normalized))
+        .returning();
+
+      return {
+        success: true,
+        user: updatedUser,
+        isNew: false,
+      };
+    }
+
     return {
       success: true,
       user: existingUser,
@@ -81,8 +82,9 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
     };
   }
 
-  // Create new user
-  const username = data.username || generateUniqueUsername();
+  // Create new user - DISABLE automatic generation as requested
+  // Username is now expected to be provided from onboarding
+  const username = data.username || `User_${normalized.slice(2, 8).toUpperCase()}`;
   const referralCode = generateReferralCode();
 
   try {

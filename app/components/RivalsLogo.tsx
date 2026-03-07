@@ -1,15 +1,18 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "../lib/utils";
 
 interface RivalsLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "full" | "icon" | "text";
+  to?: string;
 }
 
 export function RivalsLogo({
   className,
   size = "md",
   variant = "full",
+  to = "/",
 }: RivalsLogoProps) {
   const sizeClasses = {
     sm: "h-6",
@@ -25,55 +28,44 @@ export function RivalsLogo({
     xl: "text-6xl",
   };
 
-  if (variant === "icon") {
-    return (
-      <img
-        src="/logo.png"
-        alt="KickOff Rivals"
-        className={cn(
-          "object-contain",
-          sizeClasses[size],
-          "aspect-square",
-          className,
-        )}
-      />
-    );
-  }
-
-  if (variant === "text") {
-    return (
-      <span
-        className={cn(
-          "font-sport font-black italic tracking-tighter",
-          textSizeClasses[size],
-          className,
-        )}
-      >
-        KICKOFF<span className="text-primary">RIVALS</span>
-      </span>
-    );
-  }
+  const content = (
+    <>
+      {(variant === "full" || variant === "icon") && (
+        <img
+          src="/logo.png"
+          alt="KickOff Rivals"
+          className={cn(
+            "object-contain",
+            sizeClasses[size],
+            "aspect-square",
+            variant === "icon" && className,
+          )}
+        />
+      )}
+      {(variant === "full" || variant === "text") && (
+        <span
+          className={cn(
+            "font-sport font-black italic tracking-tighter",
+            textSizeClasses[size],
+            variant === "text" ? className : "text-white",
+          )}
+        >
+          KICKOFF<span className="text-primary">RIVALS</span>
+        </span>
+      )}
+    </>
+  );
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <img
-        src="/logo.png"
-        alt="KickOff Rivals"
-        className={cn(
-          "object-contain",
-          sizeClasses[size],
-          "aspect-square",
-        )}
-      />
-      <span
-        className={cn(
-          "font-sport font-black italic tracking-tighter text-white",
-          textSizeClasses[size],
-        )}
-      >
-        KICKOFF<span className="text-primary">RIVALS</span>
-      </span>
-    </div>
+    <Link
+      to={to as any}
+      className={cn(
+        "flex items-center gap-2 hover:opacity-80 transition-opacity whitespace-nowrap",
+        variant === "full" && className
+      )}
+    >
+      {content}
+    </Link>
   );
 }
 
