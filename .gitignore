@@ -55,6 +55,7 @@ coverage
 .temp
 *.pem
 tmp/
+.tanstack/
 contracts/node_modules/
 contracts/artifacts/
 contracts/cache/

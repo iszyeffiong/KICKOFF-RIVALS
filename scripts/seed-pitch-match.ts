@@ -1,4 +1,4 @@
-import { db, matches, seasons, teams } from "./app/lib/db";
+import { db, matches, seasons, teams } from "../app/lib/db";
 import { eq, desc } from "drizzle-orm";
 
 async function seedPitchMatch() {
