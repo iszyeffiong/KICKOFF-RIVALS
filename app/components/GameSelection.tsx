@@ -36,7 +36,7 @@ export function GameSelection({ onSelectFootball }: GameSelectionProps) {
         </div>
 
         {/* Game Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-5xl w-full">
           {/* Football - Active */}
           <GameCard
             title="Football"
@@ -91,6 +91,32 @@ export function GameSelection({ onSelectFootball }: GameSelectionProps) {
             status="coming_soon"
             accentColor="yellow"
           />
+
+          {/* Aviator - Coming Soon */}
+          <GameCard
+            title="Aviator"
+            description="High-flying crash game — cash out before the plane flies away and multiply your stake!"
+            icon={
+              <svg
+                width="24"
+                height="24"
+                className="w-14 h-14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2L3 9l2 2 4-2-2 5 2 1 3-4 3 4 2-1-2-5 4 2 2-2z" />
+                <path d="M10 19l2 3 2-3" />
+                <path d="M7 13l-4 2" />
+                <path d="M17 13l4 2" />
+              </svg>
+            }
+            status="coming_soon"
+            accentColor="purple"
+          />
         </div>
       </div>
 
@@ -108,7 +134,7 @@ interface GameCardProps {
   icon: React.ReactNode;
   status: "active" | "coming_soon";
   onClick?: () => void;
-  accentColor: "emerald" | "orange" | "yellow";
+  accentColor: "emerald" | "orange" | "yellow" | "purple";
 }
 
 const accentStyles = {
@@ -136,6 +162,14 @@ const accentStyles = {
     badge: "bg-slate-700 text-slate-300",
     cta: "text-yellow-400",
   },
+  purple: {
+    glow: "group-hover:shadow-purple-500/10",
+    border: "group-hover:border-purple-500/20",
+    iconBg: "bg-purple-500/10",
+    iconColor: "text-purple-400",
+    badge: "bg-slate-700 text-slate-300",
+    cta: "text-purple-400",
+  },
 };
 
 function GameCard({
@@ -159,11 +193,11 @@ function GameCard({
         "glass-card",
         isActive
           ? cn(
-            "cursor-pointer hover:translate-y-[-6px]",
-            "hover:shadow-2xl",
-            styles.glow,
-            styles.border,
-          )
+              "cursor-pointer hover:translate-y-[-6px]",
+              "hover:shadow-2xl",
+              styles.glow,
+              styles.border,
+            )
           : "cursor-not-allowed opacity-50",
       )}
     >
