@@ -7,6 +7,7 @@ import {
   IconCoins,
   IconZap,
   IconRefresh,
+  IconTrophy,
 } from "../Icons";
 import { RivalsLogo } from "../RivalsLogo";
 import { useUserStore } from "../../stores/userStore";
@@ -22,13 +23,18 @@ const NAV_TABS = [
   },
   {
     to: "/dashboard/league" as const,
-    label: "Table",
+    label: "Tables",
     icon: <IconTable className="w-5 h-5" />,
   },
   {
     to: "/dashboard/bets" as const,
     label: "My Bets",
     icon: <IconTicket className="w-5 h-5" />,
+  },
+  {
+    to: "/dashboard/leaderboard" as const,
+    label: "Leaderboard",
+    icon: <IconTrophy className="w-5 h-5" />,
   },
   {
     to: "/dashboard/profile" as const,

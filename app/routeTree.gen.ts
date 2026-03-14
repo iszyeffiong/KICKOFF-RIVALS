@@ -22,8 +22,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard/profile'
 import { Route as DashboardLeagueRouteImport } from './routes/dashboard/league'
+import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard/leaderboard'
 import { Route as DashboardHomeRouteImport } from './routes/dashboard/home'
 import { Route as DashboardBetsRouteImport } from './routes/dashboard/bets'
+import { Route as ApiLeaderboardRouteImport } from './routes/api/leaderboard'
 import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.register-referral'
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
@@ -104,6 +106,11 @@ const DashboardLeagueRoute = DashboardLeagueRouteImport.update({
   path: '/league',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLeaderboardRoute = DashboardLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardHomeRoute = DashboardHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -113,6 +120,11 @@ const DashboardBetsRoute = DashboardBetsRouteImport.update({
   id: '/bets',
   path: '/bets',
   getParentRoute: () => DashboardRoute,
+} as any)
+const ApiLeaderboardRoute = ApiLeaderboardRouteImport.update({
+  id: '/api/leaderboard',
+  path: '/api/leaderboard',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUserRegisterReferralRoute = ApiUserRegisterReferralRouteImport.update({
   id: '/api/user/register-referral',
@@ -198,8 +210,10 @@ export interface FileRoutesByFullPath {
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/api/leaderboard': typeof ApiLeaderboardRoute
   '/dashboard/bets': typeof DashboardBetsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/league': typeof DashboardLeagueRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -228,8 +242,10 @@ export interface FileRoutesByTo {
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/api/leaderboard': typeof ApiLeaderboardRoute
   '/dashboard/bets': typeof DashboardBetsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/league': typeof DashboardLeagueRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -260,8 +276,10 @@ export interface FileRoutesById {
   '/play': typeof PlayRoute
   '/sign': typeof SignRoute
   '/welcome': typeof WelcomeRoute
+  '/api/leaderboard': typeof ApiLeaderboardRoute
   '/dashboard/bets': typeof DashboardBetsRoute
   '/dashboard/home': typeof DashboardHomeRoute
+  '/dashboard/leaderboard': typeof DashboardLeaderboardRoute
   '/dashboard/league': typeof DashboardLeagueRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -293,8 +311,10 @@ export interface FileRouteTypes {
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/api/leaderboard'
     | '/dashboard/bets'
     | '/dashboard/home'
+    | '/dashboard/leaderboard'
     | '/dashboard/league'
     | '/dashboard/profile'
     | '/dashboard/'
@@ -323,8 +343,10 @@ export interface FileRouteTypes {
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/api/leaderboard'
     | '/dashboard/bets'
     | '/dashboard/home'
+    | '/dashboard/leaderboard'
     | '/dashboard/league'
     | '/dashboard/profile'
     | '/dashboard'
@@ -354,8 +376,10 @@ export interface FileRouteTypes {
     | '/play'
     | '/sign'
     | '/welcome'
+    | '/api/leaderboard'
     | '/dashboard/bets'
     | '/dashboard/home'
+    | '/dashboard/leaderboard'
     | '/dashboard/league'
     | '/dashboard/profile'
     | '/dashboard/'
@@ -386,6 +410,7 @@ export interface RootRouteChildren {
   PlayRoute: typeof PlayRoute
   SignRoute: typeof SignRoute
   WelcomeRoute: typeof WelcomeRoute
+  ApiLeaderboardRoute: typeof ApiLeaderboardRoute
   ApiBetsActiveRoute: typeof ApiBetsActiveRoute
   ApiBetsSettleRoute: typeof ApiBetsSettleRoute
   ApiCouponsVerifyRoute: typeof ApiCouponsVerifyRoute
@@ -495,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLeagueRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/leaderboard': {
+      id: '/dashboard/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/dashboard/leaderboard'
+      preLoaderRoute: typeof DashboardLeaderboardRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/home': {
       id: '/dashboard/home'
       path: '/home'
@@ -508,6 +540,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/bets'
       preLoaderRoute: typeof DashboardBetsRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/api/leaderboard': {
+      id: '/api/leaderboard'
+      path: '/api/leaderboard'
+      fullPath: '/api/leaderboard'
+      preLoaderRoute: typeof ApiLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/user/register-referral': {
       id: '/api/user/register-referral'
@@ -613,6 +652,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardBetsRoute: typeof DashboardBetsRoute
   DashboardHomeRoute: typeof DashboardHomeRoute
+  DashboardLeaderboardRoute: typeof DashboardLeaderboardRoute
   DashboardLeagueRoute: typeof DashboardLeagueRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -621,6 +661,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardBetsRoute: DashboardBetsRoute,
   DashboardHomeRoute: DashboardHomeRoute,
+  DashboardLeaderboardRoute: DashboardLeaderboardRoute,
   DashboardLeagueRoute: DashboardLeagueRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardIndexRoute: DashboardIndexRoute,
@@ -641,6 +682,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayRoute: PlayRoute,
   SignRoute: SignRoute,
   WelcomeRoute: WelcomeRoute,
+  ApiLeaderboardRoute: ApiLeaderboardRoute,
   ApiBetsActiveRoute: ApiBetsActiveRoute,
   ApiBetsSettleRoute: ApiBetsSettleRoute,
   ApiCouponsVerifyRoute: ApiCouponsVerifyRoute,

@@ -57,6 +57,7 @@ export function ProfileScreen({
     message: string;
   }>({ type: null, message: "" });
   const [referralCode, setReferralCode] = useState("");
+  const [isApplyingReferral, setIsApplyingReferral] = useState(false);
   const [referralStatus, setReferralStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
@@ -77,13 +78,20 @@ export function ProfileScreen({
 
   const handleReferral = async () => {
     if (!referralCode.trim()) return;
-    const result = await onReferral(referralCode.trim());
-    setReferralStatus({
-      type: result.success ? "success" : "error",
-      message: result.message || (result.success ? "Referral applied!" : "Invalid code"),
-    });
-    if (result.success) {
-      setReferralCode("");
+    setIsApplyingReferral(true);
+    setReferralStatus({ type: null, message: "" });
+    
+    try {
+      const result = await onReferral(referralCode.trim());
+      setReferralStatus({
+        type: result.success ? "success" : "error",
+        message: result.message || (result.success ? "Referral applied!" : "Invalid code"),
+      });
+      if (result.success) {
+        setReferralCode("");
+      }
+    } finally {
+      setIsApplyingReferral(false);
     }
   };
 
@@ -406,13 +414,19 @@ export function ProfileScreen({
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                     placeholder="Enter friend's code"
-                    className="input flex-1"
+                    className="input flex-1 disabled:opacity-50"
+                    disabled={isApplyingReferral || referralStatus.type === "success"}
                   />
                   <button
                     onClick={handleReferral}
-                    className="btn btn-primary px-6"
+                    disabled={isApplyingReferral || referralStatus.type === "success" || !referralCode.trim()}
+                    className="btn btn-primary px-6 flex items-center justify-center min-w-[100px]"
                   >
-                    Apply
+                    {isApplyingReferral ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
                   </button>
                 </div>
                 {referralStatus.message && (

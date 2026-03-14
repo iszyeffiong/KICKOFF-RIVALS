@@ -32,7 +32,8 @@ import { SimulationScreen } from "./SimulationScreen";
 import { LeagueTable } from "./LeagueTable";
 import { ProfileScreen } from "./ProfileScreen";
 import { WalletModal } from "./WalletModal";
-import { IconHome, IconTicket, IconUser, IconTable } from "./Icons";
+import { IconHome, IconTicket, IconUser, IconTable, IconTrophy } from "./Icons";
+import { Leaderboard } from "./Leaderboard";
 import { ConnectWallet } from "./ConnectWallet";
 import { SwapConfirm } from "./SwapConfirm";
 import { BetModal } from "./BetModal";
@@ -105,7 +106,7 @@ const App: React.FC = () => {
   const [roundNumber, setRoundNumber] = useState(1);
   const [seasonId, setSeasonId] = useState(1);
   const [activeTab, setActiveTab] = useState<
-    "home" | "league" | "bets" | "profile"
+    "home" | "league" | "bets" | "leaderboard" | "profile"
   >("home");
   const [betTab, setBetTab] = useState<"ongoing" | "ended">("ongoing");
   const [balance, setBalance] = useState(INITIAL_BALANCE);
@@ -1335,13 +1336,18 @@ const App: React.FC = () => {
               },
               {
                 id: "league",
-                label: "Table",
+                label: "Tables",
                 icon: <IconTable className="w-5 h-5" />,
               },
               {
                 id: "bets",
                 label: "My Bets",
                 icon: <IconTicket className="w-5 h-5" />,
+              },
+              {
+                id: "leaderboard",
+                label: "Leaderboard",
+                icon: <IconTrophy className="w-5 h-5" />,
               },
               {
                 id: "profile",
@@ -1536,6 +1542,12 @@ const App: React.FC = () => {
             onOpenWallet={() => setShowWallet(true)}
             onClaimAllianceRewards={handleClaimAllianceRewards}
           />
+        </main>
+      )}
+      
+      {activeTab === "leaderboard" && (
+        <main className="p-3 w-full">
+          <Leaderboard />
         </main>
       )}
 

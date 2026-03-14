@@ -255,11 +255,24 @@ export const registerReferral = createServerFn({ method: "POST" })
 
     const REWARD_AMOUNT = 5000;
 
-    // Update user with referrer
+    // Update user with referrer and reward
     await db
       .update(users)
-      .set({ referredBy: referrer.walletAddress })
+      .set({ 
+        referredBy: referrer.walletAddress,
+        coins: (user.coins || 0) + REWARD_AMOUNT,
+      })
       .where(eq(users.walletAddress, user.walletAddress));
+
+    // Log transaction for referred user
+    await db.insert(transactions).values({
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}-1`,
+      walletAddress: user.walletAddress,
+      type: "referral",
+      amount: REWARD_AMOUNT,
+      currency: "coins",
+      description: `Welcome Bonus (Referred by ${referrer.username})`,
+    });
 
     // Update referrer's stats
     await db
@@ -273,7 +286,7 @@ export const registerReferral = createServerFn({ method: "POST" })
 
     // Log transaction for referrer
     await db.insert(transactions).values({
-      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}-2`,
       walletAddress: referrer.walletAddress,
       type: "referral",
       amount: REWARD_AMOUNT,
@@ -281,7 +294,7 @@ export const registerReferral = createServerFn({ method: "POST" })
       description: `Referral Bonus: ${user.username}`,
     });
 
-    return { success: true, message: "Referral registered" };
+    return { success: true, message: "Referral applied! You both earned 5000 coins." };
   });
 
 // ==========================================
@@ -508,4 +521,54 @@ export const recordGamePlay = createServerFn({ method: "POST" })
       success: true,
       gamePlays: (user.gamePlays || 0) + 1,
     };
+  });
+
+// ==========================================
+// GET LEADERBOARD
+// ==========================================
+
+export const getLeaderboard = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      // Import desc from drizzle-orm
+      const { desc } = await import("drizzle-orm");
+      
+      const topUsersKor = await db.select({
+        walletAddress: users.walletAddress,
+        username: users.username,
+        doodlBalance: users.doodlBalance,
+        totalBets: users.totalBets,
+        wins: users.wins,
+        referralCount: users.referralCount,
+        coins: users.coins,
+      })
+      .from(users)
+      .orderBy(desc(users.doodlBalance))
+      .limit(50);
+
+      const topUsersReferrals = await db.select({
+        walletAddress: users.walletAddress,
+        username: users.username,
+        doodlBalance: users.doodlBalance,
+        totalBets: users.totalBets,
+        wins: users.wins,
+        referralCount: users.referralCount,
+        coins: users.coins,
+      })
+      .from(users)
+      .orderBy(desc(users.referralCount))
+      .limit(50);
+
+      return {
+        success: true,
+        leaderboardKor: topUsersKor,
+        leaderboardReferrals: topUsersReferrals
+      };
+    } catch (error) {
+      console.error("Failed to fetch leaderboard", error);
+      return {
+        success: false,
+        error: "Failed to fetch leaderboard"
+      };
+    }
   });
