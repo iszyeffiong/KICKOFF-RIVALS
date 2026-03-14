@@ -125,15 +125,13 @@ export async function seed() {
 // RUN SEED DIRECTLY
 // ==========================================
 
-// Only run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seed()
-    .then(() => {
-      console.log("Seed script finished");
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error("Seed script failed:", error);
-      process.exit(1);
-    });
-}
+// Run if executed directly
+seed()
+  .then(() => {
+    console.log("Seed script finished");
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("Seed script failed:", error);
+    process.exit(1);
+  });
