@@ -37,16 +37,14 @@ function DashboardLayout() {
   }
 
   return (
-    <div 
+    <div
       className={`min-h-screen font-sans text-dark bg-light flex flex-col transition-all ${
         betSlipSelections.length > 0 ? "lg:pr-[400px]" : ""
       }`}
     >
       <DashboardHeader />
-
       {/* Tab content rendered here via nested routes */}
       <Outlet />
-
       {/* Floating modals + persistent bet slip — always mounted */}
       <DashboardModals />
     </div>

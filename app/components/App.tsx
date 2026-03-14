@@ -927,6 +927,10 @@ const App: React.FC = () => {
         return { success: false, message: json.error || "Failed" };
       } else {
         console.log("Referral registered", json);
+        // Refresh profile to update referral stats
+        if (walletState.address) {
+          setTimeout(() => refreshProfile(walletState.address!), 1000);
+        }
         return { success: true, message: json.message || "Referral linked!" };
       }
     } catch (err: any) {
@@ -1671,7 +1675,7 @@ const App: React.FC = () => {
           />
         </main>
       )}
-      
+
       {activeTab === "leaderboard" && (
         <main className="p-3 w-full">
           <Leaderboard />

@@ -47,10 +47,11 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   if (existingUser) {
     // If we have existing user BUT we are passing NEW registration data (username/league),
     // we should update the existing record. This fixed the "not reflecting" issue.
-    if ((data.username && existingUser.username !== data.username) ||
+    if (
+      (data.username && existingUser.username !== data.username) ||
       (data.leagueId && !existingUser.allianceLeagueId) ||
-      (data.teamId && !existingUser.allianceTeamId)) {
-
+      (data.teamId && !existingUser.allianceTeamId)
+    ) {
       const updateData: any = {};
       if (data.username) updateData.username = data.username;
       if (data.leagueId) updateData.allianceLeagueId = data.leagueId;
@@ -86,7 +87,8 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
 
   // Create new user - DISABLE automatic generation as requested
   // Username is now expected to be provided from onboarding
-  const username = data.username || `User_${normalized.slice(2, 8).toUpperCase()}`;
+  const username =
+    data.username || `User_${normalized.slice(2, 8).toUpperCase()}`;
   const referralCode = generateReferralCode();
 
   try {
@@ -132,7 +134,9 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   } catch (error: any) {
     // Handle username conflict
     if (error.code === "23505" && error.message?.includes("username")) {
-      const retryUsername = `${username}${Math.floor(100 + Math.random() * 900)}`;
+      const retryUsername = `${username}${Math.floor(
+        100 + Math.random() * 900
+      )}`;
       const [retryUser] = await db
         .insert(users)
         .values({
@@ -243,6 +247,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
       canClaimWelcomeGift,
       nextGiftClaimIn,
       referralCode: user.referralCode,
+      hasReferred: !!user.referredBy,
       referralCount: user.referralCount,
       referralEarnings: user.referralEarnings,
       totalBets: user.totalBets,
@@ -321,7 +326,7 @@ export const registerReferral = createServerFn({ method: "POST" })
     // Update user with referrer and reward
     await db
       .update(users)
-      .set({ 
+      .set({
         referredBy: referrer.walletAddress,
         coins: (user.coins || 0) + REWARD_AMOUNT,
       })
@@ -357,7 +362,10 @@ export const registerReferral = createServerFn({ method: "POST" })
       description: `Referral Bonus: ${user.username}`,
     });
 
-    return { success: true, message: "Referral applied! You both earned 5000 coins." };
+    return {
+      success: true,
+      message: "Referral applied! You both earned 5000 coins.",
+    };
   });
 
 // ==========================================
@@ -725,48 +733,51 @@ export const recordGamePlay = createServerFn({ method: "POST" })
 // GET LEADERBOARD
 // ==========================================
 
-export const getLeaderboard = createServerFn({ method: "GET" })
-  .handler(async () => {
+export const getLeaderboard = createServerFn({ method: "GET" }).handler(
+  async () => {
     try {
       // Import desc from drizzle-orm
       const { desc } = await import("drizzle-orm");
-      
-      const topUsersKor = await db.select({
-        walletAddress: users.walletAddress,
-        username: users.username,
-        doodlBalance: users.doodlBalance,
-        totalBets: users.totalBets,
-        wins: users.wins,
-        referralCount: users.referralCount,
-        coins: users.coins,
-      })
-      .from(users)
-      .orderBy(desc(users.doodlBalance))
-      .limit(50);
 
-      const topUsersReferrals = await db.select({
-        walletAddress: users.walletAddress,
-        username: users.username,
-        doodlBalance: users.doodlBalance,
-        totalBets: users.totalBets,
-        wins: users.wins,
-        referralCount: users.referralCount,
-        coins: users.coins,
-      })
-      .from(users)
-      .orderBy(desc(users.referralCount))
-      .limit(50);
+      const topUsersKor = await db
+        .select({
+          walletAddress: users.walletAddress,
+          username: users.username,
+          doodlBalance: users.doodlBalance,
+          totalBets: users.totalBets,
+          wins: users.wins,
+          referralCount: users.referralCount,
+          coins: users.coins,
+        })
+        .from(users)
+        .orderBy(desc(users.doodlBalance))
+        .limit(50);
+
+      const topUsersReferrals = await db
+        .select({
+          walletAddress: users.walletAddress,
+          username: users.username,
+          doodlBalance: users.doodlBalance,
+          totalBets: users.totalBets,
+          wins: users.wins,
+          referralCount: users.referralCount,
+          coins: users.coins,
+        })
+        .from(users)
+        .orderBy(desc(users.referralCount))
+        .limit(50);
 
       return {
         success: true,
         leaderboardKor: topUsersKor,
-        leaderboardReferrals: topUsersReferrals
+        leaderboardReferrals: topUsersReferrals,
       };
     } catch (error) {
       console.error("Failed to fetch leaderboard", error);
       return {
         success: false,
-        error: "Failed to fetch leaderboard"
+        error: "Failed to fetch leaderboard",
       };
     }
-  });
+  }
+);
