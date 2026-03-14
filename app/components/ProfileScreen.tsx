@@ -379,7 +379,7 @@ export function ProfileScreen({
                 </button>
               </div>
               <p className="text-sm text-muted-foreground mt-3">
-                Share your code and earn 5000 coins for each friend who joins!
+                Share your code and you both earn 5000 coins when your friend joins!
               </p>
             </div>
 

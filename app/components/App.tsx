@@ -895,7 +895,7 @@ const App: React.FC = () => {
         return { success: false, message: json.error || "Failed" };
       } else {
         console.log("Referral registered", json);
-        return { success: true, message: "Referral linked!" };
+        return { success: true, message: json.message || "Referral linked!" };
       }
     } catch (err: any) {
       console.error("Referral error", err);
