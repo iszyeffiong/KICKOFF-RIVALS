@@ -342,11 +342,10 @@ export function ProfileScreen({
         </div>
       )}
 
-      {/* Referral Section - COMING SOON OVERLAY */}
+      {/* Referral Section */}
       {activeSection === "referral" && (
-        <div className="space-y-4 relative overflow-hidden min-h-[300px]">
-          <ComingSoonOverlay />
-          <div className="opacity-50 blur-[1px] space-y-4">
+        <div className="space-y-4 relative min-h-[300px]">
+          <div className="space-y-4">
             {/* Your Referral Code */}
             <div className="card p-4">
               <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -354,7 +353,7 @@ export function ProfileScreen({
                 Your Referral Code
               </h3>
               <div className="flex gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-lg font-bold text-foreground">
+                <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-lg font-bold text-foreground overflow-x-auto whitespace-nowrap">
                   {stats.referralCode}
                 </div>
                 <button
@@ -363,7 +362,6 @@ export function ProfileScreen({
                     "btn px-4",
                     copied ? "btn-primary" : "btn-outline"
                   )}
-                  disabled
                 >
                   {copied ? (
                     <IconCheck className="w-5 h-5" />
@@ -373,7 +371,7 @@ export function ProfileScreen({
                 </button>
               </div>
               <p className="text-sm text-muted-foreground mt-3">
-                Share your code and earn 100 coins for each friend who joins!
+                Share your code and earn 5000 coins for each friend who joins!
               </p>
             </div>
 
@@ -409,16 +407,26 @@ export function ProfileScreen({
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                     placeholder="Enter friend's code"
                     className="input flex-1"
-                    disabled
                   />
                   <button
                     onClick={handleReferral}
-                    disabled={true}
                     className="btn btn-primary px-6"
                   >
                     Apply
                   </button>
                 </div>
+                {referralStatus.message && (
+                  <p
+                    className={cn(
+                      "text-xs mt-2",
+                      referralStatus.type === "success"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    )}
+                  >
+                    {referralStatus.message}
+                  </p>
+                )}
               </div>
             )}
           </div>

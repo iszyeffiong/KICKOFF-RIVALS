@@ -253,7 +253,7 @@ export const registerReferral = createServerFn({ method: "POST" })
       return { success: false, error: "Cannot refer self" };
     }
 
-    const REWARD_AMOUNT = 50;
+    const REWARD_AMOUNT = 5000;
 
     // Update user with referrer
     await db
@@ -267,7 +267,7 @@ export const registerReferral = createServerFn({ method: "POST" })
       .set({
         referralCount: (referrer.referralCount || 0) + 1,
         referralEarnings: (referrer.referralEarnings || 0) + REWARD_AMOUNT,
-        doodlBalance: (referrer.doodlBalance || 0) + REWARD_AMOUNT,
+        coins: (referrer.coins || 0) + REWARD_AMOUNT,
       })
       .where(eq(users.walletAddress, referrer.walletAddress));
 
@@ -277,7 +277,7 @@ export const registerReferral = createServerFn({ method: "POST" })
       walletAddress: referrer.walletAddress,
       type: "referral",
       amount: REWARD_AMOUNT,
-      currency: "kor",
+      currency: "coins",
       description: `Referral Bonus: ${user.username}`,
     });
 
