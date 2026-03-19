@@ -849,7 +849,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               if (!old) return old;
               return {
                 ...old,
-                coins: (old.coins || 0) + reward,
+                korBalance: (old.korBalance || 0) + reward,
                 quests: (old.quests || []).map((q: any) =>
                   q.id === id ? { ...q, completed: true } : q,
                 ),
@@ -861,7 +861,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           addTransaction(
             "redeem",
             reward,
-            "coins",
+            "kor",
             `Quest Reward: ${quest.title}`,
           );
 
@@ -966,12 +966,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.success) {
-        addTransaction(
-          "bonus",
-          data.reward,
-          "coins",
-          "4-Hourly Check-in Bonus",
-        );
+        addTransaction("bonus", data.reward, "kor", "4-Hourly Check-in Bonus");
         refreshProfileQuery();
         return { success: true, message: data.message, reward: data.reward };
       } else {

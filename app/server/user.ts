@@ -653,9 +653,9 @@ export const checkIn = createServerFn({ method: "POST" })
       }
     }
 
-    // Add reward to coins
+    // Add reward to KOR balance
     await db.update(users).set({
-      coins: (user.coins || 0) + REWARD,
+      doodlBalance: (user.doodlBalance || 0) + REWARD,
       lastCheckInDate: new Date(),
     }).where(eq(users.walletAddress, normalized));
 
@@ -665,7 +665,7 @@ export const checkIn = createServerFn({ method: "POST" })
       walletAddress: normalized,
       type: "bonus",
       amount: REWARD,
-      currency: "coins",
+      currency: "kor",
       description: "4-Hourly Check-in Bonus"
     });
 
@@ -730,9 +730,9 @@ export const claimSocialReward = createServerFn({ method: "POST" })
       set: { completed: true, progress: 1 }
     });
 
-    // 2. Add reward to coins in DB
+    // 2. Add reward to KOR balance in DB
     await db.update(users).set({
-      coins: (user.coins || 0) + REWARD,
+      doodlBalance: (user.doodlBalance || 0) + REWARD,
     }).where(eq(users.walletAddress, normalized));
 
     // 3. Log transaction in DB
@@ -741,7 +741,7 @@ export const claimSocialReward = createServerFn({ method: "POST" })
       walletAddress: normalized,
       type: "redeem",
       amount: REWARD,
-      currency: "coins",
+      currency: "kor",
       description: `Social Quest Reward: ${questData?.title || data.questId}`
     });
 
