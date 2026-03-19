@@ -74,7 +74,7 @@ function generateMatchEvents(
   return events.sort((a, b) => a.minute - b.minute);
 }
 
-// Helper to simulate match result
+// Helper to simulate match result with strength bias
 function simulateMatchResult(
   homeTeamId: string,
   awayTeamId: string,
@@ -84,9 +84,32 @@ function simulateMatchResult(
   const finalSeed = seed || Math.random().toString();
   const rng = seedrandom(finalSeed);
 
-  // Simple simulation
-  const homeScore = Math.floor(rng() * 5); // 0-4 goals
-  const awayScore = Math.floor(rng() * 5); // 0-4 goals
+  // Strength lookup
+  const allTeams = Object.values(TEAMS).flat();
+  const home = allTeams.find(t => t.id === homeTeamId);
+  const away = allTeams.find(t => t.id === awayTeamId);
+  const homeStr = home?.strength || 75;
+  const awayStr = away?.strength || 75;
+
+  // Calculate biases based on strength (90-70 = 20 max diff usually)
+  const diff = (homeStr - awayStr) / 20; // range ~ -1.5 to 1.5
+  
+  // More realistic goal distribution (Poisson-ish)
+  const getGoals = (bias: number) => {
+    const r = rng();
+    const lambda = 1.3 + bias * 0.8; // Mean goals adjusted by strength
+    
+    // Simple outcome mapping for speed & determinism
+    if (r < Math.exp(-lambda)) return 0;
+    if (r < Math.exp(-lambda) * (1 + lambda)) return 1;
+    if (r < Math.exp(-lambda) * (1 + lambda + Math.pow(lambda, 2)/2)) return 2;
+    if (r < 0.95) return 3;
+    return 4 + Math.floor(rng() * 2); // Cap at 4-5 usually
+  };
+
+  const homeScore = getGoals(diff);
+  const awayScore = getGoals(-diff);
+  
   const events = generateMatchEvents(
     homeTeamId,
     awayTeamId,
@@ -152,16 +175,20 @@ async function startLiveMatch(
   }
 }
 
-// Helper to generate next round matches
+// Helper to generate next round matches with strength-based odds
 function generateNextRoundMatches(seasonId: number, roundNumber: number, startTime?: Date) {
   const newMatches = [];
   const leaguesList = ["l1", "l2", "l3"];
+  
+  // Create deterministic rng for this round to keep fixtures stable if re-run
+  const roundRng = seedrandom(`fixtures-${seasonId}-${roundNumber}`);
 
   for (const leagueId of leaguesList) {
     const leagueTeams = TEAMS[leagueId] || [];
     if (leagueTeams.length < 2) continue;
 
-    const shuffled = [...leagueTeams].sort(() => 0.5 - Math.random());
+    // Use round-specific shuffle (simulated round-robin for variety)
+    const shuffled = [...leagueTeams].sort(() => 0.5 - roundRng());
 
     for (let i = 0; i < shuffled.length; i += 2) {
       if (i + 1 >= shuffled.length) break;
@@ -169,6 +196,24 @@ function generateNextRoundMatches(seasonId: number, roundNumber: number, startTi
       const home = shuffled[i];
       const away = shuffled[i + 1];
       const matchId = `m-${seasonId}-${roundNumber}-${leagueId}-${i / 2}`;
+
+      // Strength-based odds calculation
+      const hStr = home.strength;
+      const aStr = away.strength;
+      const totalStr = hStr + aStr;
+      
+      // Balanced win probabilities with fixed draw baseline (approx 28%)
+      const pDraw = 0.28;
+      const rawHome = (hStr / totalStr) * 1.1; // home advantage bias
+      const rawAway = (aStr / totalStr);
+      const rem = 1 - pDraw;
+      const pHome = rem * (rawHome / (rawHome + rawAway));
+      const pAway = rem * (rawAway / (rawHome + rawAway));
+
+      const margin = 0.92; // Tighter margin (8% house edge) for more professional odds
+      const oddsH = Number(Math.max(1.1, margin / pHome).toFixed(2));
+      const oddsA = Number(Math.max(1.1, margin / pAway).toFixed(2));
+      const oddsD = Number(Math.max(2.1, margin / pDraw).toFixed(2));
 
       newMatches.push({
         id: matchId,
@@ -179,11 +224,11 @@ function generateNextRoundMatches(seasonId: number, roundNumber: number, startTi
         awayTeamId: away.id,
         status: "SCHEDULED",
         startTime: startTime || new Date(), 
-        oddsHome: Number((1 + Math.random() * 2).toFixed(2)),
-        oddsDraw: Number((2 + Math.random() * 2).toFixed(2)),
-        oddsAway: Number((1 + Math.random() * 2).toFixed(2)),
-        oddsGg: Number((1.5 + Math.random()).toFixed(2)),
-        oddsNogg: Number((1.5 + Math.random()).toFixed(2)),
+        oddsHome: oddsH,
+        oddsDraw: oddsD,
+        oddsAway: oddsA,
+        oddsGg: Number((1.5 + roundRng()).toFixed(2)),
+        oddsNogg: Number((1.5 + roundRng()).toFixed(2)),
       });
     }
   }
@@ -756,7 +801,7 @@ export const placeBet = createServerFn({ method: "POST" })
       }
 
       // Check balance
-      if ((user.doodlBalance || 0) < data.stake) {
+      if ((user.coins || 0) < data.stake) {
         return { success: false, error: "Insufficient balance" };
       }
 
@@ -799,23 +844,23 @@ export const placeBet = createServerFn({ method: "POST" })
       });
 
       // Deduct balance
-      const newBalance = (user.doodlBalance || 0) - data.stake;
+      const newBalance = (user.coins || 0) - data.stake;
       await db
         .update(users)
         .set({
-          doodlBalance: newBalance,
+          coins: newBalance,
           totalBets: (user.totalBets || 0) + 1,
         })
         .where(eq(users.walletAddress, normalized));
 
       // Log transaction
       await db.insert(transactions).values({
-        id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        id: `tx-${Date.now()}`,
         walletAddress: normalized,
         type: "bet",
-        amount: -data.stake,
-        currency: "kor",
-        description: `Bet on ${data.selection} @ ${data.odds}`,
+        amount: data.stake,
+        currency: "coins",
+        description: `Bet on ${match.id} (${data.selection})`,
       });
 
       return {
@@ -887,13 +932,13 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
       await db.insert(bets).values(betValues);
 
       // Deduct balance
-      const newBalance = (user.doodlBalance || 0) - data.stake;
-      console.log(`[ACCUMULATOR] Deducting stake ${data.stake} from ${user.doodlBalance}. New Balance: ${newBalance}`);
+      const newBalance = (user.coins || 0) - data.stake;
+      console.log(`[ACCUMULATOR] Deducting stake ${data.stake} from ${user.coins}. New Balance: ${newBalance}`);
 
       await db
         .update(users)
         .set({
-          doodlBalance: newBalance,
+          coins: newBalance,
           totalBets: (user.totalBets || 0) + 1,
         })
         .where(eq(users.walletAddress, normalized));
@@ -905,9 +950,9 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
         id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         walletAddress: normalized,
         type: "bet",
-        amount: -data.stake,
-        currency: "kor",
-        description: `Accumulator bet (${data.selections.length} selections) @ ${data.totalOdds.toFixed(2)}`,
+        amount: data.stake, // This should be positive for a deduction transaction
+        currency: "coins",
+        description: `Accumulator Bet (${data.selections.length} legs) @ ${data.totalOdds.toFixed(2)}`,
       });
 
       return {
@@ -981,14 +1026,12 @@ export const settleBets = createServerFn({ method: "POST" })
         if (won) {
           winners++;
 
-          // For accumulators, only pay out if all selections won
           if (bet.betType === "accumulator" && bet.accumulatorId) {
-            // Check if all selections in accumulator won
             const allBetsInAccumulator = await db
               .select()
               .from(bets)
               .where(eq(bets.accumulatorId, bet.accumulatorId))
-              .orderBy(bets.createdAt); // Consistent order
+              .orderBy(bets.createdAt);
 
             const allSettled = allBetsInAccumulator.every(
               (b) => b.status !== "pending",
@@ -998,18 +1041,15 @@ export const settleBets = createServerFn({ method: "POST" })
             );
 
             if (allSettled && allWon) {
-              // Pay out only once — only if THIS bet is the FIRST leg of the accumulator
               const isFirstLeg = allBetsInAccumulator[0]?.id === bet.id;
               if (isFirstLeg) {
                 const potentialReturn = Math.floor(bet.potentialReturn);
-                // For accumulators, we don't really have a single "odds" easily but we can use totalOdds if we want.
-                // However, bet.potentialReturn / bet.stake gives us the decimal odds for the whole accumulator.
                 const effectiveOdds = bet.stake > 0 ? potentialReturn / bet.stake : 1;
 
                 await db
                   .update(users)
                   .set({
-                    doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                    coins: sql`${users.coins} + ${potentialReturn}`,
                     wins: sql`${users.wins} + 1`,
                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
                     bestOddsWon: sql`CASE WHEN ${effectiveOdds} > ${users.bestOddsWon} THEN ${effectiveOdds} ELSE ${users.bestOddsWon} END`,
@@ -1020,24 +1060,22 @@ export const settleBets = createServerFn({ method: "POST" })
                   })
                   .where(eq(users.walletAddress, bet.walletAddress));
 
-                // Log win transaction
                 await db.insert(transactions).values({
                   id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                   walletAddress: bet.walletAddress,
                   type: "win",
                   amount: potentialReturn,
-                  currency: "kor",
-                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} KOR`,
+                  currency: "coins",
+                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} Coins`,
                 });
               }
             }
-          } else {
-
+          } else if (bet.betType === "single") {
             const odds = Number(bet.odds);
             await db
               .update(users)
               .set({
-                doodlBalance: sql`${users.doodlBalance} + ${bet.potentialReturn}`,
+                coins: sql`${users.coins} + ${bet.potentialReturn}`,
                 wins: sql`${users.wins} + 1`,
                 biggestWin: sql`CASE WHEN ${bet.potentialReturn} > ${users.biggestWin} THEN ${bet.potentialReturn} ELSE ${users.biggestWin} END`,
                 bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
@@ -1048,14 +1086,13 @@ export const settleBets = createServerFn({ method: "POST" })
               })
               .where(eq(users.walletAddress, bet.walletAddress));
 
-            // Log win transaction
             await db.insert(transactions).values({
               id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
               walletAddress: bet.walletAddress,
               type: "win",
               amount: bet.potentialReturn,
-              currency: "kor",
-              description: `Bet win @ ${bet.odds}`,
+              currency: "coins",
+              description: `Bet win @ ${bet.odds} — +${bet.potentialReturn} Coins`,
             });
           }
         } else {

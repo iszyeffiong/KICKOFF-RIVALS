@@ -197,7 +197,7 @@ export function BetModal({
                 Stake Amount
               </label>
               <span className="text-xs text-muted-foreground">
-                Balance: {balance.toLocaleString()} KOR
+                Balance: {balance.toLocaleString()} Coins
               </span>
             </div>
 
@@ -220,7 +220,7 @@ export function BetModal({
                   max={balance}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  KOR
+                  Coins
                 </span>
               </div>
 
@@ -283,7 +283,7 @@ export function BetModal({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Stake</span>
                 <span className="text-sm font-medium text-foreground">
-                  {stake.toLocaleString()} KOR
+                  {stake.toLocaleString()} Coins
                 </span>
               </div>
               <div className="border-t border-border pt-3 flex items-center justify-between">
@@ -291,7 +291,7 @@ export function BetModal({
                   Potential Win
                 </span>
                 <span className="text-lg font-bold text-primary">
-                  {potentialWin.toFixed(2)} KOR
+                  {potentialWin.toFixed(2)} Coins
                 </span>
               </div>
             </div>

@@ -188,7 +188,7 @@ export function AdminPortal({
       const seasonId = 1; // Default for now
 
       LEAGUES.forEach((league) => {
-        // Simple random pairing
+        // Use realistic strength-based pairing or deterministic shuffle
         const shuffled = [...TEAMS[league.id]].sort(() => 0.5 - Math.random());
         for (let i = 0; i < shuffled.length; i += 2) {
           if (i + 1 >= shuffled.length) break;
@@ -196,26 +196,34 @@ export function AdminPortal({
           const away = shuffled[i + 1];
           const mId = `m-${seasonId}-${roundId}-${league.id}-${i / 2}`;
 
-          // Basic odds calculation
-          const totalStrength = home.strength + away.strength;
-          const homeProb = home.strength / totalStrength;
-          const awayProb = away.strength / totalStrength;
-          const drawProb = 0.25; // Fixed draw probability
+          // Use the SAME robust odds calculation as the server (normalized)
+          const hStr = home.strength;
+          const aStr = away.strength;
+          const totalStr = hStr + aStr;
+          
+          const pDraw = 0.28;
+          const rawHome = (hStr / totalStr) * 1.1; // home advantage bias
+          const rawAway = (aStr / totalStr);
+          const rem = 1 - pDraw;
+          const pHome = rem * (rawHome / (rawHome + rawAway));
+          const pAway = rem * (rawAway / (rawHome + rawAway));
 
-          // Adjust probabilities to sum to 1
-          const factor = (1 - drawProb) / (homeProb + awayProb);
+          const margin = 0.92; 
+          const oddsH = Number(Math.max(1.1, margin / pHome).toFixed(2));
+          const oddsA = Number(Math.max(1.1, margin / pAway).toFixed(2));
+          const oddsD = Number(Math.max(2.1, margin / pDraw).toFixed(2));
 
           newMatches.push({
             id: mId,
             leagueId: league.id,
             homeTeam: home,
             awayTeam: away,
-            startTime: Date.now() + 60000, // Starts in 1 min
-            status: "SCHEDULED" as const, // API expects uppercase from typical enums, ensure consistency
+            startTime: Date.now() + 60000, 
+            status: "SCHEDULED" as const,
             odds: {
-              home: parseFloat((1 / (homeProb * factor)).toFixed(2)),
-              draw: parseFloat((1 / drawProb).toFixed(2)),
-              away: parseFloat((1 / (awayProb * factor)).toFixed(2)),
+              home: oddsH,
+              draw: oddsD,
+              away: oddsA,
               gg: 1.9,
               nogg: 1.9,
             },
@@ -227,7 +235,7 @@ export function AdminPortal({
             roundHash: "admin-gen",
             commitHash: "admin-gen",
             events: [],
-          } as any); // Cast to any to avoid strict type checks on temporary object construction
+          } as any);
         }
       });
 

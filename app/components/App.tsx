@@ -182,8 +182,8 @@ const App: React.FC = () => {
     bestOddsWon: 0,
     dailyWalkPoints: 0,
     lastWalkDate: "",
-    coins: 1000,
-    korBalance: 1000,
+    coins: 5000,
+    korBalance: 0,
     referralCode: generate6DigitCode(),
     hasReferred: false,
     referralCount: 0,
@@ -412,7 +412,7 @@ const App: React.FC = () => {
           walletAddress: address,
           username: userData.username || prev.username,
           coins: Number(userData.coins) || 0,
-          korBalance: Number(userData.korBalance) || 1000,
+          korBalance: Number(userData.korBalance) || 0,
           referralEarnings: userData.referralEarnings || 0,
           unclaimedAllianceRewards:
             Number(userData.unclaimedAllianceRewards) || 0,
@@ -448,7 +448,7 @@ const App: React.FC = () => {
             });
           })(),
         }));
-        setBalance(Number(userData.korBalance) || 1000);
+        setBalance(Number(userData.coins) || 0);
       } else {
         // Fallback for failed profile fetch - don't block the user
         console.warn(
@@ -678,16 +678,16 @@ const App: React.FC = () => {
       const profileData = await profileRes.json();
 
       if (profileData.success && profileData.user) {
-        const newBalance = Number(profileData.user.korBalance) || 0;
+        const newBalance = Number(profileData.user.coins) || 0;
         const oldBalance = balance;
         const winnings = newBalance - oldBalance;
 
         setBalance(newBalance);
-        setUserStats((prev) => ({ ...prev, korBalance: newBalance }));
+        setUserStats((prev) => ({ ...prev, coins: newBalance, korBalance: Number(profileData.user.korBalance) || 0 }));
 
         if (winnings > 0) {
-          console.log(`[WINNINGS] You won ${winnings} DOODL!`);
-          addTransaction("win", winnings, "kor", "Match Winnings");
+          console.log(`[WINNINGS] You won ${winnings} Coins!`);
+          addTransaction("win", winnings, "coins", "Match Winnings");
         }
       }
     } catch (err) {
@@ -1142,14 +1142,14 @@ const App: React.FC = () => {
         const totalStake = stake * betSlipSelections.length;
         setUserStats((s) => ({
           ...s,
-          korBalance: s.korBalance - totalStake,
+          coins: s.coins - totalStake,
           totalBets: s.totalBets + betSlipSelections.length,
         }));
         setBalance((prev) => prev - totalStake);
         addTransaction(
           "bet",
           totalStake,
-          "kor",
+          "coins",
           `${betSlipSelections.length} single bets`,
         );
       } else {
@@ -1198,14 +1198,14 @@ const App: React.FC = () => {
 
           setUserStats((s) => ({
             ...s,
-            korBalance: s.korBalance - stake,
+            coins: s.coins - stake,
             totalBets: s.totalBets + 1,
           }));
           setBalance((prev) => prev - stake);
           addTransaction(
             "bet",
             stake,
-            "kor",
+            "coins",
             `Accumulator (${betSlipSelections.length} selections)`,
           );
         } else {

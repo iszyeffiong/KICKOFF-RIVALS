@@ -28,6 +28,7 @@ import {
   IconPlay,
   IconRefresh,
   IconX,
+  IconShield,
 } from "./Icons";
 import { truncateAddress, formatNumber } from "../lib/utils";
 
@@ -320,24 +321,25 @@ export function ProfileScreen({
             </h3>
             <div className="grid grid-cols-4 gap-3">
               <AchievementBadge
-                icon={<IconStar />}
-                label="First Win"
-                unlocked={(stats?.wins || 0) > 0}
+                icon={<IconAward />}
+                label="Best Win"
+                value={`${(stats?.bestOddsWon || 0).toFixed(2)}x`}
+                unlocked={(stats?.bestOddsWon || 0) > 0}
               />
               <AchievementBadge
-                icon={<IconFlame />}
-                label="Hot Streak"
-                unlocked={(stats?.longestStreak || 0) >= 5}
+                icon={<IconShield />}
+                label="NFT Holder"
+                unlocked={false} // Placeholder for future NFT check
+              />
+              <AchievementBadge
+                icon={<IconStar />}
+                label="Beta Player"
+                unlocked={true} // All existing users are Beta players
               />
               <AchievementBadge
                 icon={<IconTarget />}
                 label="Sharpshooter"
                 unlocked={(winRate || 0) >= 60}
-              />
-              <AchievementBadge
-                icon={<IconTrophy />}
-                label="High Roller"
-                unlocked={(stats?.totalBets || 0) >= 100}
               />
             </div>
           </div>
@@ -574,27 +576,16 @@ export function ProfileScreen({
             onClick={onOpenWallet}
           />
           <SettingsButton
-            icon={<IconSettings className="w-5 h-5" />}
-            label="Sync Account"
-            description="Refresh your account data"
-            onClick={onSystemSync}
+            icon={<IconZap className="w-5 h-5 text-pitch" />}
+            label="KOR Transfer"
+            description="Coming Soon"
+            onClick={() => notify?.("KOR Transfer is coming soon!", "info")}
           />
           <SettingsButton
-            icon={<IconSettings className="w-5 h-5 text-yellow-500" />}
-            label="Reset Social Quests (Test)"
-            description="Clear quest progress for testing"
-            onClick={() => {
-              const socialIds = ["q-follow-x", "q-like-1", "q-like-2"];
-              socialIds.forEach((id) => {
-                localStorage.removeItem(`quest_completed_${id}`);
-                localStorage.removeItem(`quest_verify_${id}`);
-                localStorage.removeItem(`quest_visited_${id}`);
-              });
-              notify?.("Quest progress reset! Refreshing...", "success");
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
-            }}
+            icon={<IconCoins className="w-5 h-5 text-yellow-500" />}
+            label="Coin Transfer"
+            description="Coming Soon"
+            onClick={() => notify?.("Coin Transfer is coming soon!", "info")}
           />
           <SettingsButton
             icon={<IconLogOut className="w-5 h-5 text-destructive" />}
@@ -771,21 +762,34 @@ function StatItem({ label, value, highlight }: StatItemProps) {
 interface AchievementBadgeProps {
   icon: React.ReactNode;
   label: string;
+  value?: string;
   unlocked: boolean;
 }
 
-function AchievementBadge({ icon, label, unlocked }: AchievementBadgeProps) {
+function AchievementBadge({
+  icon,
+  label,
+  value,
+  unlocked,
+}: AchievementBadgeProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-1 p-2 rounded-lg transition-all",
+        "flex flex-col items-center gap-1 p-2 rounded-xl transition-all",
         unlocked
-          ? "bg-yellow-500/10 text-yellow-500"
-          : "bg-muted/50 text-muted-foreground opacity-50",
+          ? "bg-yellow-500/10 text-yellow-500 shadow-[inset_0_0_12px_rgba(234,179,8,0.05)]"
+          : "bg-muted/50 text-muted-foreground opacity-40",
       )}
     >
       <div className="w-8 h-8 flex items-center justify-center">{icon}</div>
-      <span className="text-[10px] font-medium text-center">{label}</span>
+      <div className="flex flex-col items-center leading-tight">
+        <span className="text-[9px] font-black uppercase tracking-tighter text-center">
+          {label}
+        </span>
+        {unlocked && value && (
+          <span className="text-[8px] font-bold opacity-80 mt-0.5">{value}</span>
+        )}
+      </div>
     </div>
   );
 }
