@@ -1,4 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserStore } from '../stores/userStore';
 import type { UserStats } from '../types';
 import { INITIAL_QUESTS } from '../constants';
@@ -50,10 +51,13 @@ export const useProfile = () => {
         if (data.quests) {
           const socialIds = ["q-follow-x", "q-like-1", "q-like-2"];
           const extra = INITIAL_QUESTS.filter(iq => socialIds.includes(iq.id) && !data.quests.some((sq: any) => sq.id === iq.id));
-          data.quests = [...data.quests, ...extra].map(q => {
-            if (socialIds.includes(q.id)) {
-              const isDone = typeof window !== 'undefined' ? localStorage.getItem(`quest_completed_${q.id}`) === 'true' : false;
-              return { ...q, completed: isDone, progress: isDone ? q.target : q.progress };
+          data.quests = [...data.quests, ...extra].map((q: any) => {
+            const isDoneLocal =
+              typeof window !== "undefined"
+                ? localStorage.getItem(`quest_completed_${q.id}`) === "true"
+                : false;
+            if (isDoneLocal && !q.completed) {
+              return { ...q, completed: true, progress: q.target };
             }
             return q;
           });
@@ -67,9 +71,9 @@ export const useProfile = () => {
     refetchInterval: 60000, // 1 minute
   });
 
-  const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['profile', address] });
-  };
+  const refresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["profile", address] });
+  }, [queryClient, address]);
 
   const profile = query.data;
   const isError = query.isError || (profile && profile.success === false);

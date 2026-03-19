@@ -26,6 +26,7 @@ import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard/lea
 import { Route as DashboardHomeRouteImport } from './routes/dashboard/home'
 import { Route as DashboardBetsRouteImport } from './routes/dashboard/bets'
 import { Route as ApiLeaderboardRouteImport } from './routes/api/leaderboard'
+import { Route as ApiUserSubmitQuestVerificationRouteImport } from './routes/api/user.submit-quest-verification'
 import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.register-referral'
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
@@ -128,6 +129,12 @@ const ApiLeaderboardRoute = ApiLeaderboardRouteImport.update({
   path: '/api/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUserSubmitQuestVerificationRoute =
+  ApiUserSubmitQuestVerificationRouteImport.update({
+    id: '/api/user/submit-quest-verification',
+    path: '/api/user/submit-quest-verification',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiUserRegisterReferralRoute = ApiUserRegisterReferralRouteImport.update({
   id: '/api/user/register-referral',
   path: '/api/user/register-referral',
@@ -246,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -280,6 +288,7 @@ export interface FileRoutesByTo {
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -316,6 +325,7 @@ export interface FileRoutesById {
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-coins'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/submit-quest-verification'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -387,6 +398,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-coins'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/submit-quest-verification'
   id:
     | '__root__'
     | '/'
@@ -422,6 +434,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-coins'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/submit-quest-verification'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -452,6 +465,7 @@ export interface RootRouteChildren {
   ApiUserConvertCoinsRoute: typeof ApiUserConvertCoinsRoute
   ApiUserProfileRoute: typeof ApiUserProfileRoute
   ApiUserRegisterReferralRoute: typeof ApiUserRegisterReferralRoute
+  ApiUserSubmitQuestVerificationRoute: typeof ApiUserSubmitQuestVerificationRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -573,6 +587,13 @@ declare module '@tanstack/react-router' {
       path: '/api/leaderboard'
       fullPath: '/api/leaderboard'
       preLoaderRoute: typeof ApiLeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/user/submit-quest-verification': {
+      id: '/api/user/submit-quest-verification'
+      path: '/api/user/submit-quest-verification'
+      fullPath: '/api/user/submit-quest-verification'
+      preLoaderRoute: typeof ApiUserSubmitQuestVerificationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/user/register-referral': {
@@ -740,6 +761,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUserConvertCoinsRoute: ApiUserConvertCoinsRoute,
   ApiUserProfileRoute: ApiUserProfileRoute,
   ApiUserRegisterReferralRoute: ApiUserRegisterReferralRoute,
+  ApiUserSubmitQuestVerificationRoute: ApiUserSubmitQuestVerificationRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { claimSocialReward } from "../../server/user";
+import { submitQuestVerification } from "../../server/user";
 
-export const Route = createFileRoute("/api/user/claim-social-reward")({
+export const Route = createFileRoute("/api/user/submit-quest-verification")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const walletAddress = body.walletAddress;
-          const questId = body.questId;
+          const { walletAddress, questId, verificationCode } = body;
 
           if (!walletAddress || !questId) {
             return Response.json(
@@ -17,17 +16,18 @@ export const Route = createFileRoute("/api/user/claim-social-reward")({
             );
           }
 
-          const result = await claimSocialReward({
+          const result = await submitQuestVerification({
             data: {
               walletAddress,
               questId,
+              verificationCode,
             },
           });
 
           return Response.json(result);
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
-          console.error("Social Reward API error:", errorMessage);
+          console.error("Submit Quest Verification API error:", errorMessage);
           return Response.json(
             { success: false, error: errorMessage },
             { status: 500 },

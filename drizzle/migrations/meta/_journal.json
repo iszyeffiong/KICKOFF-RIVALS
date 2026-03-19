@@ -22,6 +22,20 @@
       "when": 1773755921333,
       "tag": "0002_keen_the_professor",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773913698092,
+      "tag": "0003_giant_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773914296690,
+      "tag": "0004_tricky_ronan",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { useAccount } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/userStore";
 import { useProfile } from "../hooks/useProfile";
@@ -139,8 +140,12 @@ interface GameContextType {
     stake: number,
     betType: "single" | "accumulator",
   ) => Promise<boolean>;
-  handleQuestAction: (id: string) => void;
-  handleQuestClaim: (id: string) => void;
+  handleQuestAction: (
+    id: string,
+    openUrl?: boolean,
+    verificationCode?: string,
+  ) => void;
+  handleQuestClaim: (id: string, onSuccess?: (reward: number) => void) => void;
   handleRedeem: (
     code: string,
   ) => Promise<{ success: boolean; message?: string }>;
@@ -148,7 +153,11 @@ interface GameContextType {
     code: string,
   ) => Promise<{ success: boolean; message?: string }>;
   handleClaimAllianceRewards: () => Promise<void>;
-  handleCheckIn: () => Promise<{ success: boolean; message: string; reward?: number }>;
+  handleCheckIn: () => Promise<{
+    success: boolean;
+    message: string;
+    reward?: number;
+  }>;
   handleAdminSyncRequest: () => void;
   handleAdminAuthSuccess: () => void;
   handleAdminLogout: () => Promise<void>;
@@ -168,8 +177,8 @@ interface GameContextType {
   setShowAdmin: React.Dispatch<React.SetStateAction<boolean>>;
   showAdminAuth: boolean;
   setShowAdminAuth: React.Dispatch<React.SetStateAction<boolean>>;
-  notification: { message: string; type: 'success' | 'error' | 'info' } | null;
-  notify: (message: string, type?: 'success' | 'error' | 'info') => void;
+  notification: { message: string; type: "success" | "error" | "info" } | null;
+  notify: (message: string, type?: "success" | "error" | "info") => void;
   adminSessionValid: boolean;
   adminSessionToken: string | null;
 
@@ -225,20 +234,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const { profile, refresh: refreshProfileQuery } = useProfile();
 
   // Global Notification System
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
 
-  const notify = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setNotification({ message, type });
-    // Auto-clear
-    setTimeout(() => {
-      setNotification(null);
-    }, 4000);
-  }, []);
+  const notify = useCallback(
+    (message: string, type: "success" | "error" | "info" = "info") => {
+      setNotification({ message, type });
+      // Auto-clear
+      setTimeout(() => {
+        setNotification(null);
+      }, 4000);
+    },
+    [],
+  );
 
   const adminSessionTokenRef = useRef<string | null>(null);
 
+  const queryClient = useQueryClient();
+
   // Balance (Local state for game loop UI)
   const [balance, setBalance] = useState(INITIAL_BALANCE);
+
+  // Sync state balance with profile's korBalance
+  useEffect(() => {
+    if (profile?.korBalance !== undefined) {
+      const pBalance = Number(profile.korBalance);
+      if (pBalance !== balance) {
+        setBalance(pBalance);
+      }
+    }
+  }, [profile?.korBalance, balance]);
 
   // Game State
   const [gameState, setGameState] = useState<GameState>("BETTING");
@@ -731,13 +758,128 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // QUEST & PROFILE HANDLERS
   // ==========================================
 
-  const handleQuestAction = useCallback((id: string) => {
-    // Quests are handled by backend/useProfile now
-  }, []);
+  const handleQuestAction = useCallback(
+    (id: string, openUrl: boolean = true, verificationCode?: string) => {
+      if (!profile?.quests) return;
+      const quest = profile.quests.find((q: any) => q.id === id);
+      if (!quest) return;
 
-  const handleQuestClaim = useCallback((id: string) => {
-    // Quests are claimed via backend now
-  }, []);
+      // Fallback URL from INITIAL_QUESTS if missing in current state
+      const targetUrl =
+        quest.externalUrl ||
+        INITIAL_QUESTS.find((iq) => iq.id === id)?.externalUrl;
+
+      if (quest.category === "social" || quest.type === "external") {
+        // Mark as visited locally for the UI (un-dims the input/button)
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`quest_visited_${id}`, "true");
+        }
+
+        if (openUrl && targetUrl) {
+          window.open(targetUrl, "_blank");
+        }
+
+        if (quest.requiresVerification && openUrl) {
+          // Just opened the link, don't mark as complete yet
+        } else {
+          // Mark as complete in LS for local persistence
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`quest_completed_${id}`, "true");
+          }
+
+          // 1. UPDATE SERVER (DB)
+          fetch(`${API_URL}/api/user/submit-quest-verification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              walletAddress: profile.walletAddress,
+              questId: id,
+              verificationCode:
+                verificationCode || localStorage.getItem(`quest_verify_${id}`),
+            }),
+          })
+            .then(() => {
+              // Refresh profile to sync DB state
+              refreshProfileQuery();
+            })
+            .catch((err) => console.error("Quest submission DB error:", err));
+        }
+      } else if (quest.type === "click") {
+        // Simple click complete
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`quest_completed_${id}`, "true");
+        }
+        refreshProfileQuery();
+      }
+    },
+    [profile, refreshProfileQuery],
+  );
+
+  const handleQuestClaim = useCallback(
+    async (id: string, onSuccess?: (reward: number) => void) => {
+      if (!profile?.walletAddress) return;
+      const quest = profile.quests.find((q: any) => q.id === id);
+      if (!quest) return;
+
+      try {
+        console.log(`[QUEST] Syncing quest ${id} with DB...`);
+        const res = await fetch(`${API_URL}/api/user/claim-social-reward`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: profile.walletAddress,
+            questId: id,
+          }),
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          const reward = result.reward || quest.reward;
+          console.log(`[QUEST] DB confirmed! +${reward} coins.`);
+
+          // 1. Persist to localStorage
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`quest_completed_${id}`, "true");
+          }
+
+          // 2. OPTIMISTIC UPDATE: Update profile cache instantly
+          queryClient.setQueryData(
+            ["profile", profile.walletAddress],
+            (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                coins: (old.coins || 0) + reward,
+                quests: (old.quests || []).map((q: any) =>
+                  q.id === id ? { ...q, completed: true } : q,
+                ),
+              };
+            },
+          );
+
+          // 3. Add to local transactions list
+          addTransaction(
+            "redeem",
+            reward,
+            "coins",
+            `Quest Reward: ${quest.title}`,
+          );
+
+          // 4. Refresh eventually to stay 100% in sync
+          refreshProfileQuery();
+
+          // 5. Success feedback
+          onSuccess?.(reward);
+        } else {
+          toast.error(result.error || "Claim failed");
+        }
+      } catch (e) {
+        console.error("Claim error", e);
+        toast.error("Network error during claim.");
+      }
+    },
+    [profile, refreshProfileQuery, addTransaction, queryClient],
+  );
 
   const handleRedeem = useCallback(
     async (code: string): Promise<{ success: boolean; message?: string }> => {
@@ -828,12 +970,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           "bonus",
           data.reward,
           "coins",
-          "4-Hourly Check-in Bonus"
+          "4-Hourly Check-in Bonus",
         );
         refreshProfileQuery();
         return { success: true, message: data.message, reward: data.reward };
       } else {
-        return { success: false, message: data.error || data.message || "Claim failed" };
+        return {
+          success: false,
+          message: data.error || data.message || "Claim failed",
+        };
       }
     } catch (e) {
       console.error("Check-in failed", e);
@@ -1031,8 +1176,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Timer logic for visual countdown/countup
   useEffect(() => {
-    if (!dashboardMounted) return;
-
+    // No longer blocking on dashboardMounted!
+    // This allows the background to stay in sync even on landing/selection pages
     const interval = setInterval(() => {
       setTimer((prev) => {
         if (gameState === "BETTING") {
@@ -1065,7 +1210,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [dashboardMounted, fetchMatches, gameState]);
+  }, [fetchMatches, gameState]);
 
   // Reset round-refresh flag when moving from RESULT back to BETTING
   useEffect(() => {
@@ -1073,6 +1218,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       hasRefreshedThisRoundRef.current = false;
     }
   }, [gameState]);
+
+  // PREFETCH DATA: Start fetching as soon as initialization is complete
+  useEffect(() => {
+    if (!isInitializing) {
+      console.log("[PREFETCH] App initialized. Fetching background data...");
+      fetchMatches();
+      fetchStandings();
+    }
+  }, [isInitializing, fetchMatches, fetchStandings]);
 
   // Refresh profile when matches are finished to reflect winnings/xp
   useEffect(() => {

@@ -267,6 +267,10 @@ export const userQuests = pgTable(
   (table) => ({
     walletIdx: index("user_quests_wallet_idx").on(table.walletAddress),
     questIdx: index("user_quests_quest_idx").on(table.questId),
+    walletQuestUnique: uniqueIndex("user_quests_wallet_quest_idx").on(
+      table.walletAddress,
+      table.questId
+    ),
   })
 );
 

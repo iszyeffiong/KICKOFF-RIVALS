@@ -117,7 +117,7 @@ export interface DailyQuest {
   id: string;
   title: string;
   reward: number;
-  type: 'click' | 'play' | 'win' | 'bet' | 'social' | 'external';
+  type: 'click' | 'play' | 'win' | 'bet' | 'social' | 'external' | 'referral';
   frequency: 'daily' | 'weekly';
   target: number;
   progress: number;

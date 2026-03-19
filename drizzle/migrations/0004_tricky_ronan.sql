@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "user_quests_wallet_quest_idx" ON "user_quests" USING btree ("wallet_address","quest_id");

@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  lazy,
+  Suspense,
+  useCallback,
+} from "react";
 import { cn } from "../lib/utils";
 import {
   TEAMS,
@@ -10,6 +17,7 @@ import {
   INITIAL_QUESTS,
   CONVERSION_RATE,
   CONVERSION_YIELD,
+  MAX_ROUNDS,
 } from "../constants";
 import {
   Match,
@@ -32,7 +40,16 @@ import { SimulationScreen } from "./SimulationScreen";
 import { LeagueTable } from "./LeagueTable";
 import { ProfileScreen } from "./ProfileScreen";
 import { WalletModal } from "./WalletModal";
-import { IconHome, IconTicket, IconUser, IconTable, IconTrophy, IconCheck, IconZap, IconInfo } from "./Icons";
+import {
+  IconHome,
+  IconTicket,
+  IconUser,
+  IconTable,
+  IconTrophy,
+  IconCheck,
+  IconZap,
+  IconInfo,
+} from "./Icons";
 import { Leaderboard } from "./Leaderboard";
 import { ConnectWallet } from "./ConnectWallet";
 import { SwapConfirm } from "./SwapConfirm";
@@ -181,11 +198,17 @@ const App: React.FC = () => {
     lastCheckInDate: null,
   });
 
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-  const notify = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
-  }, []);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+  const notify = useCallback(
+    (message: string, type: "success" | "error" | "info" = "info") => {
+      setNotification({ message, type });
+      setTimeout(() => setNotification(null), 4000);
+    },
+    [],
+  );
 
   const [watchingMatchId, setWatchingMatchId] = useState<string | null>(null);
   const [selectedLeagueId, setSelectedLeagueId] = useState(LEAGUES[0].id);
@@ -400,12 +423,23 @@ const App: React.FC = () => {
           lastCheckInDate: userData.lastCheckInDate,
           quests: (() => {
             // DB quests tell us what's COMPLETED. Preserve in-memory progress for live tracking.
-            const dbCompletedIds = new Set((userData.quests || []).filter((q: any) => q.completed).map((q: any) => q.questId || q.id));
-            const masterQuests = userData.masterQuests && userData.masterQuests.length > 0 ? userData.masterQuests : INITIAL_QUESTS;
+            const dbCompletedIds = new Set(
+              (userData.quests || [])
+                .filter((q: any) => q.completed)
+                .map((q: any) => q.questId || q.id),
+            );
+            const masterQuests =
+              userData.masterQuests && userData.masterQuests.length > 0
+                ? userData.masterQuests
+                : INITIAL_QUESTS;
 
             return masterQuests.map((baseQuest: any) => {
-              const prevQuest = prev.quests.find(pq => pq.id === baseQuest.id);
-              const isCompleted = dbCompletedIds.has(baseQuest.id) || (prevQuest?.completed ?? false);
+              const prevQuest = prev.quests.find(
+                (pq) => pq.id === baseQuest.id,
+              );
+              const isCompleted =
+                dbCompletedIds.has(baseQuest.id) ||
+                (prevQuest?.completed ?? false);
               return {
                 ...baseQuest,
                 progress: prevQuest?.progress ?? baseQuest.progress,
@@ -488,8 +522,8 @@ const App: React.FC = () => {
         setTimeout(() => refreshProfile(walletState.address!), 2000); // Small delay to let backend process
       }
     } else if (gameState === "RESULT") {
-      const nextRound = roundNumber >= 38 ? 1 : roundNumber + 1;
-      const nextSeason = roundNumber >= 38 ? seasonId + 1 : seasonId;
+      const nextRound = roundNumber >= MAX_ROUNDS ? 1 : roundNumber + 1;
+      const nextSeason = roundNumber >= MAX_ROUNDS ? seasonId + 1 : seasonId;
       setGameState("BETTING");
       setTimer(ROUND_DURATION_SEC);
       setRoundNumber(nextRound);
@@ -690,7 +724,10 @@ const App: React.FC = () => {
   }, [userStats.walletAddress]);
 
   useEffect(() => {
-    if (userStats.walletAddress && (activeTab === "bets" || activeTab === "profile")) {
+    if (
+      userStats.walletAddress &&
+      (activeTab === "bets" || activeTab === "profile")
+    ) {
       fetchBets();
     }
   }, [userStats.walletAddress, activeTab, fetchBets]);
@@ -860,7 +897,10 @@ const App: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        notify(`SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`, "success");
+        notify(
+          `SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`,
+          "success",
+        );
         if (userStats.walletAddress) refreshProfile(userStats.walletAddress);
       } else {
         notify(data.error || "Claim failed", "error");
@@ -1184,7 +1224,6 @@ const App: React.FC = () => {
     }
   }
 
-
   async function handleCheckIn(): Promise<{
     success: boolean;
     message: string;
@@ -1216,12 +1255,12 @@ const App: React.FC = () => {
           nextCheckInIn: 4,
           lastCheckInDate: new Date(),
         }));
-        
+
         addTransaction(
           "bonus",
           data.reward,
           "coins",
-          "4-Hourly Check-in Bonus"
+          "4-Hourly Check-in Bonus",
         );
         return { success: true, message: data.message, reward: data.reward };
       } else {
@@ -1233,19 +1272,50 @@ const App: React.FC = () => {
     }
   }
 
-  function handleQuestAction(id: string, openUrl: boolean = true) {
+  async function handleQuestAction(
+    id: string,
+    openUrl: boolean = true,
+    verificationCode?: string,
+  ) {
     const quest = userStats.quests.find((q) => q.id === id);
     if (!quest) return;
 
+    // Fallback URL from INITIAL_QUESTS if missing in current state
+    const targetUrl =
+      quest.externalUrl ||
+      INITIAL_QUESTS.find((iq) => iq.id === id)?.externalUrl;
+
     if (quest.category === "social" || quest.type === "external") {
-      if (openUrl && quest.externalUrl) {
-        window.open(quest.externalUrl, "_blank");
+      // Mark as visited locally for the UI
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`quest_visited_${id}`, "true");
       }
-      
-      if (quest.requiresVerification) {
-        // Just open the link, verification handled by button
+
+      if (openUrl && targetUrl) {
+        window.open(targetUrl, "_blank");
+      }
+
+      if (quest.requiresVerification && openUrl) {
+        // Just opened the link, don't mark as complete yet
       } else {
-        // Simple link clicks just mark as complete instantly now
+        // Mark as complete in LS for local persistence
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`quest_completed_${id}`, "true");
+        }
+
+        // 1. UPDATE SERVER (DB)
+        fetch(`${API_URL}/api/user/submit-quest-verification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: userStats.walletAddress,
+            questId: id,
+            verificationCode:
+              verificationCode || localStorage.getItem(`quest_verify_${id}`),
+          }),
+        }).catch((err) => console.error("Quest submission DB error:", err));
+
+        // 2. UPDATE LOCAL STATE
         setUserStats((prev) => ({
           ...prev,
           quests: prev.quests.map((q) =>
@@ -1255,22 +1325,34 @@ const App: React.FC = () => {
       }
     } else if (quest.type === "click") {
       // Simple click complete
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`quest_completed_${id}`, "true");
+      }
       setUserStats((prev) => ({
         ...prev,
-        quests: prev.quests.map((q) => q.id === id ? { ...q, progress: q.target } : q),
+        quests: prev.quests.map((q) =>
+          q.id === id ? { ...q, progress: q.target } : q,
+        ),
       }));
     }
   }
 
-  async function handleQuestClaim(id: string, onSuccess?: (reward: number) => void) {
+  async function handleQuestClaim(
+    id: string,
+    onSuccess?: (reward: number) => void,
+  ) {
     const quest = userStats.quests.find((q) => q.id === id);
     if (!quest) return;
 
     const isSocial = quest.category === "social" || quest.type === "external";
-    const hasSubmission = typeof window !== 'undefined' ? !!localStorage.getItem(`quest_verify_${id}`) : false;
-    const isReady = isSocial && quest.requiresVerification
-      ? hasSubmission
-      : quest.progress >= quest.target;
+    const hasSubmission =
+      typeof window !== "undefined"
+        ? !!localStorage.getItem(`quest_verify_${id}`)
+        : false;
+    const isReady =
+      isSocial && quest.requiresVerification
+        ? hasSubmission
+        : quest.progress >= quest.target;
 
     if (!isReady) {
       notify?.("Complete the quest first before claiming.", "error");
@@ -1289,14 +1371,14 @@ const App: React.FC = () => {
         }),
       });
       const result = await res.json();
-      
+
       if (result.success) {
         const reward = result.reward || quest.reward;
         console.log(`[QUEST] DB confirmed! +${reward} coins.`);
 
         // 1. Persist to localStorage so refreshProfile keeps it as completed
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`quest_completed_${id}`, 'true');
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`quest_completed_${id}`, "true");
         }
 
         // 2. Update local state immediately
@@ -1307,8 +1389,13 @@ const App: React.FC = () => {
             q.id === id ? { ...q, completed: true } : q,
           ),
         }));
-        addTransaction("redeem", reward, "coins", `Quest Reward: ${quest.title}`);
-        
+        addTransaction(
+          "redeem",
+          reward,
+          "coins",
+          `Quest Reward: ${quest.title}`,
+        );
+
         // 3. Trigger the success modal in ProfileScreen
         onSuccess?.(reward);
 
@@ -1790,19 +1877,29 @@ const App: React.FC = () => {
           onPlaceBet={handlePlaceBetSlip}
         />
       )}
-      
+
       {notification && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] max-w-[90%] w-full flex justify-center animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
-          <div className={cn(
-            "px-6 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md",
-            notification.type === 'success' ? "bg-green-500/90 border-green-400 text-white" : 
-            notification.type === 'error' ? "bg-red-500/90 border-red-400 text-white" : 
-            "bg-blue-500/90 border-blue-400 text-white"
-          )}>
-            {notification.type === 'success' ? <IconCheck className="w-5 h-5" /> : 
-             notification.type === 'error' ? <IconZap className="w-5 h-5" /> : 
-             <IconInfo className="w-4 h-4" />}
-            <span className="font-bold text-sm tracking-wide">{notification.message}</span>
+          <div
+            className={cn(
+              "px-6 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md",
+              notification.type === "success"
+                ? "bg-green-500/90 border-green-400 text-white"
+                : notification.type === "error"
+                ? "bg-red-500/90 border-red-400 text-white"
+                : "bg-blue-500/90 border-blue-400 text-white",
+            )}
+          >
+            {notification.type === "success" ? (
+              <IconCheck className="w-5 h-5" />
+            ) : notification.type === "error" ? (
+              <IconZap className="w-5 h-5" />
+            ) : (
+              <IconInfo className="w-4 h-4" />
+            )}
+            <span className="font-bold text-sm tracking-wide">
+              {notification.message}
+            </span>
           </div>
         </div>
       )}

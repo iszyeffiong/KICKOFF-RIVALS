@@ -322,6 +322,7 @@ export const INITIAL_BALANCE = 1000;
 export const ROUND_DURATION_SEC = 480; // 8 minutes betting
 export const MATCH_DURATION_SEC = 120; // 2 minutes live
 export const RESULT_DURATION_SEC = 240; // 4 minutes intermission
+export const MAX_ROUNDS = 38; // Standard league season length
 
 export const CONVERSION_RATE = 1000; // 1000 Coins = 100 Tokens
 export const CONVERSION_YIELD = 100;
@@ -329,15 +330,20 @@ export const CONVERSION_YIELD = 100;
 // Fix: Added required 'status' property to the initial quests
 export const INITIAL_QUESTS: DailyQuest[] = [
   {
-    id: "q1",
+    id: "q-follow-x",
     title: "Follow @kickoffrivals",
     reward: 200,
-    type: "click",
+    type: "social",
+    category: "social",
     frequency: "daily",
     target: 1,
     progress: 0,
     completed: false,
     status: "LIVE",
+    externalUrl: "https://twitter.com/kickoffrivals",
+    requiresVerification: true,
+    verificationPlaceholder: "@username",
+    verificationType: "username"
   },
   {
     id: "q5",
@@ -364,16 +370,20 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     externalUrl: "https://discord.gg/kickoffrivals",
   },
   {
-    id: "q7",
+    id: "q-retweet",
     title: "Retweet Pinned Post",
     reward: 500,
-    type: "external",
+    type: "social",
+    category: "social",
     frequency: "daily",
     target: 1,
     progress: 0,
     completed: false,
     status: "LIVE",
     externalUrl: "https://twitter.com/kickoffrivals",
+    requiresVerification: true,
+    verificationPlaceholder: "Paste status URL",
+    verificationType: "link"
   },
   {
     id: "dq_play5",
@@ -440,5 +450,18 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     progress: 0,
     completed: false,
     status: "LIVE",
+    externalUrl: "https://t.me/kickoffrivals", // Join Community
+  },
+  {
+    id: "q_referral",
+    title: "Refer 1 Friend",
+    reward: 5000,
+    type: "referral",
+    frequency: "daily",
+    target: 1,
+    progress: 0,
+    completed: false,
+    status: "LIVE",
+    externalUrl: "/dashboard", // Point to within dashboard referral tab
   },
 ];

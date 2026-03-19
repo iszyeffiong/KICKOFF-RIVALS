@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db, users, transactions, userQuests, quests } from "../lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { INITIAL_QUESTS } from "../constants";
 
@@ -68,6 +68,36 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
         user: updatedUser,
         isNew: false,
       };
+    }
+
+    // Check if user has quests, if not, initialize them
+    // This helps migrating old users who were created before quests existed
+    const userHasQuests = await db.query.userQuests.findFirst({
+      where: eq(userQuests.walletAddress, normalized),
+    });
+
+    if (!userHasQuests && INITIAL_QUESTS.length > 0) {
+      console.log(`[QUESTS] Initializing quests for existing user ${normalized}`);
+      const questValues = INITIAL_QUESTS.map((q) => ({
+        walletAddress: normalized,
+        questId: q.id,
+        title: q.title,
+        reward: q.reward,
+        type: q.type,
+        frequency: q.frequency,
+        target: q.target,
+        status: q.status || "LIVE",
+      }));
+      await db.insert(userQuests).values(questValues).onConflictDoNothing();
+      
+      // Re-fetch existingUser to include quests if it was from 'with: { quests: true }'
+      const updatedUser = await db.query.users.findFirst({
+        where: eq(users.walletAddress, normalized),
+        with: { quests: true },
+      });
+      if (updatedUser) {
+        return { success: true, user: updatedUser, isNew: false };
+      }
     }
 
     return {
@@ -321,6 +351,10 @@ export const registerReferral = createServerFn({ method: "POST" })
       return { success: false, error: "Cannot refer self" };
     }
 
+    if (user.referredBy) {
+      return { success: false, error: "Referral already applied" };
+    }
+
     const REWARD_AMOUNT = 5000;
 
     // Update user with referrer and reward
@@ -361,6 +395,29 @@ export const registerReferral = createServerFn({ method: "POST" })
       currency: "coins",
       description: `Referral Bonus: ${user.username}`,
     });
+
+    // Update Referrer Quest Progress
+    const refQuest = await db.query.userQuests.findFirst({
+      where: and(
+        eq(userQuests.walletAddress, referrer.walletAddress),
+        eq(userQuests.questId, "q_referral")
+      ),
+    });
+
+    if (refQuest && !refQuest.completed) {
+      const newProgress = refQuest.progress + 1;
+      const isCompleted = newProgress >= refQuest.target;
+      
+      await db
+        .update(userQuests)
+        .set({
+          progress: newProgress,
+          completed: isCompleted,
+        })
+        .where(eq(userQuests.id, refQuest.id));
+      
+      console.log(`[QUESTS] Updated referral quest for ${referrer.walletAddress}. Progress: ${newProgress}/${refQuest.target}`);
+    }
 
     return {
       success: true,
@@ -669,7 +726,7 @@ export const claimSocialReward = createServerFn({ method: "POST" })
       status: "LIVE",
       createdAt: new Date(),
     }).onConflictDoUpdate({
-      target: [userQuests.id], // Note: userQuests table doesn't have a unique index on (wallet, questId) in the schema view I saw, but I'll assume standard upsert if possible or just insert.
+      target: [userQuests.walletAddress, userQuests.questId],
       set: { completed: true, progress: 1 }
     });
 
@@ -692,6 +749,61 @@ export const claimSocialReward = createServerFn({ method: "POST" })
       success: true, 
       reward: REWARD, 
       message: `Social reward claimed! +${REWARD} coins` 
+    };
+  });
+
+// ==========================================
+// SUBMIT QUEST VERIFICATION
+// ==========================================
+
+const submitQuestVerificationSchema = z.object({
+  walletAddress: z.string().min(1),
+  questId: z.string().min(1),
+  verificationCode: z.string().nullable().optional(),
+});
+
+export const submitQuestVerification = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => submitQuestVerificationSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+    
+    // Check if user exists
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const questData = INITIAL_QUESTS.find(iq => iq.id === data.questId);
+    if (!questData) {
+      return { success: false, error: "Generic quest data not found" };
+    }
+
+    // Upsert user quest progress
+    await db.insert(userQuests).values({
+      walletAddress: normalized,
+      questId: data.questId,
+      title: questData.title,
+      reward: questData.reward,
+      type: questData.type as any,
+      frequency: questData.frequency as any,
+      target: questData.target,
+      progress: questData.target, // Mark as complete (ready to claim)
+      verifiedAt: new Date(),
+      status: "LIVE",
+    }).onConflictDoUpdate({
+      target: [userQuests.walletAddress, userQuests.questId],
+      set: { 
+        progress: questData.target,
+        verifiedAt: new Date(),
+      }
+    });
+
+    return { 
+      success: true, 
+      message: "Quest verification recorded in database" 
     };
   });
 

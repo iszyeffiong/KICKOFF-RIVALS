@@ -35,6 +35,7 @@ import {
   RESULT_DURATION_SEC,
   TEAMS,
   LEAGUES,
+  MAX_ROUNDS,
 } from "../constants";
 import { requestVRFSeed, getVRFSeedResult } from "./chainlink";
 
@@ -280,9 +281,31 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
           // Generate Next Round
           currentTickTime = new Date(currentTickTime.getTime() + TOTAL_CYCLE * 1000);
           currentTickRound++;
+
+          if (currentTickRound > MAX_ROUNDS) {
+             // End of Season! Start new one.
+             await db.update(seasons).set({ isActive: false, vrfRequestId: null, vrfSeed: null }).where(eq(seasons.id, activeSeason.id));
+             
+             const [newSeason] = await db.insert(seasons).values({
+               isActive: true,
+               currentRound: 1,
+               vrfRequestId: null,
+               vrfSeed: null
+             }).returning();
+             
+             activeSeason = newSeason;
+             currentTickRound = 1;
+             console.log(`[LOOP] Season ended. Starting New Season ID: ${activeSeason.id}`);
+          }
+
           const catchupNext = generateNextRoundMatches(activeSeason.id, currentTickRound, currentTickTime);
           await db.insert(matches).values(catchupNext).onConflictDoNothing();
-          await db.update(seasons).set({ currentRound: currentTickRound, vrfRequestId: null, vrfSeed: null }).where(eq(seasons.id, activeSeason.id));
+          await db.update(seasons).set({ 
+            currentRound: currentTickRound, 
+            vrfRequestId: null, 
+            vrfSeed: null 
+          }).where(eq(seasons.id, activeSeason.id));
+
           caughtUpCount++;
         }
       }
