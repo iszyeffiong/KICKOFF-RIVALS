@@ -461,15 +461,15 @@
 }
 
 .btn-secondary {
-  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  @apply bg-primary/20 text-primary hover:bg-primary/30;
 }
 
 .btn-destructive {
   @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
 }
-
+a
 .btn-outline {
-  @apply border border-input hover:bg-accent hover:text-accent-foreground;
+  @apply border border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300;
 }
 
 .btn-ghost {

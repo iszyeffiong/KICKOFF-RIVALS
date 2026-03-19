@@ -14,7 +14,7 @@ export function ResultsOverlay({ timer, matches }: ResultsOverlayProps) {
   return (
     <div
       id="results-overlay"
-      className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-start text-white overflow-y-auto w-full"
+      className="fixed inset-0 z-100 bg-black/95 flex flex-col items-center justify-start text-white overflow-y-auto w-full"
     >
       <div className="w-full max-w-6xl flex flex-col items-center pt-36 pb-8 px-4 relative">
         <CloseButton />
@@ -43,7 +43,7 @@ function CloseButton() {
         const el = document.getElementById("results-overlay");
         if (el) el.style.display = "none";
       }}
-      className="absolute top-8 right-4 p-2 bg-white/10 rounded-full hover:bg-white/20 text-white transition-all z-[120]"
+      className="absolute top-8 right-4 p-2 bg-white/10 rounded-full hover:bg-white/20 text-white transition-all z-120"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -75,8 +75,10 @@ function RoundEndedBanner({ timer }: { timer: number }) {
           Next Round Starts In
         </div>
         <div className="text-5xl font-mono font-bold text-white tabular-nums">
-          {Math.floor(timer / 60).toString().padStart(2, "0")}:
-          {(timer % 60).toString().padStart(2, "0")}
+          {Math.floor(timer / 60)
+            .toString()
+            .padStart(2, "0")}
+          :{(timer % 60).toString().padStart(2, "0")}
         </div>
       </div>
 
@@ -104,7 +106,7 @@ export function LeagueFilterBar({
     : "bg-white text-gray-500 hover:bg-gray-100 hover:text-dark";
 
   return (
-    <div className="flex gap-2 mb-6 overflow-x-auto pb-4 scrollbar-hide px-2 w-full justify-center">
+    <div className="flex gap-2 mb-6 overflow-x-auto pb-4 no-scrollbar px-4 w-full justify-start md:justify-center">
       <button
         onClick={() => onSelect("all")}
         className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors shadow-sm ${
@@ -139,11 +141,11 @@ function MatchResultsGrid({
     home:
       m.homeScore !== undefined && m.homeScore !== null
         ? m.homeScore
-        : (m.result?.homeScore ?? 0),
+        : m.result?.homeScore ?? 0,
     away:
       m.awayScore !== undefined && m.awayScore !== null
         ? m.awayScore
-        : (m.result?.awayScore ?? 0),
+        : m.result?.awayScore ?? 0,
   });
 
   if (selectedLeagueFilter === "all") {

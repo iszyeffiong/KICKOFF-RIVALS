@@ -17,7 +17,7 @@ export function SimulationScreen({
   onFinish,
 }: SimulationScreenProps) {
   const [displayedEvents, setDisplayedEvents] = useState<typeof result.events>(
-    []
+    [],
   );
   const [isPaused, setIsPaused] = useState(false);
   const eventsContainerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +25,7 @@ export function SimulationScreen({
   // Filter events up to current minute
   useEffect(() => {
     const eventsToShow = result.events.filter(
-      (event) => event.minute <= currentMinute
+      (event) => event.minute <= currentMinute,
     );
     setDisplayedEvents(eventsToShow);
   }, [currentMinute, result.events]);
@@ -92,7 +92,7 @@ export function SimulationScreen({
               "px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1",
               isMatchFinished
                 ? "bg-slate-600 text-white"
-                : "bg-red-500 text-white animate-pulse"
+                : "bg-red-500 text-white animate-pulse",
             )}
           >
             {isMatchFinished ? (
@@ -166,9 +166,11 @@ export function SimulationScreen({
               <div
                 className={cn(
                   "h-full transition-all duration-1000",
-                  isMatchFinished ? "bg-slate-500" : "bg-primary"
+                  isMatchFinished ? "bg-slate-500" : "bg-primary",
                 )}
-                style={{ width: `${Math.min((currentMinute / 90) * 100, 100)}%` }}
+                style={{
+                  width: `${Math.min((currentMinute / 90) * 100, 100)}%`,
+                }}
               />
             </div>
             <div className="flex justify-between mt-1 text-xs text-slate-400 font-mono">
@@ -201,10 +203,10 @@ export function SimulationScreen({
                 key={`${event.minute}-${index}`}
                 className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border transition-all animate-slide-up",
-                  getEventColor(event.type)
+                  getEventColor(event.type),
                 )}
               >
-                <div className="flex-shrink-0 w-8 text-center">
+                <div className="shrink-0 w-8 text-center">
                   <span className="text-lg">{getEventIcon(event.type)}</span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -236,10 +238,7 @@ export function SimulationScreen({
 
           <button
             onClick={onFinish}
-            className={cn(
-              "btn h-10 px-6",
-              isMatchFinished ? "btn-primary" : "btn-outline"
-            )}
+            className="btn btn-primary h-10 px-6 font-black tracking-tight"
           >
             {isMatchFinished ? "Close" : "Exit"}
           </button>
