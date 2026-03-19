@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserStore } from '../stores/userStore';
 import type { UserStats } from '../types';
+import { INITIAL_QUESTS } from '../constants';
 
 const API_URL = "";
 
@@ -43,6 +44,19 @@ export const useProfile = () => {
           setRegistrationData(null); // Clear pending registration
         } else {
           setIsNewUser(false);
+        }
+
+        // Merge INITIAL_SOCIAL_QUESTS
+        if (data.quests) {
+          const socialIds = ["q-follow-x", "q-like-1", "q-like-2"];
+          const extra = INITIAL_QUESTS.filter(iq => socialIds.includes(iq.id) && !data.quests.some((sq: any) => sq.id === iq.id));
+          data.quests = [...data.quests, ...extra].map(q => {
+            if (socialIds.includes(q.id)) {
+              const isDone = typeof window !== 'undefined' ? localStorage.getItem(`quest_completed_${q.id}`) === 'true' : false;
+              return { ...q, completed: isDone, progress: isDone ? q.target : q.progress };
+            }
+            return q;
+          });
         }
       }
 

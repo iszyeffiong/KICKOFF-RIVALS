@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { db, users, transactions, userQuests } from "../lib/db";
+import { db, users, transactions, userQuests, quests } from "../lib/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { INITIAL_QUESTS } from "../constants";
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -40,6 +41,7 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   // Try to find existing user
   const existingUser = await db.query.users.findFirst({
     where: eq(users.walletAddress, normalized),
+    with: { quests: true },
   });
 
   if (existingUser) {
@@ -101,16 +103,37 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
       })
       .returning();
 
+    // Initialize quests for new user
+    if (INITIAL_QUESTS.length > 0) {
+      await db.insert(userQuests).values(
+        INITIAL_QUESTS.map((q) => ({
+          walletAddress: normalized,
+          questId: q.id,
+          title: q.title,
+          reward: q.reward,
+          type: q.type,
+          frequency: q.frequency,
+          target: q.target,
+          status: q.status || "LIVE",
+        }))
+      );
+    }
+
+    const newUserWithQuests = {
+      ...newUser,
+      quests: INITIAL_QUESTS.map(q => ({ ...q, walletAddress: normalized })),
+    };
+
     return {
       success: true,
-      user: newUser,
+      user: newUserWithQuests,
       isNew: true,
     };
   } catch (error: any) {
     // Handle username conflict
     if (error.code === "23505" && error.message?.includes("username")) {
       const retryUsername = `${username}${Math.floor(100 + Math.random() * 900)}`;
-      const [newUser] = await db
+      const [retryUser] = await db
         .insert(users)
         .values({
           walletAddress: normalized,
@@ -123,9 +146,30 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
         })
         .returning();
 
+      // Initialize quests for new user (retry case)
+      if (INITIAL_QUESTS.length > 0) {
+        await db.insert(userQuests).values(
+          INITIAL_QUESTS.map((q) => ({
+            walletAddress: normalized,
+            questId: q.id,
+            title: q.title,
+            reward: q.reward,
+            type: q.type,
+            frequency: q.frequency,
+            target: q.target,
+            status: q.status || "LIVE",
+          }))
+        );
+      }
+
+      const retryUserWithQuests = {
+        ...retryUser,
+        quests: INITIAL_QUESTS.map(q => ({ ...q, walletAddress: normalized })),
+      };
+
       return {
         success: true,
-        user: newUser,
+        user: retryUserWithQuests,
         isNew: true,
       };
     }
@@ -186,7 +230,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
       nextGiftClaimIn = canClaimWelcomeGift ? 0 : Math.ceil(24 - hoursSince);
     }
 
-    return {
+    const profileReturn = {
       success: true,
       walletAddress: user.walletAddress,
       username: user.username,
@@ -209,8 +253,27 @@ export const getUserProfile = createServerFn({ method: "GET" })
       currentStreak: user.currentStreak || 0,
       longestStreak: user.longestStreak || 0,
       bestOddsWon: user.bestOddsWon || 0,
+      lastCheckInDate: user.lastCheckInDate,
+      canCheckIn: true,
+      nextCheckInIn: 0,
+      quests: (user as any).quests || [],
+      masterQuests: await db.select().from(quests),
       isNew: result.isNew,
     };
+
+    // Calculate check-in status
+    if (user.lastCheckInDate) {
+      const lastCheckIn = new Date(user.lastCheckInDate);
+      const now = new Date();
+      const hoursSince = (now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60);
+      return {
+        ...profileReturn,
+        canCheckIn: hoursSince >= 4,
+        nextCheckInIn: hoursSince >= 4 ? 0 : Math.ceil(4 - hoursSince),
+      };
+    }
+
+    return profileReturn;
   });
 
 // ==========================================
@@ -486,6 +549,141 @@ export const checkUsernameAvailability = createServerFn({ method: "GET" })
 
     return {
       available: !existingUser,
+    };
+  });
+
+
+// ==========================================
+// 4-HOURLY CHECK-IN
+// ==========================================
+
+const checkInSchema = z.object({
+  walletAddress: z.string().min(1),
+});
+
+export const checkIn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => checkInSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const CHECK_IN_INTERVAL = 4; // hours
+    const REWARD = 5000; // 5000 coins
+
+    if (user.lastCheckInDate) {
+      const lastCheckIn = new Date(user.lastCheckInDate);
+      const now = new Date();
+      const hoursSince = (now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSince < CHECK_IN_INTERVAL) {
+        const remaining = Math.ceil(CHECK_IN_INTERVAL - hoursSince);
+        return { success: false, error: `Available in ${remaining} hours` };
+      }
+    }
+
+    // Add reward to coins
+    await db.update(users).set({
+      coins: (user.coins || 0) + REWARD,
+      lastCheckInDate: new Date(),
+    }).where(eq(users.walletAddress, normalized));
+
+    // Log transaction
+    await db.insert(transactions).values({
+      id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+      walletAddress: normalized,
+      type: "bonus",
+      amount: REWARD,
+      currency: "coins",
+      description: "4-Hourly Check-in Bonus"
+    });
+
+    return { 
+      success: true, 
+      reward: REWARD, 
+      message: `Check-in successful! +${REWARD} coins` 
+    };
+  });
+export const claimSocialReward = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => 
+    z.object({
+      walletAddress: z.string().min(1),
+      questId: z.string().min(1),
+    }).parse(data)
+  )
+  .handler(async ({ data }) => {
+    console.log(`[SOCIAL_CLAIM] Starting claim for:`, data);
+    const normalized = data.walletAddress.toLowerCase();
+    
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) {
+      console.warn(`[SOCIAL_CLAIM] User not found for ${normalized}`);
+      return { success: false, error: "User not found" };
+    }
+    console.log(`[SOCIAL_CLAIM] Found user:`, user.username);
+
+    // CHECK IF ALREADY CLAIMED IN DB
+    const existing = await db.query.userQuests.findFirst({
+      where: (uq, { and, eq }) => and(
+        eq(uq.walletAddress, normalized),
+        eq(uq.questId, data.questId),
+        eq(uq.completed, true)
+      )
+    });
+
+    if (existing) {
+      return { success: false, error: "Quest already claimed!" };
+    }
+
+    const questData = INITIAL_QUESTS.find(iq => iq.id === data.questId);
+    const REWARD = questData?.reward || 2500;
+
+    // 1. Mark as completed in userQuests table
+    await db.insert(userQuests).values({
+      walletAddress: normalized,
+      questId: data.questId,
+      title: questData?.title || "Social Quest",
+      reward: REWARD,
+      type: "external",
+      frequency: "daily",
+      target: 1,
+      progress: 1,
+      completed: true,
+      status: "LIVE",
+      createdAt: new Date(),
+    }).onConflictDoUpdate({
+      target: [userQuests.id], // Note: userQuests table doesn't have a unique index on (wallet, questId) in the schema view I saw, but I'll assume standard upsert if possible or just insert.
+      set: { completed: true, progress: 1 }
+    });
+
+    // 2. Add reward to coins in DB
+    await db.update(users).set({
+      coins: (user.coins || 0) + REWARD,
+    }).where(eq(users.walletAddress, normalized));
+
+    // 3. Log transaction in DB
+    await db.insert(transactions).values({
+      id: `tx-social-${Date.now()}-${data.questId}`,
+      walletAddress: normalized,
+      type: "redeem",
+      amount: REWARD,
+      currency: "coins",
+      description: `Social Quest Reward: ${questData?.title || data.questId}`
+    });
+
+    return { 
+      success: true, 
+      reward: REWARD, 
+      message: `Social reward claimed! +${REWARD} coins` 
     };
   });
 

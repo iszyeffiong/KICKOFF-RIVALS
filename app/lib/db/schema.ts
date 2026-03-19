@@ -88,6 +88,7 @@ export const users = pgTable(
     loginStreak: integer("login_streak").default(0).notNull(),
     lastLoginDate: varchar("last_login_date", { length: 20 }),
     lastWelcomeGiftDate: timestamp("last_welcome_gift_date"),
+    lastCheckInDate: timestamp("last_check_in_date"),
     unclaimedAllianceRewards: integer("unclaimed_alliance_rewards")
       .default(0)
       .notNull(),
@@ -369,6 +370,24 @@ export const userQuestsRelations = relations(userQuests, ({ one }) => ({
     references: [users.walletAddress],
   }),
 }));
+
+export const quests = pgTable("quests", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  reward: integer("reward").notNull(),
+  type: varchar("type", { length: 20 }).notNull(), 
+  frequency: varchar("frequency", { length: 20 }).notNull(),
+  target: integer("target").notNull(),
+  externalUrl: text("external_url"),
+  status: varchar("status", { length: 20 }).default("LIVE").notNull(),
+  category: varchar("category", { length: 50 }),
+  requiresVerification: boolean("requires_verification").default(false),
+  verificationPlaceholder: varchar("verification_placeholder", { length: 255 }),
+  verificationType: varchar("verification_type", { length: 50 }),
+  verificationTime: integer("verification_time"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 
 // ==========================================
 // TYPES

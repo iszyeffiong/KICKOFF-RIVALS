@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { cn } from "../lib/utils";
 import {
   TEAMS,
@@ -32,7 +32,7 @@ import { SimulationScreen } from "./SimulationScreen";
 import { LeagueTable } from "./LeagueTable";
 import { ProfileScreen } from "./ProfileScreen";
 import { WalletModal } from "./WalletModal";
-import { IconHome, IconTicket, IconUser, IconTable, IconTrophy } from "./Icons";
+import { IconHome, IconTicket, IconUser, IconTable, IconTrophy, IconCheck, IconZap, IconInfo } from "./Icons";
 import { Leaderboard } from "./Leaderboard";
 import { ConnectWallet } from "./ConnectWallet";
 import { SwapConfirm } from "./SwapConfirm";
@@ -56,6 +56,7 @@ import {
 import { verifyCoupon } from "../services/couponService";
 import { LandingPage } from "./LandingPage";
 import { GameSelection } from "./GameSelection";
+import { claimSocialReward } from "../server/user";
 import { AllianceSetup } from "./AllianceSetup";
 import { EntryChoice } from "./EntryChoice";
 
@@ -175,7 +176,16 @@ const App: React.FC = () => {
     quests: [...INITIAL_QUESTS],
     activeTheme: "default",
     unclaimedAllianceRewards: 0,
+    canCheckIn: true,
+    nextCheckInIn: 0,
+    lastCheckInDate: null,
   });
+
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const notify = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  }, []);
 
   const [watchingMatchId, setWatchingMatchId] = useState<string | null>(null);
   const [selectedLeagueId, setSelectedLeagueId] = useState(LEAGUES[0].id);
@@ -385,6 +395,24 @@ const App: React.FC = () => {
             Number(userData.unclaimedAllianceRewards) || 0,
           allianceLeagueId: userData.allianceLeagueId,
           allianceTeamId: userData.allianceTeamId,
+          canCheckIn: userData.canCheckIn,
+          nextCheckInIn: userData.nextCheckInIn,
+          lastCheckInDate: userData.lastCheckInDate,
+          quests: (() => {
+            // DB quests tell us what's COMPLETED. Preserve in-memory progress for live tracking.
+            const dbCompletedIds = new Set((userData.quests || []).filter((q: any) => q.completed).map((q: any) => q.questId || q.id));
+            const masterQuests = userData.masterQuests && userData.masterQuests.length > 0 ? userData.masterQuests : INITIAL_QUESTS;
+
+            return masterQuests.map((baseQuest: any) => {
+              const prevQuest = prev.quests.find(pq => pq.id === baseQuest.id);
+              const isCompleted = dbCompletedIds.has(baseQuest.id) || (prevQuest?.completed ?? false);
+              return {
+                ...baseQuest,
+                progress: prevQuest?.progress ?? baseQuest.progress,
+                completed: isCompleted,
+              };
+            });
+          })(),
         }));
         setBalance(Number(userData.korBalance) || 1000);
       } else {
@@ -632,7 +660,15 @@ const App: React.FC = () => {
       console.error("Failed to refresh balance:", err);
     }
 
-    // 4. Fetch updated bets from database to show win/loss status
+    // 4. Fetch updated bets
+    fetchBets();
+
+    // 5. Refresh standings from database
+    fetchStandings();
+  }
+
+  const fetchBets = useCallback(async () => {
+    if (!userStats.walletAddress) return;
     try {
       const betsRes = await fetch(
         `${API_URL}/api/bets/active?walletAddress=${userStats.walletAddress}`,
@@ -642,26 +678,22 @@ const App: React.FC = () => {
       if (betsData.success) {
         // Transform DB bets to frontend format
         const dbBets = betsData.bets.map((b: any) => ({
-          id: b.id,
-          matchId: b.match_id,
-          selection: b.selection,
-          odds: Number(b.odds),
-          stake: Number(b.stake),
-          potentialReturn: Number(b.potential_return),
-          status: b.status,
-          timestamp: new Date(b.placed_at).getTime(),
-          txHash: b.tx_hash || generateHash(),
+          ...b,
+          timestamp: new Date(b.createdAt || b.timestamp).getTime(),
+          txHash: b.txHash || b.tx_hash || generateHash(),
         }));
-
         setActiveBets(dbBets);
       }
     } catch (err) {
       console.error("Failed to fetch bets:", err);
     }
+  }, [userStats.walletAddress]);
 
-    // 5. Refresh standings from database
-    fetchStandings();
-  }
+  useEffect(() => {
+    if (userStats.walletAddress && (activeTab === "bets" || activeTab === "profile")) {
+      fetchBets();
+    }
+  }, [userStats.walletAddress, activeTab, fetchBets]);
 
   async function fetchStandings(overrideSeasonId?: number) {
     const sid = overrideSeasonId || seasonId || 1;
@@ -828,10 +860,10 @@ const App: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`);
+        notify(`SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`, "success");
         if (userStats.walletAddress) refreshProfile(userStats.walletAddress);
       } else {
-        alert(data.error || "Claim failed");
+        notify(data.error || "Claim failed", "error");
       }
     } catch (e) {
       console.error("Claim error", e);
@@ -965,12 +997,12 @@ const App: React.FC = () => {
         setBettingOn(null);
         return true;
       } else {
-        alert("Bet Failed: " + data.error);
+        notify("Bet Failed: " + data.error, "error");
         return false;
       }
     } catch (e) {
       console.error("Bet placement failed", e);
-      alert("Failed to place bet");
+      notify("Failed to place bet", "error");
       return false;
     }
   }
@@ -1133,7 +1165,7 @@ const App: React.FC = () => {
             `Accumulator (${betSlipSelections.length} selections)`,
           );
         } else {
-          alert("Accumulator Bet Failed: " + data.error);
+          notify("Accumulator Bet Failed: " + data.error, "error");
           return false;
         }
       }
@@ -1143,55 +1175,148 @@ const App: React.FC = () => {
       return true;
     } catch (e) {
       console.error("Bet slip placement failed", e);
-      alert("Failed to place bets");
+      notify("Failed to place bets", "error");
       return false;
     }
   }
 
-  function handleQuestAction(id: string) {
+
+  async function handleCheckIn(): Promise<{
+    success: boolean;
+    message: string;
+    reward?: number;
+  }> {
+    if (!walletState.address) {
+      console.warn("[CHECK-IN] Abandoned: No wallet address connected");
+      return { success: false, message: "Wallet not connected" };
+    }
+
+    console.log(`[CHECK-IN] Starting claim for ${walletState.address}...`);
+
+    try {
+      const res = await fetch(`${API_URL}/api/user/check-in`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: walletState.address }),
+      });
+      const data = await res.json();
+      console.log("[CHECK-IN] Server response:", data);
+
+      if (data.success) {
+        console.log(`[CHECK-IN] Success! Reward: ${data.reward}`);
+        // Update local stats
+        setUserStats((prev) => ({
+          ...prev,
+          coins: prev.coins + data.reward,
+          canCheckIn: false,
+          nextCheckInIn: 4,
+          lastCheckInDate: new Date(),
+        }));
+        
+        addTransaction(
+          "bonus",
+          data.reward,
+          "coins",
+          "4-Hourly Check-in Bonus"
+        );
+        return { success: true, message: data.message, reward: data.reward };
+      } else {
+        return { success: false, message: data.error };
+      }
+    } catch (e) {
+      console.error(e);
+      return { success: false, message: "Network error" };
+    }
+  }
+
+  function handleQuestAction(id: string, openUrl: boolean = true) {
     const quest = userStats.quests.find((q) => q.id === id);
     if (!quest) return;
 
-    if (quest.category === "social" && quest.externalUrl) {
-      window.open(quest.externalUrl, "_blank");
+    if (quest.category === "social" || quest.type === "external") {
+      if (openUrl && quest.externalUrl) {
+        window.open(quest.externalUrl, "_blank");
+      }
+      
+      if (quest.requiresVerification) {
+        // Just open the link, verification handled by button
+      } else {
+        // Simple link clicks just mark as complete instantly now
+        setUserStats((prev) => ({
+          ...prev,
+          quests: prev.quests.map((q) =>
+            q.id === id ? { ...q, progress: q.target } : q,
+          ),
+        }));
+      }
+    } else if (quest.type === "click") {
+      // Simple click complete
       setUserStats((prev) => ({
         ...prev,
-        quests: prev.quests.map((q) =>
-          q.id === id
-            ? {
-                ...q,
-                status: "VERIFYING",
-                verifiedAt: Date.now() + (q.verificationTime || 60000),
-              }
-            : q,
-        ),
+        quests: prev.quests.map((q) => q.id === id ? { ...q, progress: q.target } : q),
       }));
     }
   }
 
-  function handleQuestClaim(id: string) {
+  async function handleQuestClaim(id: string, onSuccess?: (reward: number) => void) {
     const quest = userStats.quests.find((q) => q.id === id);
-    if (!quest || quest.completed) return;
+    if (!quest) return;
 
-    const isReady =
-      quest.category === "social"
-        ? quest.status === "VERIFYING" && Date.now() >= (quest.verifiedAt || 0)
-        : quest.progress >= quest.target;
+    const isSocial = quest.category === "social" || quest.type === "external";
+    const hasSubmission = typeof window !== 'undefined' ? !!localStorage.getItem(`quest_verify_${id}`) : false;
+    const isReady = isSocial && quest.requiresVerification
+      ? hasSubmission
+      : quest.progress >= quest.target;
 
-    if (isReady) {
-      setUserStats((prev) => ({
-        ...prev,
-        coins: prev.coins + quest.reward,
-        quests: prev.quests.map((q) =>
-          q.id === id ? { ...q, completed: true } : q,
-        ),
-      }));
-      addTransaction(
-        "redeem",
-        quest.reward,
-        "coins",
-        `Quest Reward: ${quest.title}`,
-      );
+    if (!isReady) {
+      notify?.("Complete the quest first before claiming.", "error");
+      return;
+    }
+
+    // Server-First Approach: DB decides if reward is valid
+    try {
+      console.log(`[QUEST] Syncing quest ${id} with DB...`);
+      const res = await fetch(`${API_URL}/api/user/claim-social-reward`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: userStats.walletAddress,
+          questId: id,
+        }),
+      });
+      const result = await res.json();
+      
+      if (result.success) {
+        const reward = result.reward || quest.reward;
+        console.log(`[QUEST] DB confirmed! +${reward} coins.`);
+
+        // 1. Persist to localStorage so refreshProfile keeps it as completed
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`quest_completed_${id}`, 'true');
+        }
+
+        // 2. Update local state immediately
+        setUserStats((prev) => ({
+          ...prev,
+          coins: prev.coins + reward,
+          quests: prev.quests.map((q) =>
+            q.id === id ? { ...q, completed: true } : q,
+          ),
+        }));
+        addTransaction("redeem", reward, "coins", `Quest Reward: ${quest.title}`);
+        
+        // 3. Trigger the success modal in ProfileScreen
+        onSuccess?.(reward);
+
+        // 4. Re-sync profile balance from server
+        if (userStats.walletAddress) refreshProfile(userStats.walletAddress);
+      } else {
+        console.error(`[QUEST] DB Error:`, result.error);
+        notify?.(result.error || "Failed to claim reward", "error");
+      }
+    } catch (err) {
+      console.error("[QUEST] API call failed:", err);
+      notify?.("Connection failed. Please try again.", "error");
     }
   }
 
@@ -1541,6 +1666,8 @@ const App: React.FC = () => {
             onSystemSync={handleAdminSyncRequest}
             onOpenWallet={() => setShowWallet(true)}
             onClaimAllianceRewards={handleClaimAllianceRewards}
+            onCheckIn={handleCheckIn}
+            notify={notify}
           />
         </main>
       )}
@@ -1591,7 +1718,7 @@ const App: React.FC = () => {
                 setBalance(data.korBalance);
                 addTransaction("convert", amount, "coins", "Swapped for KOR");
               } else {
-                alert("Swap failed: " + data.error);
+                notify("Swap failed: " + data.error, "error");
               }
             } catch (e) {
               console.error(e);
@@ -1658,6 +1785,22 @@ const App: React.FC = () => {
           onClearAll={handleClearBetSlip}
           onPlaceBet={handlePlaceBetSlip}
         />
+      )}
+      
+      {notification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] max-w-[90%] w-full flex justify-center animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-none">
+          <div className={cn(
+            "px-6 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md",
+            notification.type === 'success' ? "bg-green-500/90 border-green-400 text-white" : 
+            notification.type === 'error' ? "bg-red-500/90 border-red-400 text-white" : 
+            "bg-blue-500/90 border-blue-400 text-white"
+          )}>
+            {notification.type === 'success' ? <IconCheck className="w-5 h-5" /> : 
+             notification.type === 'error' ? <IconZap className="w-5 h-5" /> : 
+             <IconInfo className="w-4 h-4" />}
+            <span className="font-bold text-sm tracking-wide">{notification.message}</span>
+          </div>
+        </div>
       )}
     </div>
   );

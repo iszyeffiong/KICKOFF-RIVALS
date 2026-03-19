@@ -15,6 +15,13 @@
       "when": 1771520632135,
       "tag": "0001_gorgeous_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773755921333,
+      "tag": "0002_keen_the_professor",
+      "breakpoints": true
     }
   ]
 }

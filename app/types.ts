@@ -133,6 +133,9 @@ export interface DailyQuest {
   verificationTime?: number; // milliseconds before verification completes
   verifiedAt?: number; // timestamp when verification was completed
   category?: 'social' | 'gameplay' | 'betting';
+  requiresVerification?: boolean;
+  verificationPlaceholder?: string;
+  verificationType?: 'username' | 'link';
 }
 
 export interface UserStats {
@@ -163,6 +166,9 @@ export interface UserStats {
   allianceLeagueId?: string;
   allianceTeamId?: string;
   unclaimedAllianceRewards: number;
+  canCheckIn?: boolean;
+  nextCheckInIn?: number;
+  lastCheckInDate?: string | Date | null;
 }
 
 export interface Coupon {

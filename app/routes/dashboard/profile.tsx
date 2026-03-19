@@ -21,6 +21,7 @@ function ProfileTab() {
     handleReferral,
     handleAdminSyncRequest,
     handleClaimAllianceRewards,
+    handleCheckIn,
   } = useGame();
 
   if (isLoading) {
@@ -61,6 +62,7 @@ function ProfileTab() {
         onSystemSync={handleAdminSyncRequest}
         onOpenWallet={() => setShowWallet(true)}
         onClaimAllianceRewards={handleClaimAllianceRewards}
+        onCheckIn={handleCheckIn}
       />
     </main>
   );

@@ -30,7 +30,9 @@ import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.r
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
 import { Route as ApiUserClaimWelcomeGiftRouteImport } from './routes/api/user.claim-welcome-gift'
+import { Route as ApiUserClaimSocialRewardRouteImport } from './routes/api/user.claim-social-reward'
 import { Route as ApiUserClaimAllianceRewardsRouteImport } from './routes/api/user.claim-alliance-rewards'
+import { Route as ApiUserCheckInRouteImport } from './routes/api/user.check-in'
 import { Route as ApiMinigameBetAccumulatorRouteImport } from './routes/api/minigame.bet-accumulator'
 import { Route as ApiMinigameBetRouteImport } from './routes/api/minigame.bet'
 import { Route as ApiMatchesUpdateResultRouteImport } from './routes/api/matches.update-result'
@@ -146,12 +148,23 @@ const ApiUserClaimWelcomeGiftRoute = ApiUserClaimWelcomeGiftRouteImport.update({
   path: '/api/user/claim-welcome-gift',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUserClaimSocialRewardRoute =
+  ApiUserClaimSocialRewardRouteImport.update({
+    id: '/api/user/claim-social-reward',
+    path: '/api/user/claim-social-reward',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiUserClaimAllianceRewardsRoute =
   ApiUserClaimAllianceRewardsRouteImport.update({
     id: '/api/user/claim-alliance-rewards',
     path: '/api/user/claim-alliance-rewards',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiUserCheckInRoute = ApiUserCheckInRouteImport.update({
+  id: '/api/user/check-in',
+  path: '/api/user/check-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMinigameBetAccumulatorRoute =
   ApiMinigameBetAccumulatorRouteImport.update({
     id: '/api/minigame/bet-accumulator',
@@ -226,7 +239,9 @@ export interface FileRoutesByFullPath {
   '/api/matches/update-result': typeof ApiMatchesUpdateResultRoute
   '/api/minigame/bet': typeof ApiMinigameBetRoute
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
+  '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
+  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
@@ -258,7 +273,9 @@ export interface FileRoutesByTo {
   '/api/matches/update-result': typeof ApiMatchesUpdateResultRoute
   '/api/minigame/bet': typeof ApiMinigameBetRoute
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
+  '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
+  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
@@ -292,7 +309,9 @@ export interface FileRoutesById {
   '/api/matches/update-result': typeof ApiMatchesUpdateResultRoute
   '/api/minigame/bet': typeof ApiMinigameBetRoute
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
+  '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
+  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/profile': typeof ApiUserProfileRoute
@@ -327,7 +346,9 @@ export interface FileRouteTypes {
     | '/api/matches/update-result'
     | '/api/minigame/bet'
     | '/api/minigame/bet-accumulator'
+    | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
+    | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/profile'
@@ -359,7 +380,9 @@ export interface FileRouteTypes {
     | '/api/matches/update-result'
     | '/api/minigame/bet'
     | '/api/minigame/bet-accumulator'
+    | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
+    | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/profile'
@@ -392,7 +415,9 @@ export interface FileRouteTypes {
     | '/api/matches/update-result'
     | '/api/minigame/bet'
     | '/api/minigame/bet-accumulator'
+    | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
+    | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/profile'
@@ -420,7 +445,9 @@ export interface RootRouteChildren {
   ApiMatchesUpdateResultRoute: typeof ApiMatchesUpdateResultRoute
   ApiMinigameBetRoute: typeof ApiMinigameBetRoute
   ApiMinigameBetAccumulatorRoute: typeof ApiMinigameBetAccumulatorRoute
+  ApiUserCheckInRoute: typeof ApiUserCheckInRoute
   ApiUserClaimAllianceRewardsRoute: typeof ApiUserClaimAllianceRewardsRoute
+  ApiUserClaimSocialRewardRoute: typeof ApiUserClaimSocialRewardRoute
   ApiUserClaimWelcomeGiftRoute: typeof ApiUserClaimWelcomeGiftRoute
   ApiUserConvertCoinsRoute: typeof ApiUserConvertCoinsRoute
   ApiUserProfileRoute: typeof ApiUserProfileRoute
@@ -576,11 +603,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUserClaimWelcomeGiftRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/user/claim-social-reward': {
+      id: '/api/user/claim-social-reward'
+      path: '/api/user/claim-social-reward'
+      fullPath: '/api/user/claim-social-reward'
+      preLoaderRoute: typeof ApiUserClaimSocialRewardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/user/claim-alliance-rewards': {
       id: '/api/user/claim-alliance-rewards'
       path: '/api/user/claim-alliance-rewards'
       fullPath: '/api/user/claim-alliance-rewards'
       preLoaderRoute: typeof ApiUserClaimAllianceRewardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/user/check-in': {
+      id: '/api/user/check-in'
+      path: '/api/user/check-in'
+      fullPath: '/api/user/check-in'
+      preLoaderRoute: typeof ApiUserCheckInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/minigame/bet-accumulator': {
@@ -692,7 +733,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMatchesUpdateResultRoute: ApiMatchesUpdateResultRoute,
   ApiMinigameBetRoute: ApiMinigameBetRoute,
   ApiMinigameBetAccumulatorRoute: ApiMinigameBetAccumulatorRoute,
+  ApiUserCheckInRoute: ApiUserCheckInRoute,
   ApiUserClaimAllianceRewardsRoute: ApiUserClaimAllianceRewardsRoute,
+  ApiUserClaimSocialRewardRoute: ApiUserClaimSocialRewardRoute,
   ApiUserClaimWelcomeGiftRoute: ApiUserClaimWelcomeGiftRoute,
   ApiUserConvertCoinsRoute: ApiUserConvertCoinsRoute,
   ApiUserProfileRoute: ApiUserProfileRoute,

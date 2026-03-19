@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "../lib/utils";
 import { UserStats, DailyQuest, AppTheme } from "../types";
-import { CONVERSION_RATE, CONVERSION_YIELD } from "../constants";
+import { CONVERSION_RATE, CONVERSION_YIELD, INITIAL_QUESTS } from "../constants";
 import {
   IconUser,
   IconWallet,
@@ -22,6 +22,7 @@ import {
   IconAward,
   IconExternalLink,
   IconPlay,
+  IconRefresh,
 } from "./Icons";
 import { truncateAddress, formatNumber } from "../lib/utils";
 
@@ -29,12 +30,14 @@ interface ProfileScreenProps {
   stats: UserStats;
   onLogout: () => void;
   onRedeem: (code: string) => Promise<{ success: boolean; message?: string }>;
-  onQuestClaim: (questId: string) => void;
-  onQuestAction: (questId: string) => void;
+  onQuestClaim: (questId: string, onSuccess?: (reward: number) => void) => Promise<void>;
+  onQuestAction: (questId: string, openUrl?: boolean) => void;
   onReferral: (code: string) => Promise<{ success: boolean; message?: string }>;
   onSystemSync: () => void;
   onOpenWallet: () => void;
   onClaimAllianceRewards: () => void;
+  onCheckIn: () => Promise<{ success: boolean; message: string; reward?: number }>;
+  notify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export function ProfileScreen({
@@ -47,6 +50,8 @@ export function ProfileScreen({
   onSystemSync,
   onOpenWallet,
   onClaimAllianceRewards,
+  onCheckIn,
+  notify,
 }: ProfileScreenProps) {
   const [activeSection, setActiveSection] = useState<
     "overview" | "quests" | "referral" | "settings"
@@ -63,6 +68,8 @@ export function ProfileScreen({
     message: string;
   }>({ type: null, message: "" });
   const [copied, setCopied] = useState(false);
+  const [showClaimSuccess, setShowClaimSuccess] = useState(false);
+  const [claimReward, setClaimReward] = useState<number>(0);
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) return;
@@ -217,6 +224,7 @@ export function ProfileScreen({
         </button>
       )}
 
+
       {/* Section Tabs */}
       <div className="flex gap-1 p-1 bg-muted rounded-lg">
         {[
@@ -235,7 +243,12 @@ export function ProfileScreen({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {tab.label}
+            <div className="flex items-center justify-center gap-1.5">
+              {tab.label}
+              {tab.id === "quests" && (
+                <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              )}
+            </div>
           </button>
         ))}
       </div>
@@ -267,16 +280,12 @@ export function ProfileScreen({
             </div>
           </div>
 
-          {/* Achievements - COMING SOON OVERLAY */}
-          <div className="card p-4 relative overflow-hidden">
-
-            <ComingSoonOverlay />
-
+          <div className="card p-4">
             <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
               <IconAward className="w-5 h-5 text-yellow-500" />
               Achievements
             </h3>
-            <div className="grid grid-cols-4 gap-3 opacity-50 blur-[1px]">
+            <div className="grid grid-cols-4 gap-3">
               <AchievementBadge
                 icon={<IconStar />}
                 label="First Win"
@@ -302,33 +311,85 @@ export function ProfileScreen({
         </div>
       )}
 
-      {/* Quests Section - COMING SOON OVERLAY */}
+      {/* Quests Section */}
       {activeSection === "quests" && (
-        <div className="space-y-3 relative overflow-hidden min-h-[300px]">
-          <ComingSoonOverlay />
-          <div className="flex items-center justify-between opacity-50 blur-[1px]">
-            <h3 className="font-semibold text-foreground">Daily Quests</h3>
-            <span className="text-xs text-muted-foreground">
-              {(stats?.quests || []).filter((q) => q.completed).length}/
-              {(stats?.quests || []).length} completed
+        <div className="space-y-4 relative min-h-[300px]">
+          {/* 4-Hourly Check-in Card (Featured) */}
+          <div className="card p-5 border-primary/20 bg-primary/5 shadow-inner">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner">
+                  <IconGift className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">4-Hourly Bonus</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Claim <span className="text-primary font-semibold text-sm">5,000 coins</span> every 4 hours
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                onClick={async () => {
+                  if (stats.canCheckIn) {
+                    console.log("[PROFILE] Claim button clicked");
+                    const res = await onCheckIn();
+                    if (res.success) {
+                      setClaimReward(res.reward || 5000);
+                      setShowClaimSuccess(true);
+                    } else {
+                      notify?.(res.message || "Claim failed", "error");
+                    }
+                  }
+                }}
+                disabled={!stats.canCheckIn}
+                className={cn(
+                  "btn h-11 px-6 font-bold shadow-lg transition-all",
+                  stats.canCheckIn 
+                    ? "btn-primary hover:scale-105 active:scale-95" 
+                    : "bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                )}
+              >
+                {stats.canCheckIn ? (
+                  "Claim Now"
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <IconZap className="w-4 h-4 animate-pulse" />
+                    Wait {stats.nextCheckInIn}h
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-foreground text-lg">Daily Quests</h3>
+            <span className="badge badge-secondary text-xs">
+              {(stats?.quests || []).filter(q => q.completed).length}/{(stats?.quests || []).length} completed
             </span>
           </div>
 
-          <div className="opacity-50 blur-[1px] space-y-3">
-            { (stats?.quests || []).map((quest) => (
+          <div className="space-y-3">
+            {(stats?.quests || []).map((quest) => (
               <QuestCard
                 key={quest.id}
                 quest={quest}
-                onAction={() => onQuestAction(quest.id)}
-                onClaim={() => onQuestClaim(quest.id)}
+                onAction={(openUrl) => onQuestAction(quest.id, openUrl)}
+                onClaim={() => {
+                  onQuestClaim(quest.id, (reward) => {
+                    setClaimReward(reward);
+                    setShowClaimSuccess(true);
+                  });
+                }}
+                notify={notify}
               />
             ))}
           </div>
 
 
           {/* Redeem Code */}
-          <div className="card p-4 mt-4 opacity-50 blur-[1px]">
-            <h4 className="font-medium text-foreground mb-3">Redeem Code</h4>
+          <div className="card p-4 mt-4">
+            <h4 className="font-medium text-foreground mb-3">Redeem Coupon</h4>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -336,16 +397,20 @@ export function ProfileScreen({
                 onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
                 placeholder="Enter code"
                 className="input flex-1"
-                disabled
               />
               <button
                 onClick={handleRedeem}
-                disabled={true}
-                className="btn btn-primary px-6"
+                disabled={!redeemCode.trim()}
+                className="btn btn-primary px-6 shadow-md"
               >
                 Redeem
               </button>
             </div>
+            {redeemStatus.message && (
+              <p className={cn("text-xs mt-2", redeemStatus.type === "success" ? "text-green-500" : "text-red-500")}>
+                {redeemStatus.message}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -463,6 +528,23 @@ export function ProfileScreen({
             onClick={onSystemSync}
           />
           <SettingsButton
+            icon={<IconSettings className="w-5 h-5 text-yellow-500" />}
+            label="Reset Social Quests (Test)"
+            description="Clear quest progress for testing"
+            onClick={() => {
+              const socialIds = ["q-follow-x", "q-like-1", "q-like-2"];
+              socialIds.forEach(id => {
+                localStorage.removeItem(`quest_completed_${id}`);
+                localStorage.removeItem(`quest_verify_${id}`);
+                localStorage.removeItem(`quest_visited_${id}`);
+              });
+              notify?.("Quest progress reset! Refreshing...", "success");
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            }}
+          />
+          <SettingsButton
             icon={<IconLogOut className="w-5 h-5 text-destructive" />}
             label="Logout"
             description="Disconnect your wallet"
@@ -470,6 +552,13 @@ export function ProfileScreen({
             variant="danger"
           />
         </div>
+      )}
+
+      {showClaimSuccess && (
+        <ClaimSuccessModal 
+          amount={claimReward} 
+          onClose={() => setShowClaimSuccess(false)} 
+        />
       )}
     </div>
   );
@@ -484,6 +573,86 @@ function ComingSoonOverlay() {
       </div>
       <div className="bg-card px-4 py-2 rounded-lg shadow-sm border">
         <span className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Coming Soon</span>
+      </div>
+    </div>
+  );
+}
+
+interface ClaimSuccessModalProps {
+  amount: number;
+  onClose: () => void;
+}
+
+function ClaimSuccessModal({ amount, onClose }: ClaimSuccessModalProps) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-background/80 backdrop-blur-md animate-in fade-in duration-300" 
+        onClick={onClose}
+      />
+      
+      {/* Modal Content */}
+      <div className="relative w-full max-w-xs bg-card border-2 border-primary/30 rounded-[2.5rem] shadow-2xl p-8 flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
+        <div className="absolute -top-12">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/40 border-4 border-card animate-bounce duration-[2000ms] infinite">
+              <IconGift className="w-12 h-12 text-white" />
+            </div>
+            {/* Particle effects placeholders */}
+            <div className="absolute top-0 left-0 w-full h-full animate-ping opacity-20 bg-primary rounded-full" />
+          </div>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          <div>
+            <h2 className="text-2xl font-black text-foreground uppercase tracking-tight">Reward Claimed!</h2>
+            <p className="text-sm text-muted-foreground font-medium mt-1">Check-in complete</p>
+          </div>
+
+          <div className="bg-primary/10 rounded-3xl p-6 border border-primary/20 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
+              <IconCoins className="w-20 h-20" />
+            </div>
+            <div className="flex flex-col items-center relative z-10">
+              <span className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Bonus Credit</span>
+              <div className="flex items-center gap-2">
+                <IconCoins className="w-6 h-6 text-yellow-500" />
+                <span className="text-4xl font-black text-foreground">+{formatNumber(amount)}</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wide">Credited to coins balance</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={onClose}
+            className="w-full btn btn-primary h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            Awesome!
+          </button>
+          
+          <p className="text-[10px] text-muted-foreground font-medium italic">
+            Come back in 4 hours for more!
+          </p>
+        </div>
+      </div>
+      
+      {/* Simple "Confetti" effects */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[...Array(15)].map((_, i) => (
+          <div 
+            key={i}
+            className="absolute rounded-full bg-primary animate-ping opacity-40"
+            style={{
+              width: Math.random() * 8 + 4 + 'px',
+              height: Math.random() * 8 + 4 + 'px',
+              left: Math.random() * 100 + '%',
+              top: Math.random() * 100 + '%',
+              animationDelay: i * 200 + 'ms',
+              animationDuration: Math.random() * 3 + 2 + 's'
+            }}
+          />
+        ))}
       </div>
     </div>
   );
@@ -538,11 +707,20 @@ function AchievementBadge({ icon, label, unlocked }: AchievementBadgeProps) {
 
 interface QuestCardProps {
   quest: DailyQuest;
-  onAction: () => void;
+  onAction: (openUrl?: boolean) => void;
   onClaim: () => void;
+  notify?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
-function QuestCard({ quest, onAction, onClaim }: QuestCardProps) {
+function QuestCard({ quest, onAction, onClaim, notify }: QuestCardProps) {
+  const [verificationInput, setVerificationInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [hasVisited, setHasVisited] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`quest_visited_${quest.id}`) === 'true';
+    }
+    return false;
+  });
   const progress = Math.min((quest.progress / quest.target) * 100, 100);
   const isComplete = quest.progress >= quest.target;
   const canClaim = isComplete && !quest.completed;
@@ -598,38 +776,135 @@ function QuestCard({ quest, onAction, onClaim }: QuestCardProps) {
         </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons & Input */}
       {!quest.completed && (
-        <div className="flex gap-2">
-          {quest.type === "external" && quest.externalUrl && (
-            <a
-              href={quest.externalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => onAction()}
-              className="btn btn-outline flex-1 h-9 text-sm"
-            >
-              <IconExternalLink className="w-4 h-4 mr-1" />
-              Go
-            </a>
+        <div className="space-y-3 mt-3">
+          {quest.requiresVerification && !isComplete && (
+            <div className={cn("space-y-2 transition-opacity", !hasVisited && "opacity-30 pointer-events-none")}>
+              <input
+                type="text"
+                placeholder={quest.verificationPlaceholder || "Enter details..."}
+                value={verificationInput}
+                disabled={isVerifying || !hasVisited}
+                onChange={(e) => setVerificationInput(e.target.value)}
+                className="w-full bg-background border border-muted-foreground/20 rounded-xl px-3 h-10 text-sm focus:outline-none focus:border-primary transition-colors disabled:opacity-50"
+              />
+              <p className="text-[10px] text-muted-foreground italic px-1">
+                {quest.verificationType === 'username' 
+                  ? "Submit your X username for verification." 
+                  : "Submit your comment link for verification."}
+              </p>
+            </div>
           )}
-          {quest.type === "click" && !isComplete && (
-            <button
-              onClick={onAction}
-              className="btn btn-outline flex-1 h-9 text-sm"
-            >
-              Complete
-            </button>
-          )}
-          {canClaim && (
-            <button
-              onClick={onClaim}
-              className="btn btn-primary flex-1 h-9 text-sm"
-            >
-              <IconGift className="w-4 h-4 mr-1" />
-              Claim {quest.reward}
-            </button>
-          )}
+
+          <div className="flex gap-2">
+            {quest.externalUrl && !isComplete && (
+              <a
+                href={quest.externalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  localStorage.setItem(`quest_visited_${quest.id}`, 'true');
+                  setHasVisited(true);
+                  onAction(true);
+                }}
+                className="btn btn-outline flex-1 h-9 text-sm"
+              >
+                <IconExternalLink className="w-4 h-4 mr-1" />
+                {quest.requiresVerification ? "Go to Link" : "Go"}
+              </a>
+            )}
+            
+            {quest.requiresVerification && !isComplete && (
+              <button
+                disabled={isVerifying || !hasVisited}
+                onClick={async () => {
+                  const val = verificationInput.trim();
+                  
+                  setIsVerifying(true);
+
+                  setTimeout(() => {
+                    if (val.length < 3) {
+                      setIsVerifying(false);
+                      notify?.("Please provide valid information.", "error");
+                      return;
+                    }
+
+                    if (quest.verificationType === 'username') {
+                      if (!val.startsWith('@') || val.length < 4) {
+                        setIsVerifying(false);
+                        notify?.("Invalid username! Please redo the task with your correct @username.", "error");
+                        return;
+                      }
+                    }
+
+                    if (quest.verificationType === 'link') {
+                      if (!val.includes('x.com') && !val.includes('twitter.com')) {
+                        setIsVerifying(false);
+                        notify?.("Invalid link! Please go back and copy your specific status URL.", "error");
+                        return;
+                      }
+
+                      const savedUsername = localStorage.getItem(`quest_verify_q-follow-x`);
+                      if (!savedUsername) {
+                        setIsVerifying(false);
+                        notify?.("Please follow us on X first so we can verify your account.", "error");
+                        return;
+                      }
+                      
+                      const normalizedUsername = savedUsername.replace('@', '').toLowerCase();
+                      if (!val.toLowerCase().includes(normalizedUsername)) {
+                        setIsVerifying(false);
+                        notify?.(`Verification failed: Link does not match @${normalizedUsername}. Please redo the task correctly.`, "error");
+                        return;
+                      }
+                    }
+
+                    // SUCCESS
+                    localStorage.setItem(`quest_verify_${quest.id}`, val);
+                    onAction(false);
+                    setIsVerifying(false);
+                    notify?.("Verification successful! You can now claim your reward.", "success");
+                    setVerificationInput("");
+                  }, 5000);
+                }}
+                className="btn btn-secondary flex-1 h-9 text-sm font-bold relative overflow-hidden"
+              >
+                {isVerifying ? (
+                  <span className="flex items-center gap-2">
+                    <IconRefresh className="w-4 h-4 animate-spin" />
+                    Checking...
+                  </span>
+                ) : "Verify Task"}
+              </button>
+            )}
+
+            {quest.type === "click" && !isComplete && !quest.requiresVerification && (
+              <button
+                onClick={() => onAction()}
+                className="btn btn-outline flex-1 h-9 text-sm"
+              >
+                Complete
+              </button>
+            )}
+
+            {canClaim && (
+              <button
+                onClick={onClaim}
+                className="btn btn-primary flex-1 h-10 text-sm font-bold shadow-lg shadow-primary/20"
+              >
+                <IconGift className="w-4 h-4 mr-1" />
+                Claim {quest.reward}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {quest.completed && (
+        <div className="flex items-center gap-2 text-primary font-bold text-sm bg-primary/5 p-2 rounded-lg mt-3">
+          <IconCheck className="w-5 h-5" />
+          Task Rewarded
         </div>
       )}
     </div>

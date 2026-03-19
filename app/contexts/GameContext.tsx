@@ -148,6 +148,7 @@ interface GameContextType {
     code: string,
   ) => Promise<{ success: boolean; message?: string }>;
   handleClaimAllianceRewards: () => Promise<void>;
+  handleCheckIn: () => Promise<{ success: boolean; message: string; reward?: number }>;
   handleAdminSyncRequest: () => void;
   handleAdminAuthSuccess: () => void;
   handleAdminLogout: () => Promise<void>;
@@ -167,6 +168,8 @@ interface GameContextType {
   setShowAdmin: React.Dispatch<React.SetStateAction<boolean>>;
   showAdminAuth: boolean;
   setShowAdminAuth: React.Dispatch<React.SetStateAction<boolean>>;
+  notification: { message: string; type: 'success' | 'error' | 'info' } | null;
+  notify: (message: string, type?: 'success' | 'error' | 'info') => void;
   adminSessionValid: boolean;
   adminSessionToken: string | null;
 
@@ -220,6 +223,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setRegistrationData,
   } = useUserStore();
   const { profile, refresh: refreshProfileQuery } = useProfile();
+
+  // Global Notification System
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const notify = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    // Auto-clear
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+  }, []);
 
   const adminSessionTokenRef = useRef<string | null>(null);
 
@@ -792,6 +806,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [profile?.walletAddress, refreshProfileQuery]);
 
+  const handleCheckIn = useCallback(async (): Promise<{
+    success: boolean;
+    message: string;
+    reward?: number;
+  }> => {
+    if (!walletState.address) {
+      return { success: false, message: "Wallet not connected" };
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/user/check-in`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: walletState.address }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        addTransaction(
+          "bonus",
+          data.reward,
+          "coins",
+          "4-Hourly Check-in Bonus"
+        );
+        refreshProfileQuery();
+        return { success: true, message: data.message, reward: data.reward };
+      } else {
+        return { success: false, message: data.error || data.message || "Claim failed" };
+      }
+    } catch (e) {
+      console.error("Check-in failed", e);
+      return { success: false, message: "Connection error" };
+    }
+  }, [walletState.address, addTransaction, refreshProfileQuery]);
+
   // ==========================================
   // ADMIN HANDLERS
   // ==========================================
@@ -1174,9 +1223,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         handleRedeem,
         handleReferral,
         handleClaimAllianceRewards,
+        handleCheckIn,
         handleAdminSyncRequest,
         handleAdminAuthSuccess,
         handleAdminLogout,
+        notification,
+        notify,
       }}
     >
       {children}
