@@ -43,10 +43,10 @@ const createDatabaseClient = () => {
       connectionString: databaseUrl,
       ssl: { rejectUnauthorized: false }, // Required for Railway external proxy
       // --- Rate-limiting / connection control ---
-      max: 5,                     // Max simultaneous DB connections (default is 10; lower = fewer concurrent queries)
-      min: 1,                     // Keep 1 idle connection alive to avoid cold start overhead
-      idleTimeoutMillis: 30000,   // Release idle connections after 30s to free server resources
-      connectionTimeoutMillis: 5000, // Wait max 5s for a free connection before erroring
+      max: 20,                     // Max simultaneous DB connections
+      min: 2,                      // Keep 2 idle connections alive
+      idleTimeoutMillis: 30000,   // Release idle connections after 30s
+      connectionTimeoutMillis: 10000, // Wait max 10s for a free connection before erroring
       // query_timeout handled per-query via drizzle; pool itself controls concurrency
     });
 

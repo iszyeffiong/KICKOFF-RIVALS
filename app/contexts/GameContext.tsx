@@ -398,16 +398,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (
-        wagmiStatus === "reconnecting" ||
-        (wagmiStatus === "connecting" && !walletState.isConnected)
+        (wagmiStatus === "reconnecting" ||
+          (wagmiStatus === "connecting" && !walletState.isConnected)) &&
+        !wagmiAddress
       ) {
         console.log(
-          "[SYNC] Wagmi reconnecting or connecting without walletState.isConnected. Skipping sync.",
+          "[SYNC] Wagmi still connecting and no address yet. Skipping sync.",
         );
         return;
       }
 
-      if (isWagmiConnected && wagmiAddress) {
+      if (wagmiAddress) {
         if (walletState.address !== wagmiAddress) {
           console.log("[SYNC] Address mismatch/init. Syncing...", wagmiAddress);
           setWalletAddress(wagmiAddress);

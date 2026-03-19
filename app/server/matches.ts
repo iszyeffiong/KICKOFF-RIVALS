@@ -16,6 +16,10 @@ import { z } from "zod";
 let standingsCache: { data: any; timestamp: number } | null = null;
 const STANDINGS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
 
+// Matches Global Cache (Reduce DB hits on every refresh)
+let matchesCache: Record<string, { data: any; timestamp: number }> = {};
+const MATCHES_CACHE_TTL = 30 * 1000; // 30 seconds
+
 // ==========================================
 // GET CURRENT MATCHES
 // ==========================================
@@ -193,20 +197,51 @@ function generateNextRoundMatches(seasonId: number, roundNumber: number, startTi
 // ==========================================
 
 export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
+  const cacheKey = data.leagueId || "all";
+  const now = Date.now();
+
+  // Check cache (30s TTL)
+  if (
+    matchesCache[cacheKey] &&
+    now - matchesCache[cacheKey].timestamp < MATCHES_CACHE_TTL
+  ) {
+    console.log(`[CACHE] Serving matches for ${cacheKey} from memory`);
+    return matchesCache[cacheKey].data;
+  }
+
   try {
     // 1. SEEDING CHECK
-    const leagueCountRes = await db.select({ count: sql<number>`count(*)` }).from(leagues);
-    if (Number(leagueCountRes[0].count) === 0) await db.insert(leagues).values(LEAGUES);
+    const leagueCountRes = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(leagues);
+    if (Number(leagueCountRes[0].count) === 0)
+      await db.insert(leagues).values(LEAGUES);
 
-    const teamCountRes = await db.select({ count: sql<number>`count(*)` }).from(teams);
+    const teamCountRes = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(teams);
     if (Number(teamCountRes[0].count) === 0) {
-      const allTeams = Object.values(TEAMS).flat().map(t => ({ id: t.id, name: t.name, leagueId: t.leagueId, strength: t.strength, color: t.color }));
+      const allTeams = Object.values(TEAMS)
+        .flat()
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          leagueId: t.leagueId,
+          strength: t.strength,
+          color: t.color,
+        }));
       await db.insert(teams).values(allTeams);
     }
 
-    let activeSeason = await db.query.seasons.findFirst({ where: eq(seasons.isActive, true), orderBy: desc(seasons.id) });
+    let activeSeason = await db.query.seasons.findFirst({
+      where: eq(seasons.isActive, true),
+      orderBy: desc(seasons.id),
+    });
     if (!activeSeason) {
-      const [newSeason] = await db.insert(seasons).values({ isActive: true, currentRound: 1 }).returning();
+      const [newSeason] = await db
+        .insert(seasons)
+        .values({ isActive: true, currentRound: 1 })
+        .returning();
       activeSeason = newSeason;
     }
 
@@ -542,11 +577,22 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       };
     });
 
-    return {
+    const result = {
       success: true,
-      matches: transformedMatches,
-      serverTime: new Date().toISOString(),
+      matches: currentMatchesWithTeams,
+      gameState: "active", // Placeholder, derive from season status if needed
+      timer: 0, // Placeholder, derive from match/round start time if needed
+      round: currentActiveRound,
+      seasonId: activeSeason.id,
     };
+
+    // Update Cache
+    matchesCache[cacheKey] = {
+      data: result,
+      timestamp: Date.now(),
+    };
+
+    return result;
   } catch (error: any) {
     console.error("Failed to get current matches:", error);
     return { success: false, error: error.message, matches: [] };

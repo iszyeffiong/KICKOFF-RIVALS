@@ -291,7 +291,24 @@ export const getUserProfile = createServerFn({ method: "GET" })
       lastCheckInDate: user.lastCheckInDate,
       canCheckIn: true,
       nextCheckInIn: 0,
-      quests: (user as any).quests || [],
+      quests: ((user as any).quests || []).map((q: any) => {
+        // If already completed in DB, keep it
+        if (q.completed) return q;
+
+        // Auto-update progress for play/win types
+        let progress = q.progress || 0;
+        let completed = q.completed;
+
+        if (q.type === "play") {
+          progress = user.gamePlays || 0;
+          if (progress >= q.target) completed = true;
+        } else if (q.type === "win") {
+          progress = user.wins || 0;
+          if (progress >= q.target) completed = true;
+        }
+
+        return { ...q, progress, completed };
+      }),
       masterQuests: await db.select().from(quests),
       isNew: result.isNew,
     };
@@ -776,30 +793,50 @@ export const submitQuestVerification = createServerFn({ method: "POST" })
       return { success: false, error: "User not found" };
     }
 
-    const questData = INITIAL_QUESTS.find(iq => iq.id === data.questId);
+    const questData = INITIAL_QUESTS.find((iq) => iq.id === data.questId);
     if (!questData) {
       return { success: false, error: "Generic quest data not found" };
     }
 
-    // Upsert user quest progress
-    await db.insert(userQuests).values({
-      walletAddress: normalized,
-      questId: data.questId,
-      title: questData.title,
-      reward: questData.reward,
-      type: questData.type as any,
-      frequency: questData.frequency as any,
-      target: questData.target,
-      progress: questData.target, // Mark as complete (ready to claim)
-      verifiedAt: new Date(),
-      status: "LIVE",
-    }).onConflictDoUpdate({
-      target: [userQuests.walletAddress, userQuests.questId],
-      set: { 
-        progress: questData.target,
-        verifiedAt: new Date(),
+    // Server-side Stat Check for count-based quests
+    if (questData.type === "play") {
+      if ((user.gamePlays || 0) < questData.target) {
+        return {
+          success: false,
+          error: `Requirement not met: You have played ${user.gamePlays || 0}/${questData.target} games.`,
+        };
       }
-    });
+    } else if (questData.type === "win") {
+      if ((user.wins || 0) < questData.target) {
+        return {
+          success: false,
+          error: `Requirement not met: You have won ${user.wins || 0}/${questData.target} games.`,
+        };
+      }
+    }
+
+    // Upsert user quest progress
+    await db
+      .insert(userQuests)
+      .values({
+        walletAddress: normalized,
+        questId: data.questId,
+        title: questData.title,
+        reward: questData.reward,
+        type: questData.type as any,
+        frequency: questData.frequency as any,
+        target: questData.target,
+        progress: questData.target, // Mark as complete (ready to claim)
+        verifiedAt: new Date(),
+        status: "LIVE",
+      })
+      .onConflictDoUpdate({
+        target: [userQuests.walletAddress, userQuests.questId],
+        set: {
+          progress: questData.target,
+          verifiedAt: new Date(),
+        },
+      });
 
     return { 
       success: true, 

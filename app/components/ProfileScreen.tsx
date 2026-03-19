@@ -399,7 +399,7 @@ export function ProfileScreen({
             </div>
           </div>
 
-          {/* <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <h3 className="font-semibold text-foreground text-lg">
               Daily Quests
             </h3>
@@ -418,7 +418,7 @@ export function ProfileScreen({
                 onClick={() => setSelectedQuestId(quest.id)}
               />
             ))}
-          </div> */}
+          </div>
 
           {/* Redeem Code */}
           <div className="card p-4 mt-4">
@@ -1127,7 +1127,9 @@ function QuestDrawer({
 
                   {(quest.type === "click" ||
                     quest.type === "external" ||
-                    quest.type === "social") &&
+                    quest.type === "social" ||
+                    quest.type === "play" ||
+                    quest.type === "win") &&
                     !isComplete &&
                     !quest.requiresVerification &&
                     (hasVisited || !targetUrl) && (

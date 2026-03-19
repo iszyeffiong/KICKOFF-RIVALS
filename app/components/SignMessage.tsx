@@ -14,9 +14,15 @@ interface SignMessageProps {
   address: string;
   onSigned: (signature: string, timestamp: number) => void;
   onCancel: () => void;
+  isProfileLoading?: boolean;
 }
 
-export function SignMessage({ address, onSigned, onCancel }: SignMessageProps) {
+export function SignMessage({
+  address,
+  onSigned,
+  onCancel,
+  isProfileLoading = false,
+}: SignMessageProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const { signMessageAsync } = useSignMessage();
@@ -51,7 +57,7 @@ This action is free and does not cost any gas.`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
@@ -109,8 +115,8 @@ This action is free and does not cost any gas.`;
                 Proof that you own this wallet address
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary">•</span>
-                A timestamp for security purposes
+                <span className="text-primary">•</span>A timestamp for security
+                purposes
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -122,7 +128,7 @@ This action is free and does not cost any gas.`;
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/50 mb-6">
-              <IconX className="w-5 h-5 text-destructive flex-shrink-0" />
+              <IconX className="w-5 h-5 text-destructive shrink-0" />
               <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
@@ -130,14 +136,19 @@ This action is free and does not cost any gas.`;
           {/* Sign Button */}
           <button
             onClick={handleSign}
-            disabled={isSigning}
+            disabled={isSigning || isProfileLoading}
             className={cn(
               "btn btn-primary w-full h-14 font-semibold text-lg",
               "disabled:opacity-70 disabled:cursor-not-allowed",
-              "hover:scale-[1.02] transition-transform"
+              "hover:scale-[1.02] transition-transform",
             )}
           >
-            {isSigning ? (
+            {isProfileLoading ? (
+              <>
+                <IconLoader className="w-5 h-5 mr-3 animate-spin" />
+                Syncing balance and profile...
+              </>
+            ) : isSigning ? (
               <>
                 <IconLoader className="w-5 h-5 mr-2 animate-spin" />
                 Waiting for signature...
@@ -152,7 +163,7 @@ This action is free and does not cost any gas.`;
 
           {/* Security note */}
           <div className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-slate-800/30 border border-slate-700">
-            <IconShield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <IconShield className="w-5 h-5 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="text-white text-sm font-medium">
                 Why do I need to sign?
