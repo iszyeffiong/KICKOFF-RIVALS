@@ -1148,7 +1148,7 @@ function QuestDrawer({
                       className="btn btn-primary h-16 w-full font-black text-lg tracking-tight shadow-2xl shadow-primary/30 border-none ring-4 ring-primary/20 animate-pulse active:scale-95"
                     >
                       <IconGift className="w-6 h-6 mr-3" />
-                      CLAIM {quest.reward} KOR
+                      CLAIM {quest.reward} COINS
                     </button>
                   )}
                 </div>
