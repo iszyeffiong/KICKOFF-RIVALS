@@ -37,17 +37,11 @@ const createDatabaseClient = () => {
     return drizzleNeon(sql, { schema });
   } else {
     // Use node-postgres for Railway / standard PostgreSQL
-    // Rate-limiting via pool config: small pool to prevent query bursts
-    console.log("🚂 Using Railway PostgreSQL database driver (rate-limited pool)");
+    // standard PostgreSQL
+    console.log("🚂 Using Railway PostgreSQL database driver");
     const pool = new pg.Pool({
       connectionString: databaseUrl,
       ssl: { rejectUnauthorized: false }, // Required for Railway external proxy
-      // --- Rate-limiting / connection control ---
-      max: 20,                     // Max simultaneous DB connections
-      min: 2,                      // Keep 2 idle connections alive
-      idleTimeoutMillis: 30000,   // Release idle connections after 30s
-      connectionTimeoutMillis: 10000, // Wait max 10s for a free connection before erroring
-      // query_timeout handled per-query via drizzle; pool itself controls concurrency
     });
 
     // Attach error handler so the process doesn't crash on idle connection drops

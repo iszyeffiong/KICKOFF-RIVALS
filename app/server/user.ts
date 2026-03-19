@@ -656,7 +656,7 @@ export const checkIn = createServerFn({ method: "POST" })
       return { success: false, error: "User not found" };
     }
 
-    const CHECK_IN_INTERVAL = 4; // hours
+    const CHECK_IN_INTERVAL = 0.01; // almost instant (36 seconds) for fast testing/claiming
     const REWARD = 5000; // 5000 coins
 
     if (user.lastCheckInDate) {

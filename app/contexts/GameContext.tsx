@@ -1253,31 +1253,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     fetchMatches();
     fetchStandings(); // Initial fetch
 
-    // Poll matches and standings: 3-minute interval (180,000ms)
+    // Poll matches and standings: 5-second interval
     const interval = setInterval(() => {
       const now = Date.now();
-      // Only poll if it's been at least 3 minutes
-      if (now - lastMatchesFetchRef.current >= 180000) {
+      if (now - lastMatchesFetchRef.current >= 5000) {
         fetchMatches();
         lastMatchesFetchRef.current = now;
       }
 
-      if (now - lastStandingsFetchRef.current >= 180000) {
+      if (now - lastStandingsFetchRef.current >= 5000) {
         fetchStandings();
         lastStandingsFetchRef.current = now;
       }
-    }, 60000); // Check every minute, but obey 3-min cooldown
+    }, 5000); // Check every 5s
 
     // Poll bets if user is connected
     let betInterval: ReturnType<typeof setInterval>;
     if (walletState.isConnected && walletState.address) {
       betInterval = setInterval(() => {
         const now = Date.now();
-        if (now - lastActiveBetsFetchRef.current >= 180000) {
+        if (now - lastActiveBetsFetchRef.current >= 5000) {
           fetchActiveBets();
           lastActiveBetsFetchRef.current = now;
         }
-      }, 60000);
+      }, 5000);
     }
 
     return () => {

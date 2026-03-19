@@ -14,11 +14,9 @@ import { z } from "zod";
 
 // Standings Cache
 let standingsCache: { data: any; timestamp: number } | null = null;
-const STANDINGS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-
-// Matches Global Cache (Reduce DB hits on every refresh)
+const STANDINGS_CACHE_TTL = 10 * 1000; // 10 seconds
 let matchesCache: Record<string, { data: any; timestamp: number }> = {};
-const MATCHES_CACHE_TTL = 30 * 1000; // 30 seconds
+const MATCHES_CACHE_TTL = 2 * 1000; // 2 seconds
 
 // ==========================================
 // GET CURRENT MATCHES
@@ -269,7 +267,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       if (timeSinceLastStart > TOTAL_CYCLE * 1000) {
         let currentTickTime = lastStartTime;
         let currentTickRound = latestMatch.round;
-        const maxCatchup = 100; // Catch up to ~23 hours of missed gameplay
+        const maxCatchup = 500; // Catch up to ~23 hours of missed gameplay
         let caughtUpCount = 0;
 
         while (now.getTime() - currentTickTime.getTime() > TOTAL_CYCLE * 1000 && caughtUpCount < maxCatchup) {
@@ -579,7 +577,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
 
     const result = {
       success: true,
-      matches: currentMatchesWithTeams,
+      matches: transformedMatches,
       gameState: "active", // Placeholder, derive from season status if needed
       timer: 0, // Placeholder, derive from match/round start time if needed
       round: currentActiveRound,
