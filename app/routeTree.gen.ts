@@ -33,7 +33,7 @@ import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertKorRouteImport } from './routes/api/user.convert-kor'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
 import { Route as ApiUserClaimWelcomeGiftRouteImport } from './routes/api/user.claim-welcome-gift'
-import { Route as ApiUserClaimSocialRewardRouteImport } from './routes/api/user.claim-social-reward'
+import { Route as ApiUserClaimQuestRewardRouteImport } from './routes/api/user.claim-quest-reward'
 import { Route as ApiUserClaimAllianceRewardsRouteImport } from './routes/api/user.claim-alliance-rewards'
 import { Route as ApiUserCheckInRouteImport } from './routes/api/user.check-in'
 import { Route as ApiMinigameBetAccumulatorRouteImport } from './routes/api/minigame.bet-accumulator'
@@ -168,12 +168,11 @@ const ApiUserClaimWelcomeGiftRoute = ApiUserClaimWelcomeGiftRouteImport.update({
   path: '/api/user/claim-welcome-gift',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiUserClaimSocialRewardRoute =
-  ApiUserClaimSocialRewardRouteImport.update({
-    id: '/api/user/claim-social-reward',
-    path: '/api/user/claim-social-reward',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiUserClaimQuestRewardRoute = ApiUserClaimQuestRewardRouteImport.update({
+  id: '/api/user/claim-quest-reward',
+  path: '/api/user/claim-quest-reward',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUserClaimAllianceRewardsRoute =
   ApiUserClaimAllianceRewardsRouteImport.update({
     id: '/api/user/claim-alliance-rewards',
@@ -261,7 +260,7 @@ export interface FileRoutesByFullPath {
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
   '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
-  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
+  '/api/user/claim-quest-reward': typeof ApiUserClaimQuestRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
@@ -298,7 +297,7 @@ export interface FileRoutesByTo {
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
   '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
-  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
+  '/api/user/claim-quest-reward': typeof ApiUserClaimQuestRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
@@ -337,7 +336,7 @@ export interface FileRoutesById {
   '/api/minigame/bet-accumulator': typeof ApiMinigameBetAccumulatorRoute
   '/api/user/check-in': typeof ApiUserCheckInRoute
   '/api/user/claim-alliance-rewards': typeof ApiUserClaimAllianceRewardsRoute
-  '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
+  '/api/user/claim-quest-reward': typeof ApiUserClaimQuestRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
@@ -377,7 +376,7 @@ export interface FileRouteTypes {
     | '/api/minigame/bet-accumulator'
     | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
-    | '/api/user/claim-social-reward'
+    | '/api/user/claim-quest-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/convert-kor'
@@ -414,7 +413,7 @@ export interface FileRouteTypes {
     | '/api/minigame/bet-accumulator'
     | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
-    | '/api/user/claim-social-reward'
+    | '/api/user/claim-quest-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/convert-kor'
@@ -452,7 +451,7 @@ export interface FileRouteTypes {
     | '/api/minigame/bet-accumulator'
     | '/api/user/check-in'
     | '/api/user/claim-alliance-rewards'
-    | '/api/user/claim-social-reward'
+    | '/api/user/claim-quest-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
     | '/api/user/convert-kor'
@@ -485,7 +484,7 @@ export interface RootRouteChildren {
   ApiMinigameBetAccumulatorRoute: typeof ApiMinigameBetAccumulatorRoute
   ApiUserCheckInRoute: typeof ApiUserCheckInRoute
   ApiUserClaimAllianceRewardsRoute: typeof ApiUserClaimAllianceRewardsRoute
-  ApiUserClaimSocialRewardRoute: typeof ApiUserClaimSocialRewardRoute
+  ApiUserClaimQuestRewardRoute: typeof ApiUserClaimQuestRewardRoute
   ApiUserClaimWelcomeGiftRoute: typeof ApiUserClaimWelcomeGiftRoute
   ApiUserConvertCoinsRoute: typeof ApiUserConvertCoinsRoute
   ApiUserConvertKorRoute: typeof ApiUserConvertKorRoute
@@ -665,11 +664,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUserClaimWelcomeGiftRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/user/claim-social-reward': {
-      id: '/api/user/claim-social-reward'
-      path: '/api/user/claim-social-reward'
-      fullPath: '/api/user/claim-social-reward'
-      preLoaderRoute: typeof ApiUserClaimSocialRewardRouteImport
+    '/api/user/claim-quest-reward': {
+      id: '/api/user/claim-quest-reward'
+      path: '/api/user/claim-quest-reward'
+      fullPath: '/api/user/claim-quest-reward'
+      preLoaderRoute: typeof ApiUserClaimQuestRewardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/user/claim-alliance-rewards': {
@@ -797,7 +796,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMinigameBetAccumulatorRoute: ApiMinigameBetAccumulatorRoute,
   ApiUserCheckInRoute: ApiUserCheckInRoute,
   ApiUserClaimAllianceRewardsRoute: ApiUserClaimAllianceRewardsRoute,
-  ApiUserClaimSocialRewardRoute: ApiUserClaimSocialRewardRoute,
+  ApiUserClaimQuestRewardRoute: ApiUserClaimQuestRewardRoute,
   ApiUserClaimWelcomeGiftRoute: ApiUserClaimWelcomeGiftRoute,
   ApiUserConvertCoinsRoute: ApiUserConvertCoinsRoute,
   ApiUserConvertKorRoute: ApiUserConvertKorRoute,

@@ -49,7 +49,7 @@ export const useProfile = () => {
 
         // Merge INITIAL_SOCIAL_QUESTS
         if (data.quests) {
-          const socialIds = ["q-follow-x", "q-like-1", "q-like-2"];
+          const socialIds = ["q-follow-x", "q-lcr-post"];
           const extra = INITIAL_QUESTS.filter(iq => socialIds.includes(iq.id) && !data.quests.some((sq: any) => sq.id === iq.id));
           data.quests = [...data.quests, ...extra].map((q: any) => {
             const isDoneLocal =

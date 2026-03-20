@@ -291,23 +291,30 @@ export const getUserProfile = createServerFn({ method: "GET" })
       lastCheckInDate: user.lastCheckInDate,
       canCheckIn: true,
       nextCheckInIn: 0,
+      transactions: ((user as any).transactions || [])
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((tx: any) => ({
+          ...tx,
+          timestamp: new Date(tx.createdAt).getTime(),
+          hash: tx.id,
+        })),
       quests: ((user as any).quests || []).map((q: any) => {
+        // Ensure we use the string identifier (e.g. 'dq_win10') as the ID for the frontend
+        const id = q.questId || q.id;
+
         // If already completed in DB, keep it
-        if (q.completed) return q;
+        if (q.completed) return { ...q, id };
 
         // Auto-update progress for play/win types
         let progress = q.progress || 0;
-        let completed = q.completed;
 
         if (q.type === "play") {
           progress = user.gamePlays || 0;
-          if (progress >= q.target) completed = true;
         } else if (q.type === "win") {
           progress = user.wins || 0;
-          if (progress >= q.target) completed = true;
         }
 
-        return { ...q, progress, completed };
+        return { ...q, id, progress };
       }),
       masterQuests: await db.select().from(quests),
       isNew: result.isNew,
@@ -422,14 +429,13 @@ export const registerReferral = createServerFn({ method: "POST" })
     });
 
     if (refQuest && !refQuest.completed) {
-      const newProgress = refQuest.progress + 1;
-      const isCompleted = newProgress >= refQuest.target;
+      const newProgress = Math.min(refQuest.target, refQuest.progress + 1);
       
       await db
         .update(userQuests)
         .set({
           progress: newProgress,
-          completed: isCompleted,
+          // completed: isCompleted, // REMOVED: Completion is now manual via claim
         })
         .where(eq(userQuests.id, refQuest.id));
       
@@ -751,80 +757,79 @@ export const checkIn = createServerFn({ method: "POST" })
       message: `Check-in successful! +${REWARD} coins` 
     };
   });
-export const claimSocialReward = createServerFn({ method: "POST" })
+export const claimQuestReward = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => 
     z.object({
       walletAddress: z.string().min(1),
-      questId: z.string().min(1),
+      questId: z.coerce.string().min(1),
     }).parse(data)
   )
   .handler(async ({ data }) => {
-    console.log(`[SOCIAL_CLAIM] Starting claim for:`, data);
     const normalized = data.walletAddress.toLowerCase();
     
-    const user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, normalized),
+    // 1. Fetch user quest record
+    const userQuest = await db.query.userQuests.findFirst({
+      where: and(
+        eq(userQuests.walletAddress, normalized),
+        eq(userQuests.questId, data.questId)
+      ),
     });
 
-    if (!user) {
-      console.warn(`[SOCIAL_CLAIM] User not found for ${normalized}`);
-      return { success: false, error: "User not found" };
-    }
-    console.log(`[SOCIAL_CLAIM] Found user:`, user.username);
-
-    // CHECK IF ALREADY CLAIMED IN DB
-    const existing = await db.query.userQuests.findFirst({
-      where: (uq, { and, eq }) => and(
-        eq(uq.walletAddress, normalized),
-        eq(uq.questId, data.questId),
-        eq(uq.completed, true)
-      )
-    });
-
-    if (existing) {
-      return { success: false, error: "Quest already claimed!" };
+    if (!userQuest) {
+      return { success: false, error: "Quest progress not found" };
     }
 
-    const questData = INITIAL_QUESTS.find(iq => iq.id === data.questId);
-    const REWARD = questData?.reward || 2500;
+    if (userQuest.completed) {
+      return { success: false, error: "Already claimed" };
+    }
 
-    // 1. Mark as completed in userQuests table
-    await db.insert(userQuests).values({
-      walletAddress: normalized,
-      questId: data.questId,
-      title: questData?.title || "Social Quest",
-      reward: REWARD,
-      type: "external",
-      frequency: "daily",
-      target: 1,
-      progress: 1,
-      completed: true,
-      status: "LIVE",
-      createdAt: new Date(),
-    }).onConflictDoUpdate({
-      target: [userQuests.walletAddress, userQuests.questId],
-      set: { completed: true, progress: 1 }
+    // 2. Double-check requirements
+    const isSocial = userQuest.type === "social" || userQuest.type === "external";
+    
+    if (!isSocial && userQuest.progress < userQuest.target) {
+      return { success: false, error: `Incomplete: ${userQuest.progress}/${userQuest.target}` };
+    }
+
+    // For social, ensure we have tracking or allow claim if it's social action type
+    const rewardAmount = userQuest.reward || 0;
+
+    // 3. Perform atomic payout transaction
+    await db.transaction(async (tx) => {
+      // Mark as completed
+      await tx.update(userQuests)
+        .set({ 
+          completed: true,
+          progress: userQuest.target 
+        })
+        .where(eq(userQuests.id, userQuest.id));
+
+      // Add coins to user
+      await tx.update(users)
+        .set({ 
+          coins: sql`${users.coins} + ${rewardAmount}` 
+        })
+        .where(eq(users.walletAddress, normalized));
+
+      // Log transaction
+      await tx.insert(transactions).values({
+        id: `tx-claim-${Date.now()}-${data.questId}`,
+        walletAddress: normalized,
+        type: "redeem",
+        amount: rewardAmount,
+        currency: "coins",
+        description: `Quest Reward: ${userQuest.title}`
+      });
     });
 
-    // 2. Add reward to coins balance in DB (Atomic)
-    await db.update(users).set({
-      coins: sql`${users.coins} + ${REWARD}`,
-    }).where(eq(users.walletAddress, normalized));
-
-    // 3. Log transaction in DB
-    await db.insert(transactions).values({
-      id: `tx-social-${Date.now()}-${data.questId}`,
-      walletAddress: normalized,
-      type: "redeem",
-      amount: REWARD,
-      currency: "coins",
-      description: `Social Quest Reward: ${questData?.title || data.questId}`
+    // 4. Return updated balance for UI
+    const updatedUser = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized)
     });
 
     return { 
       success: true, 
-      reward: REWARD, 
-      message: `Social reward claimed! +${REWARD} coins` 
+      reward: rewardAmount,
+      totalCoins: updatedUser?.coins || 0 
     };
   });
 
@@ -834,7 +839,7 @@ export const claimSocialReward = createServerFn({ method: "POST" })
 
 const submitQuestVerificationSchema = z.object({
   walletAddress: z.string().min(1),
-  questId: z.string().min(1),
+  questId: z.coerce.string().min(1),
   verificationCode: z.string().nullable().optional(),
 });
 
@@ -959,8 +964,7 @@ export async function updateQuestProgressInternal(walletAddress: string, type: "
         
         await db.update(userQuests)
             .set({ 
-                progress: newProgress, 
-                completed: isCompleted,
+                progress: newProgress,
                 verifiedAt: isCompleted ? new Date() : null
             })
             .where(eq(userQuests.id, q.id));
@@ -1019,30 +1023,50 @@ export const syncGameplayQuests = createServerFn({ method: "POST" })
 
       const since = q.frequency === "weekly" ? monday : today;
       const relevantBets = recentBets.filter(b => new Date(b.createdAt) >= since);
-      
-      // Group by matchId to count unique games played
-      const uniqueMatchIds = new Set(relevantBets.map(b => b.matchId));
-      const gamesPlayed = uniqueMatchIds.size;
-      
-      // Count won matches specifically (at least one bet won on that match)
-      const matchesWithWins = new Set(
-        relevantBets
-          .filter(b => b.status === "won")
-          .map(b => b.matchId)
-      );
-      const gamesWon = matchesWithWins.size;
 
       let newProgress = q.progress;
-      if (q.type === "play") newProgress = gamesPlayed;
-      if (q.type === "win") newProgress = gamesWon;
+
+      if (q.questId === "wq_win10acc") {
+        // ACCUMULATOR QUEST: only count bets with betType=accumulator
+        // An accumulator win = all bets in the same accumulatorId are won
+        const accBets = relevantBets.filter(b => b.betType === "accumulator" && b.accumulatorId);
+        
+        // Group by accumulatorId
+        const accGroups = new Map<string, typeof accBets>();
+        for (const bet of accBets) {
+          const key = bet.accumulatorId!;
+          if (!accGroups.has(key)) accGroups.set(key, []);
+          accGroups.get(key)!.push(bet);
+        }
+        
+        // Count fully-won accumulators (all legs won)
+        let wonAccumulators = 0;
+        for (const [, legs] of accGroups) {
+          const allWon = legs.every(b => b.status === "won");
+          if (allWon && legs.length > 1) wonAccumulators++;
+        }
+        newProgress = wonAccumulators;
+      } else if (q.type === "play") {
+        // Count unique matches played (any bet placed = participated)
+        const uniqueMatchIds = new Set(relevantBets.map(b => b.matchId));
+        newProgress = uniqueMatchIds.size;
+      } else if (q.type === "win") {
+        // Count unique matches where user won at least one bet
+        const matchesWithWins = new Set(
+          relevantBets
+            .filter(b => b.status === "won")
+            .map(b => b.matchId)
+        );
+        newProgress = matchesWithWins.size;
+      }
 
       const isCompleted = newProgress >= q.target;
 
-      if (newProgress !== q.progress || isCompleted !== q.completed) {
+      if (newProgress !== q.progress) {
         await db.update(userQuests)
-          .set({ progress: newProgress, completed: isCompleted })
+          .set({ progress: newProgress })
           .where(eq(userQuests.id, q.id));
-        updatedQuests.push({ ...q, progress: newProgress, completed: isCompleted });
+        updatedQuests.push({ ...q, progress: newProgress, completed: q.completed });
       } else {
         updatedQuests.push(q);
       }

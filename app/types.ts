@@ -169,6 +169,7 @@ export interface UserStats {
   canCheckIn?: boolean;
   nextCheckInIn?: number;
   lastCheckInDate?: string | Date | null;
+  transactions?: Transaction[];
 }
 
 export interface Coupon {

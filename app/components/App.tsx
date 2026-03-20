@@ -74,7 +74,7 @@ import {
 import { verifyCoupon } from "../services/couponService";
 import { LandingPage } from "./LandingPage";
 import { GameSelection } from "./GameSelection";
-import { claimSocialReward } from "../server/user";
+import { claimQuestReward } from "../server/user";
 import { AllianceSetup } from "./AllianceSetup";
 import { EntryChoice } from "./EntryChoice";
 
@@ -1400,7 +1400,7 @@ const App: React.FC = () => {
     // Server-First Approach: DB decides if reward is valid
     try {
       console.log(`[QUEST] Syncing quest ${id} with DB...`);
-      const res = await fetch(`${API_URL}/api/user/claim-social-reward`, {
+      const res = await fetch(`${API_URL}/api/user/claim-quest-reward`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1414,19 +1414,15 @@ const App: React.FC = () => {
         const reward = result.reward || quest.reward;
         console.log(`[QUEST] DB confirmed! +${reward} coins.`);
 
-        // 1. Persist to localStorage so refreshProfile keeps it as completed
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`quest_completed_${id}`, "true");
-        }
-
-        // 2. Update local state immediately
+        // 1. Sync state using the exact total from DB
         setUserStats((prev) => ({
           ...prev,
-          coins: prev.coins + reward,
+          coins: result.totalCoins,
           quests: prev.quests.map((q) =>
             q.id === id ? { ...q, completed: true } : q,
           ),
         }));
+
         addTransaction(
           "redeem",
           reward,

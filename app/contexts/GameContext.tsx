@@ -173,6 +173,8 @@ interface GameContextType {
   setShowWallet: React.Dispatch<React.SetStateAction<boolean>>;
   showSwapConfirm: boolean;
   setShowSwapConfirm: React.Dispatch<React.SetStateAction<boolean>>;
+  showSwapKorConfirm: boolean;
+  setShowSwapKorConfirm: React.Dispatch<React.SetStateAction<boolean>>;
   showAdmin: boolean;
   setShowAdmin: React.Dispatch<React.SetStateAction<boolean>>;
   showAdminAuth: boolean;
@@ -300,6 +302,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [selectedLeagueId, setSelectedLeagueId] = useState(LEAGUES[0].id);
   const [showWallet, setShowWallet] = useState(false);
   const [showSwapConfirm, setShowSwapConfirm] = useState(false);
+  const [showSwapKorConfirm, setShowSwapKorConfirm] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [adminSessionValid, setAdminSessionValid] = useState(false);
@@ -824,7 +827,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       try {
         console.log(`[QUEST] Syncing quest ${id} with DB...`);
-        const res = await fetch(`${API_URL}/api/user/claim-social-reward`, {
+        const res = await fetch(`${API_URL}/api/user/claim-quest-reward`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -838,19 +841,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           const reward = result.reward || quest.reward;
           console.log(`[QUEST] DB confirmed! +${reward} coins.`);
 
-          // 1. Persist to localStorage
-          if (typeof window !== "undefined") {
-            localStorage.setItem(`quest_completed_${id}`, "true");
-          }
-
-          // 2. OPTIMISTIC UPDATE: Update profile cache instantly
+          // 1. Sync state using the exact total from DB
           queryClient.setQueryData(
             ["profile", profile.walletAddress],
             (old: any) => {
               if (!old) return old;
               return {
                 ...old,
-                korBalance: (old.korBalance || 0) + reward,
+                coins: result.totalCoins,
                 quests: (old.quests || []).map((q: any) =>
                   q.id === id ? { ...q, completed: true } : q,
                 ),
@@ -858,18 +856,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             },
           );
 
-          // 3. Add to local transactions list
+          // 2. Add to local transactions list
           addTransaction(
             "redeem",
             reward,
-            "kor",
+            "coins",
             `Quest Reward: ${quest.title}`,
           );
 
-          // 4. Refresh eventually to stay 100% in sync
+          // 3. Refresh to stay 100% in sync
           refreshProfileQuery();
 
-          // 5. Success feedback
+          // 4. Success feedback
           onSuccess?.(reward);
         } else {
           toast.error(result.error || "Claim failed");
@@ -1341,6 +1339,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setShowWallet,
         showSwapConfirm,
         setShowSwapConfirm,
+        showSwapKorConfirm,
+        setShowSwapKorConfirm,
         showAdmin,
         setShowAdmin,
         showAdminAuth,

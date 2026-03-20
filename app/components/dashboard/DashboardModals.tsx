@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react";
 import { useGame } from "../../contexts/GameContext";
 import { useProfile } from "../../hooks/useProfile";
-import { CONVERSION_RATE } from "../../constants";
+import { CONVERSION_RATE, CONVERSION_YIELD } from "../../constants";
 import { WalletModal } from "../WalletModal";
 import { SwapConfirm } from "../SwapConfirm";
+import { SwapKorConfirm } from "../SwapKorConfirm";
 import { SimulationScreen } from "../SimulationScreen";
 import { BetModal } from "../BetModal";
 import { BetSlip } from "../BetSlip";
@@ -28,6 +29,8 @@ export function DashboardModals() {
     setShowWallet,
     showSwapConfirm,
     setShowSwapConfirm,
+    showSwapKorConfirm,
+    setShowSwapKorConfirm,
     showAdminAuth,
     setShowAdminAuth,
     showAdmin,
@@ -63,6 +66,10 @@ export function DashboardModals() {
           onSwapRequest={() => {
             setShowWallet(false);
             setShowSwapConfirm(true);
+          }}
+          onKorToCoinsRequest={() => {
+            setShowWallet(false);
+            setShowSwapKorConfirm(true);
           }}
           currentBalance={profile.korBalance}
           userStats={profile}
@@ -100,6 +107,38 @@ export function DashboardModals() {
             setShowSwapConfirm(false);
           }}
           onCancel={() => setShowSwapConfirm(false)}
+        />
+      )}
+
+      {showSwapKorConfirm && (
+        <SwapKorConfirm
+          kor={profile.korBalance}
+          onConfirm={async () => {
+            const korAmount = profile.korBalance;
+            try {
+              const res = await fetch(`${API_URL}/api/user/convert-kor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  walletAddress: profile.walletAddress,
+                  korAmount,
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                refreshProfile();
+                setBalance(data.korBalance);
+                const coinsAdded = korAmount * (CONVERSION_RATE / CONVERSION_YIELD);
+                addTransaction("convert", coinsAdded, "coins", "Swapped KOR for Coins");
+              } else {
+                alert("Conversion failed: " + data.error);
+              }
+            } catch (e) {
+              console.error(e);
+            }
+            setShowSwapKorConfirm(false);
+          }}
+          onCancel={() => setShowSwapKorConfirm(false)}
         />
       )}
 

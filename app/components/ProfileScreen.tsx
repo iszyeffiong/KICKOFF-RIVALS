@@ -89,6 +89,7 @@ export function ProfileScreen({
   const [showClaimSuccess, setShowClaimSuccess] = useState(false);
   const [claimReward, setClaimReward] = useState<number>(0);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+  const [questTab, setQuestTab] = useState<"daily" | "weekly" | "social" | "game">("daily");
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) return;
@@ -401,26 +402,34 @@ export function ProfileScreen({
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground text-lg">
-              Active Quests
-            </h3>
-            <span className="badge badge-secondary text-xs">
-              {(stats?.quests || []).filter((q) => q.completed).length}/
-              {(stats?.quests || []).length} completed
-            </span>
+          {/* Quest Tabs */}
+          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-xl text-xs font-bold">
+            {(["daily", "weekly", "social", "game"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setQuestTab(tab)}
+                className={cn(
+                  "flex-1 py-2 rounded-lg capitalize transition-all",
+                  questTab === tab
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
           </div>
 
           <div className="space-y-3">
             {(stats?.quests || [])
-              .sort((a, b) => {
-                const aSocial = a.type === "social" || a.type === "external";
-                const bSocial = b.type === "social" || b.type === "external";
-                if (aSocial && !bSocial) return -1;
-                if (!aSocial && bSocial) return 1;
-                return 0;
+              .filter((q) => q.status !== "ARCHIVED")
+              .filter((q) => {
+                if (questTab === "daily") return (q.type === "win" || q.type === "play") && q.frequency === "daily";
+                if (questTab === "weekly") return (q.type === "win" || q.type === "play") && q.frequency === "weekly";
+                if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social";
+                if (questTab === "game") return q.type === "referral" || q.type === "click";
+                return true;
               })
-              .filter((q) => q.id !== "110" && q.id !== "113")
               .map((quest) => (
                 <QuestCard
                   key={quest.id}
@@ -429,6 +438,17 @@ export function ProfileScreen({
                   onClick={() => setSelectedQuestId(quest.id)}
                 />
               ))}
+            {(stats?.quests || []).filter((q) => q.status !== "ARCHIVED").filter((q) => {
+              if (questTab === "daily") return (q.type === "win" || q.type === "play") && q.frequency === "daily";
+              if (questTab === "weekly") return (q.type === "win" || q.type === "play") && q.frequency === "weekly";
+              if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social";
+              if (questTab === "game") return q.type === "referral" || q.type === "click";
+              return true;
+            }).length === 0 && (
+              <div className="text-center py-10 text-muted-foreground text-sm">
+                No {questTab} quests available right now.
+              </div>
+            )}
           </div>
 
           {/* Redeem Code */}
@@ -944,20 +964,6 @@ function QuestDrawer({
           notify?.("Must be a valid X/Twitter link.", "error");
           return;
         }
-
-        const savedUsername = localStorage.getItem("quest_verify_q-follow-x");
-        if (!savedUsername) {
-          setIsVerifying(false);
-          notify?.("Verify following us on X first.", "error");
-          return;
-        }
-
-        const normalizedUsername = savedUsername.replace("@", "").toLowerCase();
-        if (!lowerVal.includes(normalizedUsername)) {
-          setIsVerifying(false);
-          notify?.(`Post must be from @${normalizedUsername}`, "error");
-          return;
-        }
       }
 
       // Success logic
@@ -1167,13 +1173,19 @@ function QuestDrawer({
                       </button>
                     )}
 
-                  {canClaim && (
+                  {!quest.completed && (
                     <button
                       onClick={onClaim}
-                      className="btn btn-primary h-16 w-full font-black text-lg tracking-tight shadow-2xl shadow-primary/30 border-none ring-4 ring-primary/20 animate-pulse active:scale-95"
+                      disabled={!canClaim}
+                      className={cn(
+                        "btn h-16 w-full font-black text-lg tracking-tight transition-all active:scale-95 duration-500",
+                        canClaim
+                          ? "btn-primary shadow-2xl shadow-primary/30 border-none ring-4 ring-primary/20 animate-pulse"
+                          : "bg-muted/50 text-muted-foreground/40 border-2 border-muted cursor-not-allowed grayscale",
+                      )}
                     >
-                      <IconGift className="w-6 h-6 mr-3" />
-                      CLAIM {quest.reward} COINS
+                      <IconGift className={cn("w-6 h-6 mr-3", !canClaim && "opacity-20")} />
+                      {canClaim ? `CLAIM ${quest.reward} COINS` : "CLAIM REWARD LOCKED"}
                     </button>
                   )}
                 </div>

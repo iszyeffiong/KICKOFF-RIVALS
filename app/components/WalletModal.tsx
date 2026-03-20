@@ -118,7 +118,7 @@ export function WalletModal({
                   {formatNumber(userStats.korBalance)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  ≈ ${(userStats.korBalance * 0.01).toFixed(2)} USD
+                  Betting Currency
                 </p>
               </div>
 
@@ -245,9 +245,73 @@ export function WalletModal({
 
           {activeTab === "history" && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Transaction history will appear here
-              </p>
+              {userStats.transactions && userStats.transactions.length > 0 ? (
+                userStats.transactions.map((tx) => (
+                  <div
+                    key={tx.hash}
+                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          tx.type === "win" ||
+                            tx.type === "redeem" ||
+                            tx.type === "referral" ||
+                            tx.type === "bonus"
+                            ? "bg-green-500/10 text-green-500"
+                            : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        {tx.type === "win" ||
+                        tx.type === "redeem" ||
+                        tx.type === "referral" ||
+                        tx.type === "bonus" ? (
+                          <IconArrowUp className="w-5 h-5 rotate-45" />
+                        ) : (
+                          <IconArrowDown className="w-5 h-5 -rotate-45" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-foreground capitalize truncate">
+                          {tx.type.replace("_", " ")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                          {tx.description || formatDate(tx.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p
+                        className={cn(
+                          "font-bold text-sm",
+                          tx.type === "win" ||
+                            tx.type === "redeem" ||
+                            tx.type === "referral" ||
+                            tx.type === "bonus"
+                            ? "text-green-500"
+                            : "text-foreground",
+                        )}
+                      >
+                        {tx.type === "win" ||
+                        tx.type === "redeem" ||
+                        tx.type === "referral" ||
+                        tx.type === "bonus"
+                          ? "+"
+                          : "-"}
+                        {formatNumber(tx.amount)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-black">
+                        {tx.currency}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No transactions found. Start playing to see your history!
+                </p>
+              )}
             </div>
           )}
         </div>
