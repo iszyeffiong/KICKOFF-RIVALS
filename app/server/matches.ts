@@ -11,6 +11,7 @@ import {
 } from "../lib/db";
 import { eq, and, desc, sql, lte, not, aliasedTable } from "drizzle-orm";
 import { z } from "zod";
+import { updateQuestProgressInternal } from "./user";
 
 // Standings Cache
 let standingsCache: { data: any; timestamp: number } | null = null;
@@ -426,7 +427,10 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
                      xp: sql`${users.xp} + 25`,
                   }).where(eq(users.walletAddress, bet.walletAddress));
                   
-                  await db.insert(transactions).values({
+                    // QUESTS: Increment Win Progress
+                    await updateQuestProgressInternal(bet.walletAddress, "win", 1);
+                    
+                    await db.insert(transactions).values({
                     id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
                     walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (${m.id})`
                   });
@@ -801,7 +805,7 @@ export const placeBet = createServerFn({ method: "POST" })
       }
 
       // Check balance
-      if ((user.coins || 0) < data.stake) {
+      if ((user.doodlBalance || 0) < data.stake) {
         return { success: false, error: "Insufficient balance" };
       }
 
@@ -844,14 +848,17 @@ export const placeBet = createServerFn({ method: "POST" })
       });
 
       // Deduct balance
-      const newBalance = (user.coins || 0) - data.stake;
+      const newBalance = (user.doodlBalance || 0) - data.stake;
       await db
         .update(users)
         .set({
-          coins: newBalance,
+          doodlBalance: sql`${users.doodlBalance} - ${data.stake}`,
           totalBets: (user.totalBets || 0) + 1,
         })
         .where(eq(users.walletAddress, normalized));
+
+      // QUESTS: Increment Play Progress
+      await updateQuestProgressInternal(normalized, "play", 1);
 
       // Log transaction
       await db.insert(transactions).values({

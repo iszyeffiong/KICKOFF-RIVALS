@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { cn } from "../lib/utils";
+import { cn, formatNumber } from "../lib/utils";
 import { BetSlipSelection } from "../types";
 import {
   IconX,
@@ -261,7 +261,7 @@ export function BetSlip({
               {betType === "single" ? "Stake per bet" : "Total Stake"}
             </label>
             <span className="text-sma text-muted-foreground">
-              Balance: {balance.toLocaleString()} KOR
+              Balance: {formatNumber(balance)} KOR
             </span>
           </div>
           <div className="flex gap-2">

@@ -13,10 +13,10 @@ import {
   IconChevronRight,
 } from "./Icons";
 import { formatNumber, formatDate, truncateAddress } from "../lib/utils";
-
 interface WalletModalProps {
   onClose: () => void;
   onSwapRequest: () => void;
+  onKorToCoinsRequest: (amount: number) => void;
   currentBalance: number;
   userStats: UserStats;
   onWalkReward: () => void;
@@ -25,15 +25,20 @@ interface WalletModalProps {
 export function WalletModal({
   onClose,
   onSwapRequest,
+  onKorToCoinsRequest,
   currentBalance,
   userStats,
   onWalkReward,
 }: WalletModalProps) {
   const [activeTab, setActiveTab] = useState<"balance" | "history">("balance");
 
-  const canConvert = userStats.coins >= CONVERSION_RATE;
+  const canConvertCoins = userStats.coins >= CONVERSION_RATE;
   const convertibleKOR =
     Math.floor(userStats.coins / CONVERSION_RATE) * CONVERSION_YIELD;
+
+  const minKorForCoins = 100;
+  const canConvertKor = userStats.korBalance >= minKorForCoins;
+  const convertibleCoins = userStats.korBalance * (CONVERSION_RATE / CONVERSION_YIELD);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -132,52 +137,89 @@ export function WalletModal({
                   {formatNumber(userStats.coins)}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {canConvert
+                  {canConvertCoins
                     ? `Convert to ${convertibleKOR} KOR`
                     : `${CONVERSION_RATE - userStats.coins} more to convert`}
                 </p>
               </div>
 
-              {/* Conversion Card */}
-              <div className="card p-4 border-dashed">
+              {/* Coin to KOR Conversion */}
+              <div className="card p-4 border-dashed bg-muted/20">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-foreground">Convert Coins</h3>
-                  <span className="text-xs text-muted-foreground">
+                  <h3 className="font-medium text-foreground">Coins to KOR</h3>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {CONVERSION_RATE} Coins = {CONVERSION_YIELD} KOR
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 bg-muted rounded-lg p-3 text-center">
-                    <IconCoins className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="flex-1 bg-muted rounded-lg p-2 text-center">
                     <p className="text-lg font-bold text-foreground">
-                      {Math.floor(userStats.coins / CONVERSION_RATE) *
-                        CONVERSION_RATE}
+                      {formatNumber(Math.floor(userStats.coins / CONVERSION_RATE) * CONVERSION_RATE)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Coins</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black">Coins</p>
                   </div>
 
-                  <IconChevronRight className="w-5 h-5 text-muted-foreground" />
+                  <IconChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
 
-                  <div className="flex-1 bg-primary/10 rounded-lg p-3 text-center">
-                    <IconZap className="w-5 h-5 text-primary mx-auto mb-1" />
+                  <div className="flex-1 bg-primary/10 rounded-lg p-2 text-center">
                     <p className="text-lg font-bold text-primary">
-                      {convertibleKOR}
+                      {formatNumber(convertibleKOR)}
                     </p>
-                    <p className="text-xs text-muted-foreground">KOR</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black">KOR</p>
                   </div>
                 </div>
 
                 <button
                   onClick={onSwapRequest}
-                  disabled={!canConvert}
+                  disabled={!canConvertCoins}
                   className={cn(
                     "btn w-full h-11",
-                    canConvert ? "btn-primary" : "btn-secondary opacity-50",
+                    canConvertCoins ? "btn-primary shadow-lg shadow-primary/20" : "btn-secondary opacity-50",
                   )}
                 >
                   <IconArrowDown className="w-4 h-4 mr-2" />
-                  {canConvert ? "Convert to KOR (One-way)" : "Not Enough Coins"}
+                  {canConvertCoins ? "Convert to KOR" : "Not Enough Coins"}
+                </button>
+              </div>
+
+              {/* KOR to Coin Conversion */}
+              <div className="card p-4 border-dashed border-primary/40 bg-primary/5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-foreground">KOR to Coins</h3>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    1 KOR = 10 Coins
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="flex-1 bg-primary/10 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-primary">
+                      {formatNumber(userStats.korBalance)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black">KOR</p>
+                  </div>
+
+                  <IconChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+
+                  <div className="flex-1 bg-yellow-500/10 rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-yellow-600">
+                      {formatNumber(userStats.korBalance * 10)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black">Coins</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onKorToCoinsRequest(userStats.korBalance)}
+                  disabled={!canConvertKor}
+                  className={cn(
+                    "btn w-full h-11",
+                    canConvertKor ? "bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg shadow-yellow-500/20" : "btn-secondary opacity-50",
+                  )}
+                >
+                  <IconArrowUp className="w-4 h-4 mr-2" />
+                  {canConvertKor ? "Convert to Coins" : `Min ${minKorForCoins} KOR Required`}
                 </button>
               </div>
 

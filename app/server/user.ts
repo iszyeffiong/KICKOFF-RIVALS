@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { db, users, transactions, userQuests, quests } from "../lib/db";
-import { eq, and } from "drizzle-orm";
+import { db, users, transactions, userQuests, quests, bets } from "../lib/db";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { INITIAL_QUESTS } from "../constants";
 
@@ -489,7 +489,7 @@ export const claimWelcomeGift = createServerFn({ method: "POST" })
     await db
       .update(users)
       .set({
-        coins: (user.coins || 0) + reward,
+        coins: sql`${users.coins} + ${reward}`,
         lastWelcomeGiftDate: new Date(),
       })
       .where(eq(users.walletAddress, normalized));
@@ -554,6 +554,65 @@ export const convertCoins = createServerFn({ method: "POST" })
       amount: korToAdd,
       currency: "kor",
       description: `Converted ${coinsToConvert} coins to ${korToAdd} KOR`,
+    });
+
+    return {
+      success: true,
+      coins: newCoins,
+      korBalance: newKor,
+    };
+  });
+
+// ==========================================
+// CONVERT KOR TO COINS
+// ==========================================
+
+const convertKorSchema = z.object({
+  walletAddress: z.string().min(1),
+  korAmount: z.number().min(1),
+});
+
+export const convertKor = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => convertKorSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+    const minKor = 100;
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    if (data.korAmount < minKor) {
+      return { success: false, error: `Minimum conversion is ${minKor} KOR` };
+    }
+
+    if (data.korAmount > (user.doodlBalance || 0)) {
+      return { success: false, error: "Insufficient KOR balance" };
+    }
+
+    // Rate: 1 KOR = 10 Coins
+    const coinsToAdd = data.korAmount * (CONVERSION_RATE / CONVERSION_YIELD);
+    const newCoins = (user.coins || 0) + coinsToAdd;
+    const newKor = (user.doodlBalance || 0) - data.korAmount;
+
+    await db
+      .update(users)
+      .set({
+        coins: newCoins,
+        doodlBalance: newKor,
+      })
+      .where(eq(users.walletAddress, normalized));
+
+    // Log transaction
+    await db.insert(transactions).values({
+      id: `tx-kor-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      walletAddress: normalized,
+      type: "convert",
+      amount: coinsToAdd,
+      currency: "coins",
+      description: `Converted ${data.korAmount} KOR back to ${coinsToAdd} coins`,
     });
 
     return {
@@ -670,9 +729,9 @@ export const checkIn = createServerFn({ method: "POST" })
       }
     }
 
-    // Add reward to coins balance
+    // Add reward to coins balance (Atomic)
     await db.update(users).set({
-      coins: (user.coins || 0) + REWARD,
+      coins: sql`${users.coins} + ${REWARD}`,
       lastCheckInDate: new Date(),
     }).where(eq(users.walletAddress, normalized));
 
@@ -747,9 +806,9 @@ export const claimSocialReward = createServerFn({ method: "POST" })
       set: { completed: true, progress: 1 }
     });
 
-    // 2. Add reward to coins balance in DB
+    // 2. Add reward to coins balance in DB (Atomic)
     await db.update(users).set({
-      coins: (user.coins || 0) + REWARD,
+      coins: sql`${users.coins} + ${REWARD}`,
     }).where(eq(users.walletAddress, normalized));
 
     // 3. Log transaction in DB
@@ -875,6 +934,123 @@ export const recordGamePlay = createServerFn({ method: "POST" })
     return {
       success: true,
       gamePlays: (user.gamePlays || 0) + 1,
+    };
+  });
+
+// ==========================================
+// INTERNAL QUEST UPDATER
+// ==========================================
+
+export async function updateQuestProgressInternal(walletAddress: string, type: "play" | "win" | "checkin", amount: number = 1) {
+    const normalized = walletAddress.toLowerCase();
+    
+    // Find relevant quests for this user and type
+    const quests = await db.query.userQuests.findMany({
+        where: (uq, { and, eq }) => and(
+            eq(uq.walletAddress, normalized),
+            eq(uq.type, type),
+            eq(uq.completed, false)
+        )
+    });
+
+    for (const q of quests) {
+        const newProgress = Math.min(q.target, q.progress + amount);
+        const isCompleted = newProgress >= q.target;
+        
+        await db.update(userQuests)
+            .set({ 
+                progress: newProgress, 
+                completed: isCompleted,
+                verifiedAt: isCompleted ? new Date() : null
+            })
+            .where(eq(userQuests.id, q.id));
+            
+        console.log(`[QUESTS] Updated ${q.questId} for ${normalized}: ${newProgress}/${q.target}`);
+    }
+}
+
+// ==========================================
+// SYNC GAMEPLAY QUESTS
+// ==========================================
+
+const syncGameplayQuestsSchema = z.object({
+  walletAddress: z.string().min(1),
+});
+
+export const syncGameplayQuests = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => syncGameplayQuestsSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+
+    // 1. Get User Quests
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+      with: { quests: true },
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    // 2. Define Time Buffers
+    const now = new Date();
+    const today = new Date(now);
+    today.setUTCHours(0, 0, 0, 0);
+
+    const monday = new Date(now);
+    const day = now.getUTCDay();
+    const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1);
+    monday.setUTCDate(diff);
+    monday.setUTCHours(0, 0, 0, 0);
+
+    // 3. Fetch Bets (since monday for catch-all, we filter individual later)
+    const recentBets = await db.query.bets.findMany({
+      where: and(
+        eq(bets.walletAddress, normalized),
+        gte(bets.createdAt, monday)
+      ),
+    });
+
+    // 4. Calculate progress for each quest
+    const updatedQuests = [];
+    for (const q of user.quests) {
+      if (q.type !== "play" && q.type !== "win") {
+        updatedQuests.push(q);
+        continue;
+      }
+
+      const since = q.frequency === "weekly" ? monday : today;
+      const relevantBets = recentBets.filter(b => new Date(b.createdAt) >= since);
+      
+      // Group by matchId to count unique games played
+      const uniqueMatchIds = new Set(relevantBets.map(b => b.matchId));
+      const gamesPlayed = uniqueMatchIds.size;
+      
+      // Count won matches specifically (at least one bet won on that match)
+      const matchesWithWins = new Set(
+        relevantBets
+          .filter(b => b.status === "won")
+          .map(b => b.matchId)
+      );
+      const gamesWon = matchesWithWins.size;
+
+      let newProgress = q.progress;
+      if (q.type === "play") newProgress = gamesPlayed;
+      if (q.type === "win") newProgress = gamesWon;
+
+      const isCompleted = newProgress >= q.target;
+
+      if (newProgress !== q.progress || isCompleted !== q.completed) {
+        await db.update(userQuests)
+          .set({ progress: newProgress, completed: isCompleted })
+          .where(eq(userQuests.id, q.id));
+        updatedQuests.push({ ...q, progress: newProgress, completed: isCompleted });
+      } else {
+        updatedQuests.push(q);
+      }
+    }
+
+    return {
+      success: true,
+      quests: updatedQuests,
     };
   });
 

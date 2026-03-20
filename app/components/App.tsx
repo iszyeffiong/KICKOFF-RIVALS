@@ -53,6 +53,7 @@ import {
 import { Leaderboard } from "./Leaderboard";
 import { ConnectWallet } from "./ConnectWallet";
 import { SwapConfirm } from "./SwapConfirm";
+import { SwapKorConfirm } from "./SwapKorConfirm";
 import { BetModal } from "./BetModal";
 import { BetSlip } from "./BetSlip";
 import { RivalsLogo } from "./RivalsLogo";
@@ -107,8 +108,12 @@ const App: React.FC = () => {
   >(() => {
     // If they've already connected before, we still show the selection screen for a platform feel
     // but skipping the landing page.
-    if (localStorage.getItem("onboarding_complete") === "true") {
-      return "selection";
+    if (typeof window !== "undefined") {
+      const savedWallet = localStorage.getItem("rivals_wallet");
+      if (savedWallet) return "selection";
+      if (localStorage.getItem("onboarding_complete") === "true") {
+        return "selection";
+      }
     }
     return "landing";
   });
@@ -131,6 +136,7 @@ const App: React.FC = () => {
   const [showWallet, setShowWallet] = useState(false);
   // Mystery box removed
   const [showSwapConfirm, setShowSwapConfirm] = useState(false);
+  const [showSwapKorConfirm, setShowSwapKorConfirm] = useState(false);
   const [bettingOn, setBettingOn] = useState<Match | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
@@ -149,6 +155,17 @@ const App: React.FC = () => {
     verificationSignature: null,
     verificationTimestamp: null,
   });
+
+  // Auto-recovery of session
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedWallet = localStorage.getItem("rivals_wallet");
+      if (savedWallet && !walletState.isConnected) {
+        setWalletState(prev => ({ ...prev, address: savedWallet, isConnected: true }));
+        refreshProfile(savedWallet);
+      }
+    }
+  }, []);
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeBets, setActiveBets] = useState<Bet[]>([]);
@@ -448,7 +465,8 @@ const App: React.FC = () => {
             });
           })(),
         }));
-        setBalance(Number(userData.coins) || 0);
+        setBalance(Number(userData.korBalance) || 0); // Use KOR balance for main display if that's the currency
+        if (address) localStorage.setItem("rivals_wallet", address);
       } else {
         // Fallback for failed profile fetch - don't block the user
         console.warn(
@@ -1323,6 +1341,26 @@ const App: React.FC = () => {
           ),
         }));
       }
+    } else if (quest.type === "play" || quest.type === "win") {
+      // Gameplay quest sync
+      try {
+        const res = await fetch(`${API_URL}/api/user/sync-gameplay-quests`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ walletAddress: userStats.walletAddress }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Update local state with fresh quests from server
+          if (data.quests) {
+            setUserStats(prev => ({ ...prev, quests: data.quests }));
+            notify?.("Quest progress synced with your latest games!", "success");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync gameplay quests", err);
+        notify?.("Failed to sync progress. Please try again.", "error");
+      }
     } else if (quest.type === "click") {
       // Simple click complete
       if (typeof window !== "undefined") {
@@ -1618,7 +1656,7 @@ const App: React.FC = () => {
               {gameState} PHASE
             </h2>
             <div className="font-mono text-4xl font-bold text-white tracking-wider tabular-nums">
-              00:{timer < 10 ? `0${timer}` : timer}
+              {Math.floor(timer / 60).toString().padStart(2, '0')}:{(timer % 60).toString().padStart(2, '0')}
             </div>
           </div>
 
@@ -1776,6 +1814,10 @@ const App: React.FC = () => {
             setShowWallet(false);
             setShowSwapConfirm(true);
           }}
+          onKorToCoinsRequest={() => {
+            setShowWallet(false);
+            setShowSwapKorConfirm(true);
+          }}
           currentBalance={balance}
           userStats={userStats}
           onWalkReward={() => {}}
@@ -1820,6 +1862,45 @@ const App: React.FC = () => {
         />
       )}
 
+      {showSwapKorConfirm && (
+        <SwapKorConfirm
+          kor={userStats.korBalance}
+          onConfirm={async () => {
+            const amount = userStats.korBalance;
+            // Call API
+            try {
+              const res = await fetch(`${API_URL}/api/user/convert-kor`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  walletAddress: userStats.walletAddress,
+                  amount,
+                }),
+              });
+              const data = await res.json();
+
+              if (data.success) {
+                setUserStats((s) => ({
+                  ...s,
+                  coins: data.coins,
+                  korBalance: data.korBalance,
+                }));
+                setBalance(data.korBalance);
+                addTransaction("convert", amount, "kor", "Swapped for Coins");
+                notify(`Successfully converted ${amount} KOR to coins!`, "success");
+              } else {
+                notify("Swap failed: " + data.error, "error");
+              }
+            } catch (e) {
+              console.error(e);
+              notify("Conversion failed. Please try again.", "error");
+            }
+            setShowSwapKorConfirm(false);
+          }}
+          onCancel={() => setShowSwapKorConfirm(false)}
+        />
+      )}
+
       {/* Mystery box removed - no spinner UI */}
 
       {watchingMatchId && matches.find((m) => m.id === watchingMatchId) && (
@@ -1832,8 +1913,8 @@ const App: React.FC = () => {
       )}
       {bettingOn && (
         <BetModal
-          match={bettingOn}
-          balance={balance}
+          match={bettingOn!}
+          balance={userStats.korBalance}
           onClose={() => setBettingOn(null)}
           onPlaceBet={handleBetPlacement}
         />

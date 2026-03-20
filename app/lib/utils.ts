@@ -8,12 +8,14 @@ export function cn(...inputs: ClassValue[]) {
 export function formatNumber(num: number | undefined | null): string {
   if (num === undefined || num === null) return "0";
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + "M";
+    // 1,234,567 -> 1.2m
+    return (Math.floor(num / 100000) / 10).toFixed(1) + "m";
   }
   if (num >= 1000) {
-    return (num / 1000).toFixed(1) + "K";
+    // 4,568 -> 4.5k
+    return (Math.floor(num / 100) / 10).toFixed(1) + "k";
   }
-  return num.toString();
+  return num.toLocaleString();
 }
 
 export function formatDate(timestamp: number): string {

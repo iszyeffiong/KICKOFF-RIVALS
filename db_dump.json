@@ -1,0 +1,46 @@
+[
+  {
+    "id": "q-follow-x",
+    "title": "Follow us on X"
+  },
+  {
+    "id": "q-like-1",
+    "title": "Like & Comment on Post #1"
+  },
+  {
+    "id": "q-like-2",
+    "title": "Like & Comment on Post #2"
+  },
+  {
+    "id": "q5",
+    "title": "Join Telegram Channel"
+  },
+  {
+    "id": "q6",
+    "title": "Join Discord Server"
+  },
+  {
+    "id": "dq_play5",
+    "title": "Play 5 games"
+  },
+  {
+    "id": "dq_win10",
+    "title": "Win 10 games"
+  },
+  {
+    "id": "dq_win15",
+    "title": "Win 15 games"
+  },
+  {
+    "id": "wq_play30",
+    "title": "Play 30 games"
+  },
+  {
+    "id": "wq_win30",
+    "title": "Win 30 games"
+  },
+  {
+    "id": "wq_win10acc",
+    "title": "Win 10 Accumulated games"
+  }
+]

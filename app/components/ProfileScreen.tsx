@@ -401,9 +401,9 @@ export function ProfileScreen({
             </div>
           </div>
 
-          {/* <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <h3 className="font-semibold text-foreground text-lg">
-              Daily Quests
+              Active Quests
             </h3>
             <span className="badge badge-secondary text-xs">
               {(stats?.quests || []).filter((q) => q.completed).length}/
@@ -412,15 +412,24 @@ export function ProfileScreen({
           </div>
 
           <div className="space-y-3">
-            {(stats?.quests || []).map((quest) => (
-              <QuestCard
-                key={quest.id}
-                quest={quest}
-                isSelected={selectedQuestId === quest.id}
-                onClick={() => setSelectedQuestId(quest.id)}
-              />
-            ))}
-          </div> */}
+            {(stats?.quests || [])
+              .sort((a, b) => {
+                const aSocial = a.type === "social" || a.type === "external";
+                const bSocial = b.type === "social" || b.type === "external";
+                if (aSocial && !bSocial) return -1;
+                if (!aSocial && bSocial) return 1;
+                return 0;
+              })
+              .filter((q) => q.id !== "110" && q.id !== "113")
+              .map((quest) => (
+                <QuestCard
+                  key={quest.id}
+                  quest={quest}
+                  isSelected={selectedQuestId === quest.id}
+                  onClick={() => setSelectedQuestId(quest.id)}
+                />
+              ))}
+          </div>
 
           {/* Redeem Code */}
           <div className="card p-4 mt-4">
@@ -1093,7 +1102,7 @@ function QuestDrawer({
                 )}
 
                 <div className="flex flex-col gap-3 pt-4 pb-10">
-                  {targetUrl && !isComplete && !hasVisited && (
+                  {targetUrl && !isComplete && (
                     <button
                       onClick={() => {
                         if (typeof window !== "undefined") {
@@ -1105,10 +1114,13 @@ function QuestDrawer({
                         }
                         onAction(true);
                       }}
-                      className="btn btn-primary h-14 w-full flex items-center justify-center gap-2 font-black text-sm tracking-tight shadow-xl shadow-primary/20 ring-2 ring-white/10 active:scale-95"
+                      className={cn(
+                        "btn h-14 w-full flex items-center justify-center gap-2 font-black text-sm tracking-tight shadow-xl ring-2 ring-white/10 active:scale-95 transition-all",
+                        !hasVisited ? "btn-primary shadow-primary/20" : "btn-outline border-primary/40 text-primary hover:bg-primary/5"
+                      )}
                     >
                       <IconExternalLink className="w-5 h-5" />
-                      START QUEST NOW
+                      {!hasVisited ? "START QUEST NOW" : "REVISIT LINK"}
                     </button>
                   )}
 
@@ -1141,8 +1153,17 @@ function QuestDrawer({
                         onClick={() => onAction(false)}
                         className="btn btn-outline h-14 w-full font-black text-sm tracking-tight border-2 border-primary group active:scale-95 transition-all hover:bg-primary hover:text-white"
                       >
-                        <IconCheck className="w-5 h-5 mr-2 text-primary group-hover:text-white transition-colors" />
-                        MARK AS COMPLETE
+                        {quest.type === "play" || quest.type === "win" ? (
+                          <>
+                            <IconRefresh className="w-5 h-5 mr-2 text-primary group-hover:text-white transition-colors animate-spin-slow" />
+                            SYNC & CHECK PROGRESS
+                          </>
+                        ) : (
+                          <>
+                            <IconCheck className="w-5 h-5 mr-2 text-primary group-hover:text-white transition-colors" />
+                            MARK AS COMPLETE
+                          </>
+                        )}
                       </button>
                     )}
 

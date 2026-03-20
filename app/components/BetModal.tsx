@@ -1,8 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { cn } from "../lib/utils";
+import { cn, formatNumber } from "../lib/utils";
 import { Match } from "../types";
-import { IconX, IconCoins, IconCheck, IconMinus, IconPlus } from "./Icons";
+import { IconX, IconZap, IconCheck, IconMinus, IconPlus } from "./Icons";
 
 interface BetModalProps {
   match: Match;
@@ -196,8 +196,8 @@ export function BetModal({
               <label className="text-sm font-medium text-muted-foreground">
                 Stake Amount
               </label>
-              <span className="text-xs text-muted-foreground">
-                Balance: {balance.toLocaleString()} Coins
+              <span className="text-xs text-muted-foreground uppercase font-black">
+                Balance: {formatNumber(balance)} KOR
               </span>
             </div>
 
@@ -219,8 +219,8 @@ export function BetModal({
                   min={1}
                   max={balance}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  Coins
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground uppercase font-black">
+                  KOR
                 </span>
               </div>
 
@@ -283,7 +283,7 @@ export function BetModal({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Stake</span>
                 <span className="text-sm font-medium text-foreground">
-                  {stake.toLocaleString()} Coins
+                  {stake.toLocaleString()} KOR
                 </span>
               </div>
               <div className="border-t border-border pt-3 flex items-center justify-between">
@@ -291,7 +291,7 @@ export function BetModal({
                   Potential Win
                 </span>
                 <span className="text-lg font-bold text-primary">
-                  {potentialWin.toFixed(2)} Coins
+                  {potentialWin.toFixed(2)} KOR
                 </span>
               </div>
             </div>

@@ -122,7 +122,7 @@ export interface DailyQuest {
   target: number;
   progress: number;
   completed: boolean;
-  status: 'LIVE' | 'QUEUED' | 'VERIFYING';
+  status: 'LIVE' | 'QUEUED' | 'VERIFYING' | 'ARCHIVED';
   liveAt?: number; // timestamp
   externalUrl?: string;
   socialLinks?: {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { cn } from "../lib/utils";
+import { cn, formatNumber } from "../lib/utils";
 import { RivalsLogo } from "./RivalsLogo";
 import { IconTrophy, IconChevronRight, IconTrendingUp } from "./Icons";
 
@@ -81,11 +81,11 @@ export function ReturningUserScreen({
 
                             <div className="grid grid-cols-2 gap-4 divide-x divide-slate-700">
                                 <div className="text-center pr-2">
-                                    <p className="text-3xl font-bold text-yellow-400">{coins.toLocaleString()}</p>
+                                    <p className="text-3xl font-bold text-yellow-400">{formatNumber(coins)}</p>
                                     <p className="text-xs text-slate-400 uppercase tracking-wider mt-1">Coins</p>
                                 </div>
                                 <div className="text-center pl-2">
-                                    <p className="text-3xl font-bold text-primary">{korBalance.toLocaleString()}</p>
+                                    <p className="text-3xl font-bold text-primary">{formatNumber(korBalance)}</p>
                                     <p className="text-xs text-slate-400 uppercase tracking-wider mt-1">KOR Tokens</p>
                                 </div>
                             </div>

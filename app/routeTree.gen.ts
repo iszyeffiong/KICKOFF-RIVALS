@@ -26,9 +26,11 @@ import { Route as DashboardLeaderboardRouteImport } from './routes/dashboard/lea
 import { Route as DashboardHomeRouteImport } from './routes/dashboard/home'
 import { Route as DashboardBetsRouteImport } from './routes/dashboard/bets'
 import { Route as ApiLeaderboardRouteImport } from './routes/api/leaderboard'
+import { Route as ApiUserSyncGameplayQuestsRouteImport } from './routes/api/user.sync-gameplay-quests'
 import { Route as ApiUserSubmitQuestVerificationRouteImport } from './routes/api/user.submit-quest-verification'
 import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.register-referral'
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
+import { Route as ApiUserConvertKorRouteImport } from './routes/api/user.convert-kor'
 import { Route as ApiUserConvertCoinsRouteImport } from './routes/api/user.convert-coins'
 import { Route as ApiUserClaimWelcomeGiftRouteImport } from './routes/api/user.claim-welcome-gift'
 import { Route as ApiUserClaimSocialRewardRouteImport } from './routes/api/user.claim-social-reward'
@@ -129,6 +131,12 @@ const ApiLeaderboardRoute = ApiLeaderboardRouteImport.update({
   path: '/api/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUserSyncGameplayQuestsRoute =
+  ApiUserSyncGameplayQuestsRouteImport.update({
+    id: '/api/user/sync-gameplay-quests',
+    path: '/api/user/sync-gameplay-quests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiUserSubmitQuestVerificationRoute =
   ApiUserSubmitQuestVerificationRouteImport.update({
     id: '/api/user/submit-quest-verification',
@@ -143,6 +151,11 @@ const ApiUserRegisterReferralRoute = ApiUserRegisterReferralRouteImport.update({
 const ApiUserProfileRoute = ApiUserProfileRouteImport.update({
   id: '/api/user/profile',
   path: '/api/user/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUserConvertKorRoute = ApiUserConvertKorRouteImport.update({
+  id: '/api/user/convert-kor',
+  path: '/api/user/convert-kor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUserConvertCoinsRoute = ApiUserConvertCoinsRouteImport.update({
@@ -251,9 +264,11 @@ export interface FileRoutesByFullPath {
   '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
+  '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
+  '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -286,9 +301,11 @@ export interface FileRoutesByTo {
   '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
+  '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
+  '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -323,9 +340,11 @@ export interface FileRoutesById {
   '/api/user/claim-social-reward': typeof ApiUserClaimSocialRewardRoute
   '/api/user/claim-welcome-gift': typeof ApiUserClaimWelcomeGiftRoute
   '/api/user/convert-coins': typeof ApiUserConvertCoinsRoute
+  '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
+  '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -361,9 +380,11 @@ export interface FileRouteTypes {
     | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
+    | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
     | '/api/user/submit-quest-verification'
+    | '/api/user/sync-gameplay-quests'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -396,9 +417,11 @@ export interface FileRouteTypes {
     | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
+    | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
     | '/api/user/submit-quest-verification'
+    | '/api/user/sync-gameplay-quests'
   id:
     | '__root__'
     | '/'
@@ -432,9 +455,11 @@ export interface FileRouteTypes {
     | '/api/user/claim-social-reward'
     | '/api/user/claim-welcome-gift'
     | '/api/user/convert-coins'
+    | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
     | '/api/user/submit-quest-verification'
+    | '/api/user/sync-gameplay-quests'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -463,9 +488,11 @@ export interface RootRouteChildren {
   ApiUserClaimSocialRewardRoute: typeof ApiUserClaimSocialRewardRoute
   ApiUserClaimWelcomeGiftRoute: typeof ApiUserClaimWelcomeGiftRoute
   ApiUserConvertCoinsRoute: typeof ApiUserConvertCoinsRoute
+  ApiUserConvertKorRoute: typeof ApiUserConvertKorRoute
   ApiUserProfileRoute: typeof ApiUserProfileRoute
   ApiUserRegisterReferralRoute: typeof ApiUserRegisterReferralRoute
   ApiUserSubmitQuestVerificationRoute: typeof ApiUserSubmitQuestVerificationRoute
+  ApiUserSyncGameplayQuestsRoute: typeof ApiUserSyncGameplayQuestsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -589,6 +616,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/user/sync-gameplay-quests': {
+      id: '/api/user/sync-gameplay-quests'
+      path: '/api/user/sync-gameplay-quests'
+      fullPath: '/api/user/sync-gameplay-quests'
+      preLoaderRoute: typeof ApiUserSyncGameplayQuestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/user/submit-quest-verification': {
       id: '/api/user/submit-quest-verification'
       path: '/api/user/submit-quest-verification'
@@ -608,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/api/user/profile'
       fullPath: '/api/user/profile'
       preLoaderRoute: typeof ApiUserProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/user/convert-kor': {
+      id: '/api/user/convert-kor'
+      path: '/api/user/convert-kor'
+      fullPath: '/api/user/convert-kor'
+      preLoaderRoute: typeof ApiUserConvertKorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/user/convert-coins': {
@@ -759,9 +800,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUserClaimSocialRewardRoute: ApiUserClaimSocialRewardRoute,
   ApiUserClaimWelcomeGiftRoute: ApiUserClaimWelcomeGiftRoute,
   ApiUserConvertCoinsRoute: ApiUserConvertCoinsRoute,
+  ApiUserConvertKorRoute: ApiUserConvertKorRoute,
   ApiUserProfileRoute: ApiUserProfileRoute,
   ApiUserRegisterReferralRoute: ApiUserRegisterReferralRoute,
   ApiUserSubmitQuestVerificationRoute: ApiUserSubmitQuestVerificationRoute,
+  ApiUserSyncGameplayQuestsRoute: ApiUserSyncGameplayQuestsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
