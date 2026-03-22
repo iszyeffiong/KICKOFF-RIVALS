@@ -1,25 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { convertCoins } from "../../server/user";
+import { swapCoinsToKor } from "../../server/user";
 
-export const Route = createFileRoute("/api/user/convert-coins")({
+export const Route = createFileRoute("/api/user/swap-coins-to-kor")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { walletAddress, amount } = body;
+          const { walletAddress, coins } = body;
 
-          if (!walletAddress || !amount) {
+          if (!walletAddress || coins === undefined) {
             return Response.json(
               { success: false, error: "Missing required fields" },
               { status: 400 },
             );
           }
 
-          const result = await convertCoins({
+          const result = await swapCoinsToKor({
             data: {
               walletAddress,
-              amount: Number(amount),
+              coins: Number(coins),
             },
           });
 
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/user/convert-coins")({
         } catch (error: unknown) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
-          console.error("Convert coins API error:", error);
+          console.error("Swap coins API error:", error);
           return Response.json(
             { success: false, error: errorMessage },
             { status: 500 },

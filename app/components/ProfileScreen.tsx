@@ -30,6 +30,7 @@ import {
   IconX,
   IconShield,
 } from "./Icons";
+import { SwapConfirm } from "./SwapConfirm";
 import { truncateAddress, formatNumber } from "../lib/utils";
 
 interface ProfileScreenProps {
@@ -55,6 +56,7 @@ interface ProfileScreenProps {
     reward?: number;
   }>;
   onQuestRefresh?: () => Promise<void>;
+  onConvert?: (amount: number) => Promise<void>;
   notify?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
@@ -70,6 +72,7 @@ export function ProfileScreen({
   onClaimAllianceRewards,
   onQuestRefresh,
   onCheckIn,
+  onConvert,
   notify,
 }: ProfileScreenProps) {
   const [activeSection, setActiveSection] = useState<
@@ -93,6 +96,7 @@ export function ProfileScreen({
   const [claimReward, setClaimReward] = useState<number>(0);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [questTab, setQuestTab] = useState<"daily" | "weekly" | "social" | "partners">("daily");
+  const [showConversion, setShowConversion] = useState(false);
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) return;
@@ -666,16 +670,16 @@ export function ProfileScreen({
             onClick={onOpenWallet}
           />
           <SettingsButton
-            icon={<IconZap className="w-5 h-5 text-pitch" />}
-            label="KOR Transfer"
-            description="Coming Soon"
-            onClick={() => notify?.("KOR Transfer is coming soon!", "info")}
+            icon={<IconZap className="w-5 h-5 text-primary" />}
+            label="Coins to KOR"
+            description="Convert your coins into KOR tokens"
+            onClick={() => setShowConversion(true)}
           />
           <SettingsButton
             icon={<IconCoins className="w-5 h-5 text-yellow-500" />}
-            label="Coin Transfer"
+            label="KOR to Coins"
             description="Coming Soon"
-            onClick={() => notify?.("Coin Transfer is coming soon!", "info")}
+            onClick={() => notify?.("KOR to Coins conversion is coming soon!", "info")}
           />
           <SettingsButton
             icon={<IconLogOut className="w-5 h-5 text-destructive" />}
@@ -683,16 +687,6 @@ export function ProfileScreen({
             description="Disconnect your wallet"
             onClick={onLogout}
             variant="danger"
-          />
-          <SettingsButton
-            icon={
-              isResettingQuests
-                ? <IconRefresh className="w-5 h-5 text-orange-400 animate-spin" />
-                : <IconRefresh className="w-5 h-5 text-orange-400" />
-            }
-            label={isResettingQuests ? "Resetting..." : "Reset My Quests"}
-            description="Clear your quest progress so you can redo all tasks"
-            onClick={handleResetMyQuests}
           />
         </div>
       )}
@@ -721,6 +715,18 @@ export function ProfileScreen({
             });
           }}
           notify={notify}
+        />
+      )}
+      {showConversion && (
+        <SwapConfirm
+          coins={stats?.coins || 0}
+          onCancel={() => setShowConversion(false)}
+          onConfirm={async () => {
+            if (stats?.coins) {
+               await onConvert?.(stats.coins);
+               setShowConversion(false);
+            }
+          }}
         />
       )}
     </div>

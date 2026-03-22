@@ -61,6 +61,7 @@ import { BetModal } from "./BetModal";
 import { BetSlip } from "./BetSlip";
 import { RivalsLogo } from "./RivalsLogo";
 import { Onboarding } from "./Onboarding";
+import { InstallPrompt } from "./InstallPrompt";
 const AdminPortal = lazy(() =>
   import("./AdminPortal").then((mod) => ({ default: mod.AdminPortal })),
 );
@@ -1471,6 +1472,43 @@ const App: React.FC = () => {
     }
   }
 
+  async function handleCoinsToKor(amount: number) {
+    if (!amount || !userStats.walletAddress) return;
+    try {
+      const res = await fetch(`${API_URL}/api/user/swap-coins-to-kor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: userStats.walletAddress,
+          coins: amount,
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        // Sync local stats with returned balances
+        setUserStats((prev) => ({
+          ...prev,
+          coins: result.newCoins,
+          korBalance: result.newKor,
+        }));
+        
+        // Log locally for immediate feedback in Slip
+        addTransaction(
+          "convert",
+          amount,
+          "coins",
+          `Converted ${amount} Coins to ${Math.floor(amount / CONVERSION_RATE) * CONVERSION_YIELD} KOR`,
+        );
+        notify?.("Conversion successful!", "success");
+      } else {
+        notify?.(result.error || "Conversion failed.", "error");
+      }
+    } catch (err) {
+      console.error("[SWAP] Error:", err);
+      notify?.("Connection failed.", "error");
+    }
+  }
+
   async function handleRedeem(
     code: string,
   ): Promise<{ success: boolean; message?: string }> {
@@ -1819,6 +1857,7 @@ const App: React.FC = () => {
             onOpenWallet={() => setShowWallet(true)}
             onClaimAllianceRewards={handleClaimAllianceRewards}
             onCheckIn={handleCheckIn}
+            onConvert={handleCoinsToKor}
             notify={notify}
           />
         </main>
@@ -1850,34 +1889,8 @@ const App: React.FC = () => {
         <SwapConfirm
           coins={userStats.coins}
           onConfirm={async () => {
-            const amount =
-              Math.floor(userStats.coins / CONVERSION_RATE) * CONVERSION_RATE;
-
-            // Call API
-            try {
-              const res = await fetch(`${API_URL}/api/user/convert-coins`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  walletAddress: userStats.walletAddress,
-                  amount,
-                }),
-              });
-              const data = await res.json();
-
-              if (data.success) {
-                setUserStats((s) => ({
-                  ...s,
-                  coins: data.coins,
-                  korBalance: data.korBalance,
-                }));
-                addTransaction("convert", amount, "coins", "Swapped for KOR");
-              } else {
-                notify("Swap failed: " + data.error, "error");
-              }
-            } catch (e) {
-              console.error(e);
-            }
+            const amount = Math.floor(userStats.coins / CONVERSION_RATE) * CONVERSION_RATE;
+            await handleCoinsToKor(amount);
             setShowSwapConfirm(false);
           }}
           onCancel={() => setShowSwapConfirm(false)}
@@ -2005,6 +2018,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      <InstallPrompt />
     </div>
   );
 };

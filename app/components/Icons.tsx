@@ -63,6 +63,7 @@ import {
   Crown,
   Flame,
   Sparkles,
+  Download,
   type LucideProps,
 } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -132,6 +133,7 @@ export const IconMedal = Medal;
 export const IconCrown = Crown;
 export const IconFlame = Flame;
 export const IconSparkles = Sparkles;
+export const IconDownload = Download;
 
 // Custom football/soccer icon
 export function IconFootball({ className, ...props }: LucideProps) {

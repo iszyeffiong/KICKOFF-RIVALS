@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+﻿import { createServerFn } from "@tanstack/react-start";
 import { db, users, transactions, userQuests, quests, bets } from "../lib/db";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -618,7 +618,122 @@ export const claimWelcomeGift = createServerFn({ method: "POST" })
 // CONVERT COINS TO KOR
 // ==========================================
 
+const convertCoinsSchema = z.object({
+  walletAddress: z.string().min(1),
+  amount: z.number().min(1000),
+});
 
+const CONVERSION_RATE = 1000; // 1000 coins = 100 KOR
+const CONVERSION_YIELD = 100;
+
+export const convertCoins = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => convertCoinsSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const coinsToConvert =
+      Math.floor(data.amount / CONVERSION_RATE) * CONVERSION_RATE;
+
+    if (coinsToConvert > (user.coins || 0)) {
+      return { success: false, error: "Insufficient coins" };
+    }
+
+    const korToAdd = (coinsToConvert / CONVERSION_RATE) * CONVERSION_YIELD;
+
+    const newCoins = (user.coins || 0) - coinsToConvert;
+    const newKor = (user.doodlBalance || 0) + korToAdd;
+
+    await db
+      .update(users)
+      .set({
+        coins: newCoins,
+        doodlBalance: newKor,
+      })
+      .where(eq(users.walletAddress, normalized));
+
+    // Log transaction
+    await db.insert(transactions).values({
+      id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      walletAddress: normalized,
+      type: "convert",
+      amount: korToAdd,
+      currency: "kor",
+      description: `Converted ${coinsToConvert} coins to ${korToAdd} KOR`,
+    });
+
+    return {
+      success: true,
+      coins: newCoins,
+      korBalance: newKor,
+    };
+  });
+
+// ==========================================
+// CONVERT KOR TO COINS
+// ==========================================
+
+const convertKorSchema = z.object({
+  walletAddress: z.string().min(1),
+  korAmount: z.number().min(1),
+});
+
+export const convertKor = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => convertKorSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+    const minKor = 100;
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) return { success: false, error: "User not found" };
+
+    if (data.korAmount < minKor) {
+      return { success: false, error: `Minimum conversion is ${minKor} KOR` };
+    }
+
+    if (data.korAmount > (user.doodlBalance || 0)) {
+      return { success: false, error: "Insufficient KOR balance" };
+    }
+
+    // Rate: 1 KOR = 10 Coins
+    const coinsToAdd = data.korAmount * (CONVERSION_RATE / CONVERSION_YIELD);
+    const newCoins = (user.coins || 0) + coinsToAdd;
+    const newKor = (user.doodlBalance || 0) - data.korAmount;
+
+    await db
+      .update(users)
+      .set({
+        coins: newCoins,
+        doodlBalance: newKor,
+      })
+      .where(eq(users.walletAddress, normalized));
+
+    // Log transaction
+    await db.insert(transactions).values({
+      id: `tx-kor-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      walletAddress: normalized,
+      type: "convert",
+      amount: coinsToAdd,
+      currency: "coins",
+      description: `Converted ${data.korAmount} KOR back to ${coinsToAdd} coins`,
+    });
+
+    return {
+      success: true,
+      coins: newCoins,
+      korBalance: newKor,
+    };
+  });
 
 // ==========================================
 // CLAIM ALLIANCE REWARDS
@@ -1189,7 +1304,7 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
         
         // Log transaction
         await tx.insert(transactions).values({
-            id: `swp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            id: `tx-swap-${Date.now()}-${normalized}`,
             walletAddress: normalized,
             type: "convert",
             amount: convertibleCoins,
@@ -1210,3 +1325,4 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
       return { success: false, error: e.message || "Failed to complete transaction" };
     }
   });
+

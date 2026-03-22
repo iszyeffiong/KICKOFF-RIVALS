@@ -81,23 +81,23 @@ export function DashboardModals() {
         <SwapConfirm
           coins={profile.coins}
           onConfirm={async () => {
-            const amount =
+            const coins =
               Math.floor(profile.coins / CONVERSION_RATE) * CONVERSION_RATE;
             try {
-              const res = await fetch(`${API_URL}/api/user/convert-coins`, {
+              const res = await fetch(`${API_URL}/api/user/swap-coins-to-kor`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   walletAddress: profile.walletAddress,
-                  amount,
+                  coins,
                 }),
               });
               const data = await res.json();
               if (data.success) {
                 // Refresh profile to pick up new balances
                 refreshProfile();
-                setBalance(data.korBalance);
-                addTransaction("convert", amount, "coins", "Swapped for KOR");
+                setBalance(data.newKor);
+                addTransaction("convert", coins, "coins", "Swapped for KOR");
               } else {
                 alert("Swap failed: " + data.error);
               }
@@ -114,28 +114,7 @@ export function DashboardModals() {
         <SwapKorConfirm
           kor={profile.korBalance}
           onConfirm={async () => {
-            const korAmount = profile.korBalance;
-            try {
-              const res = await fetch(`${API_URL}/api/user/convert-kor`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  walletAddress: profile.walletAddress,
-                  korAmount,
-                }),
-              });
-              const data = await res.json();
-              if (data.success) {
-                refreshProfile();
-                setBalance(data.korBalance);
-                const coinsAdded = korAmount * (CONVERSION_RATE / CONVERSION_YIELD);
-                addTransaction("convert", coinsAdded, "coins", "Swapped KOR for Coins");
-              } else {
-                alert("Conversion failed: " + data.error);
-              }
-            } catch (e) {
-              console.error(e);
-            }
+            alert("KOR to Coins conversion is coming soon!");
             setShowSwapKorConfirm(false);
           }}
           onCancel={() => setShowSwapKorConfirm(false)}
