@@ -318,7 +318,7 @@ export const TEAMS: Record<string, Team[]> = {
   ],
 };
 
-export const INITIAL_BALANCE = 1000;
+
 export const ROUND_DURATION_SEC = 480; // 8 minutes betting
 export const MATCH_DURATION_SEC = 120; // 2 minutes live
 export const RESULT_DURATION_SEC = 240; // 4 minutes intermission
@@ -335,7 +335,7 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     reward: 2000,
     type: "social",
     category: "social",
-    frequency: "daily",
+    frequency: "once",
     target: 1,
     progress: 0,
     completed: false,
@@ -351,7 +351,7 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     reward: 2000,
     type: "social",
     category: "social",
-    frequency: "daily",
+    frequency: "once",
     target: 1,
     progress: 0,
     completed: false,
@@ -395,16 +395,15 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     status: "LIVE",
   },
   {
-    id: "wq_win10acc",
-    title: "Win 10 Accumulated games",
+    id: "wq_win50",
+    title: "Win 50 games weekly",
     reward: 2000,
     type: "win",
     frequency: "weekly",
-    target: 10,
+    target: 50,
     progress: 0,
     completed: false,
     status: "LIVE",
-    externalUrl: "https://t.me/kickoffrivals", // Join Community
   },
   {
     id: "q_referral",
@@ -417,5 +416,38 @@ export const INITIAL_QUESTS: DailyQuest[] = [
     completed: false,
     status: "LIVE",
     externalUrl: "/dashboard", // Point to within dashboard referral tab
+  },
+  {
+    id: "dq_play10",
+    title: "Play 10 matches",
+    reward: 2000,
+    type: "play",
+    frequency: "daily",
+    target: 10,
+    progress: 0,
+    completed: false,
+    status: "LIVE",
+  },
+  {
+    id: "dq_play15",
+    title: "Play 15 matches",
+    reward: 2000,
+    type: "play",
+    frequency: "daily",
+    target: 15,
+    progress: 0,
+    completed: false,
+    status: "LIVE",
+  },
+  {
+    id: "dq_play20",
+    title: "Play 20 matches",
+    reward: 2000,
+    type: "play",
+    frequency: "daily",
+    target: 20,
+    progress: 0,
+    completed: false,
+    status: "LIVE",
   },
 ];

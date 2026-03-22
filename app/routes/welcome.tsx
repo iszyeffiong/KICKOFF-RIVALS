@@ -17,6 +17,10 @@ function WelcomeRoute() {
 
   const handleProceed = () => {
     handleProceedFromWelcome();
+    // If it was a new user, reset the flag so they aren't 'new' on next login
+    if (storeIsNewUser) {
+      useUserStore.getState().setIsNewUser(false);
+    }
     navigate({ to: "/dashboard" });
   };
 
@@ -30,14 +34,23 @@ function WelcomeRoute() {
 
   if (!profile) return null;
 
-  // Optional: show new user welcome if storeIsNewUser is true
-  // For now, consistent with existing logic (returning welcome)
+  // Show NEW user welcome if storeIsNewUser is true
+  if (storeIsNewUser) {
+    return (
+      <WelcomeScreen
+        username={profile.username}
+        onProceed={handleProceed}
+      />
+    );
+  }
+
+  // Otherwise show RETURNING user welcome
   return (
     <ReturningUserWelcome
       username={profile.username}
-      totalBets={profile.totalBets}
-      wins={profile.wins}
-      korBalance={profile.korBalance}
+      totalBets={profile.totalBets || 0}
+      wins={profile.wins || 0}
+      korBalance={profile.korBalance || 0}
       onProceed={handleProceed}
     />
   );

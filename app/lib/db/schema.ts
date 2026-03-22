@@ -258,6 +258,7 @@ export const userQuests = pgTable(
     frequency: varchar("frequency", { length: 20 }).notNull(),
     target: integer("target").notNull(),
     progress: integer("progress").default(0).notNull(),
+    proof: text("proof"),
     completed: boolean("completed").default(false).notNull(),
     status: varchar("status", { length: 20 }).default("LIVE").notNull(),
     verifiedAt: timestamp("verified_at"),

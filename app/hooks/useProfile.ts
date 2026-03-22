@@ -51,16 +51,7 @@ export const useProfile = () => {
         if (data.quests) {
           const socialIds = ["q-follow-x", "q-lcr-post"];
           const extra = INITIAL_QUESTS.filter(iq => socialIds.includes(iq.id) && !data.quests.some((sq: any) => sq.id === iq.id));
-          data.quests = [...data.quests, ...extra].map((q: any) => {
-            const isDoneLocal =
-              typeof window !== "undefined"
-                ? localStorage.getItem(`quest_completed_${q.id}`) === "true"
-                : false;
-            if (isDoneLocal && !q.completed) {
-              return { ...q, completed: true, progress: q.target };
-            }
-            return q;
-          });
+          data.quests = [...data.quests, ...extra];
         }
       }
 

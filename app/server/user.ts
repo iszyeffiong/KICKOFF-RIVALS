@@ -8,9 +8,65 @@ import { INITIAL_QUESTS } from "../constants";
 // HELPER FUNCTIONS
 // ==========================================
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
+function getNextReset(frequency: string): Date {
+  const now = new Date();
+  
+  if (frequency === "daily") {
+    // Current day, 3 AM UTC
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0, 0));
+    // If it's already past 3 AM UTC today, the next reset is 3 AM UTC tomorrow
+    if (now >= next) {
+      next.setUTCDate(next.getUTCDate() + 1);
+    }
+    return next;
+  }
+  
+  if (frequency === "weekly") {
+    // Find days until next Sunday (Sunday is 0 in JS Date)
+    let daysToSunday = (7 - now.getUTCDay()) % 7;
+    
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysToSunday, 3, 0, 0, 0));
+    
+    // If today is Sunday but it's already past 3 AM UTC, the next reset is next Sunday at 3 AM UTC
+    if (daysToSunday === 0 && now >= next) {
+      next.setUTCDate(next.getUTCDate() + 7);
+    }
+    
+    return next;
+  }
+  
+  // Default fallback for "once" or unknown frequencies: very distant future
+  return new Date(Date.UTC(2099, 11, 31, 3, 0, 0, 0));
+}
+
+function getPreviousReset(frequency: string): Date {
+  const now = new Date();
+  // Fixed point: 3 AM UTC
+  const resetTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0, 0));
+  
+  if (frequency === "daily") {
+    // If it's before 3 AM today, the previous reset was yesterday at 3 AM
+    if (now < resetTime) {
+      resetTime.setUTCDate(resetTime.getUTCDate() - 1);
+    }
+    return resetTime;
+  }
+  
+  if (frequency === "weekly") {
+    // Last Sunday 3 AM UTC
+    let daysSinceSunday = now.getUTCDay(); // 0 is Sunday
+    resetTime.setUTCDate(resetTime.getUTCDate() - daysSinceSunday);
+    
+    // If today is Sunday but BEFORE 3 AM UTC, move back to last Sunday
+    if (daysSinceSunday === 0 && now < resetTime) {
+        resetTime.setUTCDate(resetTime.getUTCDate() - 7);
+    }
+    return resetTime;
+  }
+  
+  // For "once" or unknown: the beginning of time
+  return new Date(0);
+}
 
 function generateReferralCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -70,15 +126,28 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
       };
     }
 
-    // Check if user has quests, if not, initialize them
-    // This helps migrating old users who were created before quests existed
-    const userHasQuests = await db.query.userQuests.findFirst({
-      where: eq(userQuests.walletAddress, normalized),
+    // Check if user is missing any INITIAL_QUESTS and initialize them
+    const existingQuestIds = (existingUser.quests || []).map((q: any) => q.questId);
+    const missingQuests = INITIAL_QUESTS.filter(iq => !existingQuestIds.includes(iq.id));
+
+    // Fix frequencies for existing quests if they mismatch INITIAL_QUESTS (e.g. social tasks mistakenly in daily)
+    const questsToFix = (existingUser.quests || []).filter(q => {
+      const master = INITIAL_QUESTS.find(iq => iq.id === q.questId);
+      return master && master.frequency !== q.frequency;
     });
 
-    if (!userHasQuests && INITIAL_QUESTS.length > 0) {
-      console.log(`[QUESTS] Initializing quests for existing user ${normalized}`);
-      const questValues = INITIAL_QUESTS.map((q) => ({
+    if (questsToFix.length > 0) {
+      for (const q of questsToFix) {
+        const master = INITIAL_QUESTS.find(iq => iq.id === q.questId)!;
+        await db.update(userQuests)
+          .set({ frequency: master.frequency })
+          .where(eq(userQuests.id, q.id));
+      }
+    }
+
+    if (missingQuests.length > 0) {
+      console.log(`[QUESTS] Migrating ${missingQuests.length} new quests for existing user ${normalized}`);
+      const questValues = missingQuests.map((q) => ({
         walletAddress: normalized,
         questId: q.id,
         title: q.title,
@@ -87,10 +156,42 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
         frequency: q.frequency,
         target: q.target,
         status: q.status || "LIVE",
+        resetAt: getNextReset(q.frequency)
       }));
       await db.insert(userQuests).values(questValues).onConflictDoNothing();
+    }
+
+    // CHECK AND RESET QUESTS
+    const now = new Date();
+    const questsToReset = (existingUser.quests || []).filter(q => 
+      (q.frequency !== "once" && (!q.resetAt || now >= new Date(q.resetAt)))
+    );
+
+    if (questsToReset.length > 0) {
+      console.log(`[QUESTS] Resetting ${questsToReset.length} quests for ${normalized}`);
+      for (const q of questsToReset) {
+        await db.update(userQuests)
+          .set({ 
+            progress: 0, 
+            completed: false, 
+            proof: "", 
+            resetAt: getNextReset(q.frequency) 
+          })
+          .where(eq(userQuests.id, q.id));
+      }
       
-      // Re-fetch existingUser to include quests if it was from 'with: { quests: true }'
+      // Re-fetch existingUser to include all updated quests
+      const updatedUserRefreshed = await db.query.users.findFirst({
+        where: eq(users.walletAddress, normalized),
+        with: { quests: true },
+      });
+      if (updatedUserRefreshed) {
+        return { success: true, user: updatedUserRefreshed, isNew: false };
+      }
+    }
+
+    if (missingQuests.length > 0) {
+      // Re-fetch existingUser to include all quests if it was migrated but not reset
       const updatedUser = await db.query.users.findFirst({
         where: eq(users.walletAddress, normalized),
         with: { quests: true },
@@ -147,6 +248,7 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
           frequency: q.frequency,
           target: q.target,
           status: q.status || "LIVE",
+          resetAt: getNextReset(q.frequency)
         }))
       );
     }
@@ -192,6 +294,7 @@ export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
             frequency: q.frequency,
             target: q.target,
             status: q.status || "LIVE",
+            resetAt: getNextReset(q.frequency)
           }))
         );
       }
@@ -302,19 +405,22 @@ export const getUserProfile = createServerFn({ method: "GET" })
         // Ensure we use the string identifier (e.g. 'dq_win10') as the ID for the frontend
         const id = q.questId || q.id;
 
+        // Find master properties (requiresVerification, externalUrl, etc) from hardcoded list
+        // This ensures frontend has full quest metadata even if not in DB row
+        const master = INITIAL_QUESTS.find((iq) => iq.id === id);
+
         // If already completed in DB, keep it
-        if (q.completed) return { ...q, id };
+        if (q.completed) return { ...master, ...q, id };
 
-        // Auto-update progress for play/win types
+        // Auto-update progress for play/win types based on actual user stats
         let progress = q.progress || 0;
-
         if (q.type === "play") {
           progress = user.gamePlays || 0;
         } else if (q.type === "win") {
           progress = user.wins || 0;
         }
 
-        return { ...q, id, progress };
+        return { ...master, ...q, id, progress };
       }),
       masterQuests: await db.select().from(quests),
       isNew: result.isNew,
@@ -767,6 +873,8 @@ export const claimQuestReward = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const normalized = data.walletAddress.toLowerCase();
     
+    console.log(`[CLAIM] Starting claim for ${normalized}: ${data.questId}`);
+    
     // 1. Fetch user quest record
     const userQuest = await db.query.userQuests.findFirst({
       where: and(
@@ -774,6 +882,8 @@ export const claimQuestReward = createServerFn({ method: "POST" })
         eq(userQuests.questId, data.questId)
       ),
     });
+
+    console.log(`[CLAIM] UserQuest found: ${!!userQuest}, completed: ${userQuest?.completed}, progress: ${userQuest?.progress}`);
 
     if (!userQuest) {
       return { success: false, error: "Quest progress not found" };
@@ -786,22 +896,46 @@ export const claimQuestReward = createServerFn({ method: "POST" })
     // 2. Double-check requirements
     const isSocial = userQuest.type === "social" || userQuest.type === "external";
     
-    if (!isSocial && userQuest.progress < userQuest.target) {
-      return { success: false, error: `Incomplete: ${userQuest.progress}/${userQuest.target}` };
+    if (!isSocial) {
+      // For automated quests (win/play), we check the actual user stats first
+      const user = await db.query.users.findFirst({
+        where: eq(users.walletAddress, normalized)
+      });
+      
+      let actualProgress = userQuest.progress;
+      if (userQuest.type === "play") {
+        actualProgress = user?.gamePlays || 0;
+      } else if (userQuest.type === "win") {
+        actualProgress = user?.wins || 0;
+      }
+      
+      if (actualProgress < userQuest.target) {
+        return { success: false, error: `Incomplete: ${actualProgress}/${userQuest.target}` };
+      }
+    } else {
+      // For social quests, we should ideally check if it's verified (proof exists)
+      // but if the user requested manual-only claim with verification being a separate step,
+      // we check for proof if requiresVerification is set in master
+      const master = INITIAL_QUESTS.find(iq => iq.id === userQuest.questId);
+      if (master?.requiresVerification && !userQuest.proof) {
+        return { success: false, error: "Verification required before claiming" };
+      }
     }
 
-    // For social, ensure we have tracking or allow claim if it's social action type
     const rewardAmount = userQuest.reward || 0;
 
     // 3. Perform atomic payout transaction
     await db.transaction(async (tx) => {
+      console.log(`[CLAIM] Starting transaction for ${normalized}`);
+      
       // Mark as completed
-      await tx.update(userQuests)
+      const res1 = await tx.update(userQuests)
         .set({ 
           completed: true,
           progress: userQuest.target 
         })
         .where(eq(userQuests.id, userQuest.id));
+      console.log(`[CLAIM] userQuests updated`);
 
       // Add coins to user
       await tx.update(users)
@@ -809,7 +943,7 @@ export const claimQuestReward = createServerFn({ method: "POST" })
           coins: sql`${users.coins} + ${rewardAmount}` 
         })
         .where(eq(users.walletAddress, normalized));
-
+      
       // Log transaction
       await tx.insert(transactions).values({
         id: `tx-claim-${Date.now()}-${data.questId}`,
@@ -819,7 +953,10 @@ export const claimQuestReward = createServerFn({ method: "POST" })
         currency: "coins",
         description: `Quest Reward: ${userQuest.title}`
       });
+      console.log(`[CLAIM] transaction inserted`);
     });
+
+    console.log(`[CLAIM] Transaction committed for ${normalized}`);
 
     // 4. Return updated balance for UI
     const updatedUser = await db.query.users.findFirst({
@@ -862,6 +999,18 @@ export const submitQuestVerification = createServerFn({ method: "POST" })
       return { success: false, error: "Generic quest data not found" };
     }
 
+    // Check existing record for completion
+    const existingQuest = await db.query.userQuests.findFirst({
+        where: and(
+            eq(userQuests.walletAddress, normalized),
+            eq(userQuests.questId, data.questId)
+        )
+    });
+
+    if (existingQuest?.completed && questData.frequency === "once") {
+        return { success: false, error: "Task already completed and claimed." };
+    }
+
     // Server-side Stat Check for count-based quests
     if (questData.type === "play") {
       if ((user.gamePlays || 0) < questData.target) {
@@ -879,7 +1028,7 @@ export const submitQuestVerification = createServerFn({ method: "POST" })
       }
     }
 
-    // Upsert user quest progress
+    // Upsert user quest progress with proof AND set progress to target
     await db
       .insert(userQuests)
       .values({
@@ -890,21 +1039,25 @@ export const submitQuestVerification = createServerFn({ method: "POST" })
         type: questData.type as any,
         frequency: questData.frequency as any,
         target: questData.target,
-        progress: questData.target, // Mark as complete (ready to claim)
+        progress: questData.target, // Set progress to target upon verification
+        completed: false, // EXPLICITLY force completed to false during submit phase
+        proof: data.verificationCode || null,
         verifiedAt: new Date(),
         status: "LIVE",
       })
       .onConflictDoUpdate({
         target: [userQuests.walletAddress, userQuests.questId],
         set: {
-          progress: questData.target,
+          progress: questData.target, // Also update progress to target here
+          completed: false, // Ensure it's not marked as completed yet
+          proof: data.verificationCode || null,
           verifiedAt: new Date(),
         },
       });
 
     return { 
       success: true, 
-      message: "Quest verification recorded in database" 
+      message: "Quest verification recorded. Ready to claim." 
     };
   });
 
@@ -946,7 +1099,7 @@ export const recordGamePlay = createServerFn({ method: "POST" })
 // INTERNAL QUEST UPDATER
 // ==========================================
 
-export async function updateQuestProgressInternal(walletAddress: string, type: "play" | "win" | "checkin", amount: number = 1) {
+export async function updateQuestProgressInternal(walletAddress: string, type: "play" | "win" | "win_accumulator" | "checkin", amount: number = 1) {
     const normalized = walletAddress.toLowerCase();
     
     // Find relevant quests for this user and type
@@ -994,60 +1147,33 @@ export const syncGameplayQuests = createServerFn({ method: "POST" })
 
     if (!user) return { success: false, error: "User not found" };
 
-    // 2. Define Time Buffers
-    const now = new Date();
-    const today = new Date(now);
-    today.setUTCHours(0, 0, 0, 0);
+    // 2. Fetch Bets since the oldest possible reset (weekly)
+    // Sunday 3 AM UTC is our reference for weekly
+    const weeklyReset = getPreviousReset("weekly");
+    const dailyReset = getPreviousReset("daily");
 
-    const monday = new Date(now);
-    const day = now.getUTCDay();
-    const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1);
-    monday.setUTCDate(diff);
-    monday.setUTCHours(0, 0, 0, 0);
-
-    // 3. Fetch Bets (since monday for catch-all, we filter individual later)
     const recentBets = await db.query.bets.findMany({
       where: and(
         eq(bets.walletAddress, normalized),
-        gte(bets.createdAt, monday)
+        gte(bets.createdAt, weeklyReset)
       ),
     });
 
-    // 4. Calculate progress for each quest
+    // 3. Calculate progress for each quest
     const updatedQuests = [];
     for (const q of user.quests) {
-      if (q.type !== "play" && q.type !== "win") {
+      if (q.type !== "play" && q.type !== "win" && q.type !== "win_accumulator") {
         updatedQuests.push(q);
         continue;
       }
 
-      const since = q.frequency === "weekly" ? monday : today;
+      const since = q.frequency === "weekly" ? weeklyReset : dailyReset;
       const relevantBets = recentBets.filter(b => new Date(b.createdAt) >= since);
 
       let newProgress = q.progress;
 
-      if (q.questId === "wq_win10acc") {
-        // ACCUMULATOR QUEST: only count bets with betType=accumulator
-        // An accumulator win = all bets in the same accumulatorId are won
-        const accBets = relevantBets.filter(b => b.betType === "accumulator" && b.accumulatorId);
-        
-        // Group by accumulatorId
-        const accGroups = new Map<string, typeof accBets>();
-        for (const bet of accBets) {
-          const key = bet.accumulatorId!;
-          if (!accGroups.has(key)) accGroups.set(key, []);
-          accGroups.get(key)!.push(bet);
-        }
-        
-        // Count fully-won accumulators (all legs won)
-        let wonAccumulators = 0;
-        for (const [, legs] of accGroups) {
-          const allWon = legs.every(b => b.status === "won");
-          if (allWon && legs.length > 1) wonAccumulators++;
-        }
-        newProgress = wonAccumulators;
-      } else if (q.type === "play") {
-        // Count unique matches played (any bet placed = participated)
+      if (q.type === "play") {
+        // Count unique matches played (any bet placed = participated in that match)
         const uniqueMatchIds = new Set(relevantBets.map(b => b.matchId));
         newProgress = uniqueMatchIds.size;
       } else if (q.type === "win") {
@@ -1058,23 +1184,36 @@ export const syncGameplayQuests = createServerFn({ method: "POST" })
             .map(b => b.matchId)
         );
         newProgress = matchesWithWins.size;
+      } else if (q.type === "win_accumulator") {
+        // Count unique accumulators that were fully won
+        const accBets = relevantBets.filter(b => b.betType === "accumulator" && b.accumulatorId);
+        const accGroups = new Map<string, typeof accBets>();
+        for (const b of accBets) {
+          if (!accGroups.has(b.accumulatorId!)) accGroups.set(b.accumulatorId!, []);
+          accGroups.get(b.accumulatorId!)!.push(b);
+        }
+        let wonAccCount = 0;
+        for (const [, legs] of accGroups) {
+          if (legs.every(l => l.status === "won") && legs.length > 1) {
+            wonAccCount++;
+          }
+        }
+        newProgress = wonAccCount;
       }
-
-      const isCompleted = newProgress >= q.target;
 
       if (newProgress !== q.progress) {
         await db.update(userQuests)
           .set({ progress: newProgress })
           .where(eq(userQuests.id, q.id));
-        updatedQuests.push({ ...q, progress: newProgress, completed: q.completed });
+        updatedQuests.push({ ...q, progress: newProgress });
       } else {
         updatedQuests.push(q);
       }
     }
 
-    return {
-      success: true,
-      quests: updatedQuests,
+    return { 
+      success: true, 
+      quests: updatedQuests 
     };
   });
 

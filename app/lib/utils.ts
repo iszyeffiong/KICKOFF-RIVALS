@@ -35,3 +35,12 @@ export function truncateAddress(address: string): string {
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
+
+export const generateHash = () =>
+  "0x" +
+  Array.from({ length: 64 }, () =>
+    Math.floor(Math.random() * 16).toString(16),
+  ).join("");
+
+export const generate6DigitCode = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();

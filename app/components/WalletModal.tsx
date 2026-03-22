@@ -9,7 +9,6 @@ import {
   IconZap,
   IconArrowUp,
   IconArrowDown,
-  IconRefresh,
   IconChevronRight,
 } from "./Icons";
 import { formatNumber, formatDate, truncateAddress } from "../lib/utils";
@@ -41,15 +40,18 @@ export function WalletModal({
   const convertibleCoins = userStats.korBalance * (CONVERSION_RATE / CONVERSION_YIELD);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[200] overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-md bg-background rounded-t-2xl sm:rounded-2xl shadow-xl animate-slide-up max-h-[85vh] flex flex-col">
+      {/* Centering wrapper — scrolls with overlay */}
+      <div className="relative flex min-h-full items-center justify-center p-4 py-16">
+
+      {/* Modal — natural height, no clipping */}
+      <div className="relative w-full max-w-md bg-background rounded-2xl shadow-xl animate-slide-up flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-3">
@@ -98,7 +100,7 @@ export function WalletModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="p-4">
           {activeTab === "balance" && (
             <div className="space-y-4">
               {/* KOR Balance */}
@@ -144,7 +146,13 @@ export function WalletModal({
               </div>
 
               {/* Coin to KOR Conversion */}
-              <div className="card p-4 border-dashed bg-muted/20">
+              <div className="card p-4 border-dashed bg-muted/20 relative overflow-hidden group">
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
+                  <div className="bg-card px-3 py-1 rounded-full shadow-sm border text-[10px] font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+                    Coming Soon
+                  </div>
+                </div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-foreground">Coins to KOR</h3>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -184,7 +192,13 @@ export function WalletModal({
               </div>
 
               {/* KOR to Coin Conversion */}
-              <div className="card p-4 border-dashed border-primary/40 bg-primary/5">
+              <div className="card p-4 border-dashed border-primary/40 bg-primary/5 relative overflow-hidden group">
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
+                  <div className="bg-card px-3 py-1 rounded-full shadow-sm border text-[10px] font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+                    Coming Soon
+                  </div>
+                </div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-foreground">KOR to Coins</h3>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -322,6 +336,7 @@ export function WalletModal({
             Close
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

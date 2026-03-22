@@ -117,8 +117,8 @@ export interface DailyQuest {
   id: string;
   title: string;
   reward: number;
-  type: 'click' | 'play' | 'win' | 'bet' | 'social' | 'external' | 'referral';
-  frequency: 'daily' | 'weekly';
+  type: 'click' | 'play' | 'win' | 'win_accumulator' | 'bet' | 'social' | 'external' | 'referral';
+  frequency: 'daily' | 'weekly' | 'once';
   target: number;
   progress: number;
   completed: boolean;
@@ -136,6 +136,7 @@ export interface DailyQuest {
   requiresVerification?: boolean;
   verificationPlaceholder?: string;
   verificationType?: 'username' | 'link';
+  proof?: string;
 }
 
 export interface UserStats {

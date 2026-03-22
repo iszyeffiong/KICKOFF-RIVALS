@@ -13,7 +13,6 @@ import { useUserStore } from "../stores/userStore";
 import { useProfile } from "../hooks/useProfile";
 import {
   TEAMS,
-  INITIAL_BALANCE,
   LEAGUES,
   ROUND_DURATION_SEC,
   MATCH_DURATION_SEC,
@@ -44,14 +43,10 @@ import {
 
 const API_URL = "";
 
-const generateHash = () =>
-  "0x" +
-  Array.from({ length: 64 }, () =>
-    Math.floor(Math.random() * 16).toString(16),
-  ).join("");
-
-const generate6DigitCode = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+import { 
+  generateHash, 
+  generate6DigitCode 
+} from "../lib/utils";
 
 interface GameContextType {
   isInitializing: boolean;
@@ -256,18 +251,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const queryClient = useQueryClient();
 
-  // Balance (Local state for game loop UI)
-  const [balance, setBalance] = useState(INITIAL_BALANCE);
-
-  // Sync state balance with profile's korBalance
-  useEffect(() => {
-    if (profile?.korBalance !== undefined) {
-      const pBalance = Number(profile.korBalance);
-      if (pBalance !== balance) {
-        setBalance(pBalance);
-      }
-    }
-  }, [profile?.korBalance, balance]);
+  // Balance (Read directly from profile where possible)
+  const balance = profile?.coins || 0;
+  // We can keep setBalance as a no-op or a local update if needed for optimistic UI
+  const setBalance = (val: any) => {
+    // Optimistically updating coins is better handled in useProfile or via query invalidation
+  };
 
   // Game State
   const [gameState, setGameState] = useState<GameState>("BETTING");
@@ -380,7 +369,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.walletAddress, profile?.username, setOnboardingComplete]);
 
   const handleLogout = useCallback(() => {
-    setBalance(INITIAL_BALANCE);
     setActiveBets([]);
     setTransactions([]);
     storeLogout();
@@ -471,7 +459,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleBetPlacement = useCallback(
     async (match: Match, selection: Bet["selection"], stake: number) => {
-      if (stake > (profile?.korBalance || 0)) return false;
+      if (stake > (profile?.coins || 0)) return false;
       if (!match.odds) return false;
 
       try {
@@ -493,7 +481,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
         const data = await res.json();
         if (data.success) {
-          setBalance(data.newBalance);
           const bet: Bet = {
             id: data.bet.id,
             matchId: match.id,
@@ -506,7 +493,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             txHash: generateHash(),
           };
           setActiveBets((prev) => [bet, ...prev]);
-          addTransaction("bet", stake, "kor", "Match wager");
+          addTransaction("bet", stake, "coins", "Match wager");
           refreshProfileQuery();
           return true;
         } else {
@@ -518,7 +505,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [
-      profile?.korBalance,
+      profile?.coins,
       profile?.walletAddress,
       profile?.username,
       walletState.address,
@@ -646,9 +633,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                   betType: "single",
                 },
               ]);
-              if (data.newBalance !== undefined) {
-                setBalance(data.newBalance);
-              }
             } else {
               console.error("Single bet failed:", data);
             }
@@ -659,7 +643,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           addTransaction(
             "bet",
             totalStake,
-            "kor",
+            "coins",
             `${betSlipSelections.length} single bets`,
           );
           setBetSlipSelections([]); // Clear slip on success
@@ -726,14 +710,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             // Batch update active bets
             setActiveBets((prev) => [...newBets, ...prev]);
 
-            if (data.newBalance !== undefined) {
-              setBalance(data.newBalance);
-            }
-
             addTransaction(
               "bet",
               stake,
-              "kor",
+              "coins",
               `Accumulator (${betSlipSelections.length} selections)`,
             );
           } else {

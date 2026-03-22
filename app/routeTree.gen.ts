@@ -28,6 +28,7 @@ import { Route as DashboardBetsRouteImport } from './routes/dashboard/bets'
 import { Route as ApiLeaderboardRouteImport } from './routes/api/leaderboard'
 import { Route as ApiUserSyncGameplayQuestsRouteImport } from './routes/api/user.sync-gameplay-quests'
 import { Route as ApiUserSubmitQuestVerificationRouteImport } from './routes/api/user.submit-quest-verification'
+import { Route as ApiUserResetMyQuestsRouteImport } from './routes/api/user.reset-my-quests'
 import { Route as ApiUserRegisterReferralRouteImport } from './routes/api/user.register-referral'
 import { Route as ApiUserProfileRouteImport } from './routes/api/user.profile'
 import { Route as ApiUserConvertKorRouteImport } from './routes/api/user.convert-kor'
@@ -143,6 +144,11 @@ const ApiUserSubmitQuestVerificationRoute =
     path: '/api/user/submit-quest-verification',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiUserResetMyQuestsRoute = ApiUserResetMyQuestsRouteImport.update({
+  id: '/api/user/reset-my-quests',
+  path: '/api/user/reset-my-quests',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUserRegisterReferralRoute = ApiUserRegisterReferralRouteImport.update({
   id: '/api/user/register-referral',
   path: '/api/user/register-referral',
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/reset-my-quests': typeof ApiUserResetMyQuestsRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
   '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/reset-my-quests': typeof ApiUserResetMyQuestsRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
   '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/api/user/convert-kor': typeof ApiUserConvertKorRoute
   '/api/user/profile': typeof ApiUserProfileRoute
   '/api/user/register-referral': typeof ApiUserRegisterReferralRoute
+  '/api/user/reset-my-quests': typeof ApiUserResetMyQuestsRoute
   '/api/user/submit-quest-verification': typeof ApiUserSubmitQuestVerificationRoute
   '/api/user/sync-gameplay-quests': typeof ApiUserSyncGameplayQuestsRoute
 }
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/reset-my-quests'
     | '/api/user/submit-quest-verification'
     | '/api/user/sync-gameplay-quests'
   fileRoutesByTo: FileRoutesByTo
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/reset-my-quests'
     | '/api/user/submit-quest-verification'
     | '/api/user/sync-gameplay-quests'
   id:
@@ -457,6 +468,7 @@ export interface FileRouteTypes {
     | '/api/user/convert-kor'
     | '/api/user/profile'
     | '/api/user/register-referral'
+    | '/api/user/reset-my-quests'
     | '/api/user/submit-quest-verification'
     | '/api/user/sync-gameplay-quests'
   fileRoutesById: FileRoutesById
@@ -490,6 +502,7 @@ export interface RootRouteChildren {
   ApiUserConvertKorRoute: typeof ApiUserConvertKorRoute
   ApiUserProfileRoute: typeof ApiUserProfileRoute
   ApiUserRegisterReferralRoute: typeof ApiUserRegisterReferralRoute
+  ApiUserResetMyQuestsRoute: typeof ApiUserResetMyQuestsRoute
   ApiUserSubmitQuestVerificationRoute: typeof ApiUserSubmitQuestVerificationRoute
   ApiUserSyncGameplayQuestsRoute: typeof ApiUserSyncGameplayQuestsRoute
 }
@@ -627,6 +640,13 @@ declare module '@tanstack/react-router' {
       path: '/api/user/submit-quest-verification'
       fullPath: '/api/user/submit-quest-verification'
       preLoaderRoute: typeof ApiUserSubmitQuestVerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/user/reset-my-quests': {
+      id: '/api/user/reset-my-quests'
+      path: '/api/user/reset-my-quests'
+      fullPath: '/api/user/reset-my-quests'
+      preLoaderRoute: typeof ApiUserResetMyQuestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/user/register-referral': {
@@ -802,6 +822,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUserConvertKorRoute: ApiUserConvertKorRoute,
   ApiUserProfileRoute: ApiUserProfileRoute,
   ApiUserRegisterReferralRoute: ApiUserRegisterReferralRoute,
+  ApiUserResetMyQuestsRoute: ApiUserResetMyQuestsRoute,
   ApiUserSubmitQuestVerificationRoute: ApiUserSubmitQuestVerificationRoute,
   ApiUserSyncGameplayQuestsRoute: ApiUserSyncGameplayQuestsRoute,
 }

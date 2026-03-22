@@ -8,6 +8,7 @@ export const Route = createFileRoute("/api/user/claim-quest-reward")({
         try {
           const body = await request.json();
           const { walletAddress, questId } = body;
+          console.log(`[API] Claim Quest Reward hit: ${walletAddress}, ${questId}`);
 
           if (!walletAddress || !questId) {
             return Response.json(

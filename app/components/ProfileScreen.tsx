@@ -54,6 +54,7 @@ interface ProfileScreenProps {
     message: string;
     reward?: number;
   }>;
+  onQuestRefresh?: () => Promise<void>;
   notify?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
@@ -67,6 +68,7 @@ export function ProfileScreen({
   onSystemSync,
   onOpenWallet,
   onClaimAllianceRewards,
+  onQuestRefresh,
   onCheckIn,
   notify,
 }: ProfileScreenProps) {
@@ -85,11 +87,12 @@ export function ProfileScreen({
     message: string;
   }>({ type: null, message: "" });
   const [copied, setCopied] = useState(false);
+  const [isResettingQuests, setIsResettingQuests] = useState(false);
 
   const [showClaimSuccess, setShowClaimSuccess] = useState(false);
   const [claimReward, setClaimReward] = useState<number>(0);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
-  const [questTab, setQuestTab] = useState<"daily" | "weekly" | "social" | "game">("daily");
+  const [questTab, setQuestTab] = useState<"daily" | "weekly" | "social" | "partners">("daily");
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) return;
@@ -125,11 +128,50 @@ export function ProfileScreen({
     }
   };
 
-  const copyReferralCode = () => {
+  const handleResetMyQuests = async () => {
+    if (!stats?.walletAddress) return;
+    const confirmed = window.confirm(
+      "Reset your quest progress? You will be able to redo all tasks and claim rewards again."
+    );
+    if (!confirmed) return;
+
+    setIsResettingQuests(true);
+    try {
+      const res = await fetch("/api/user/reset-my-quests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress: stats.walletAddress }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify?.("Quest progress reset! Refresh to see your tasks.", "success");
+      } else {
+        notify?.(data.error || "Reset failed.", "error");
+      }
+    } catch (e) {
+      notify?.("Network error. Please try again.", "error");
+    } finally {
+      setIsResettingQuests(false);
+    }
+  };
+
+  const copyReferralCode = async () => {
     if (!stats?.referralCode) return;
-    navigator.clipboard.writeText(stats.referralCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    
+    // Safety check for document focus to avoid 'NotAllowedError'
+    if (!document.hasFocus()) {
+      console.warn("[CLIPBOARD] Document is not focused, skipping copy.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(stats.referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("[CLIPBOARD] Failed to copy:", err);
+      notify?.("Failed to copy code. Please try again.", "error");
+    }
   };
 
   const winRate =
@@ -404,7 +446,7 @@ export function ProfileScreen({
 
           {/* Quest Tabs */}
           <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-xl text-xs font-bold">
-            {(["daily", "weekly", "social", "game"] as const).map((tab) => (
+            {(["daily", "weekly", "social", "partners"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setQuestTab(tab)}
@@ -415,19 +457,38 @@ export function ProfileScreen({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "partners" ? "Partners" : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
+
+        {/* Sync Progress Button */}
+        {(questTab === "daily" || questTab === "weekly") && (
+          <div className="flex justify-end">
+            {/* <button
+              onClick={async () => {
+                const btn = document.getElementById("sync-btn");
+                if (btn) btn.classList.add("animate-spin");
+                await onQuestRefresh?.();
+                if (btn) btn.classList.remove("animate-spin");
+                notify?.("Quest progress synchronized", "success");
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold transition-all border border-primary/10"
+            >
+              <IconRefresh id="sync-btn" className="w-3.5 h-3.5" />
+              SYNC PROGRESS
+            </button> */}
+          </div>
+        )}
 
           <div className="space-y-3">
             {(stats?.quests || [])
               .filter((q) => q.status !== "ARCHIVED")
               .filter((q) => {
-                if (questTab === "daily") return (q.type === "win" || q.type === "play") && q.frequency === "daily";
-                if (questTab === "weekly") return (q.type === "win" || q.type === "play") && q.frequency === "weekly";
-                if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social";
-                if (questTab === "game") return q.type === "referral" || q.type === "click";
+                if (questTab === "daily") return q.frequency === "daily";
+                if (questTab === "weekly") return q.frequency === "weekly";
+                if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social" || q.frequency === "once";
+                if (questTab === "partners") return q.type === "referral" || q.type === "click" || q.id.includes("partner");
                 return true;
               })
               .map((quest) => (
@@ -439,10 +500,10 @@ export function ProfileScreen({
                 />
               ))}
             {(stats?.quests || []).filter((q) => q.status !== "ARCHIVED").filter((q) => {
-              if (questTab === "daily") return (q.type === "win" || q.type === "play") && q.frequency === "daily";
-              if (questTab === "weekly") return (q.type === "win" || q.type === "play") && q.frequency === "weekly";
-              if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social";
-              if (questTab === "game") return q.type === "referral" || q.type === "click";
+              if (questTab === "daily") return q.frequency === "daily";
+              if (questTab === "weekly") return q.frequency === "weekly";
+              if (questTab === "social") return q.type === "social" || q.type === "external" || q.category === "social" || q.frequency === "once";
+              if (questTab === "partners") return q.type === "referral" || q.type === "click" || q.id.includes("partner");
               return true;
             }).length === 0 && (
               <div className="text-center py-10 text-muted-foreground text-sm">
@@ -622,6 +683,16 @@ export function ProfileScreen({
             description="Disconnect your wallet"
             onClick={onLogout}
             variant="danger"
+          />
+          <SettingsButton
+            icon={
+              isResettingQuests
+                ? <IconRefresh className="w-5 h-5 text-orange-400 animate-spin" />
+                : <IconRefresh className="w-5 h-5 text-orange-400" />
+            }
+            label={isResettingQuests ? "Resetting..." : "Reset My Quests"}
+            description="Clear your quest progress so you can redo all tasks"
+            onClick={handleResetMyQuests}
           />
         </div>
       )}
@@ -854,10 +925,14 @@ function QuestCard({
             <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">
               +{quest.reward} COINS
             </span>
-            <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-            <span className="text-[10px] text-muted-foreground">
-              {quest.frequency === "weekly" ? "WEEKLY" : "DAILY"}
-            </span>
+            {quest.frequency !== "once" && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                <span className="text-[10px] text-muted-foreground uppercase">
+                  {quest.frequency === "weekly" ? "WEEKLY" : "DAILY"}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -920,16 +995,26 @@ function QuestDrawer({
 }) {
   const [verificationInput, setVerificationInput] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
-  const [hasVisited, setHasVisited] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(`quest_visited_${quest.id}`) === "true";
-    }
-    return false;
-  });
+  const [claimInProgress, setClaimInProgress] = useState(false);
+  const [hasVisited, setHasVisited] = useState(false);
+  // Tracks if the user has submitted proof in this session or server confirms it — unlocking CLAIM
+  const [isVerified, setIsVerified] = useState(false);
+
+  const isSocialQuest = quest.type === "social" || quest.type === "external" || quest.category === "social";
 
   const progress = Math.min((quest.progress / quest.target) * 100, 100);
   const isComplete = quest.progress >= quest.target;
-  const canClaim = isComplete && !quest.completed;
+  
+  // Persistence-Friendly Claim Logic:
+  // 1. If it's a social quest requiring verification:
+  //    - If the server has a proof (!!quest.proof), we unlock CLAIM immediately.
+  //    - Otherwise, require the user to have verified it in the CURRENT session (isVerified).
+  // 2. Proof (quest.proof) must exist for a complete verifiable quest.
+  const canClaim = !quest.completed && (
+    isSocialQuest
+      ? (quest.requiresVerification ? (isVerified || !!quest.proof) : (hasVisited && isComplete))
+      : (isComplete)
+  );
 
   // Fallback URL from INITIAL_QUESTS if missing in current state
   const targetUrl =
@@ -950,6 +1035,12 @@ function QuestDrawer({
     }
 
     setIsVerifying(true);
+    // Persist visited state locally to prevent flicker
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`quest_visited_${quest.id}`, "true");
+      setHasVisited(true);
+    }
+    
     setTimeout(() => {
       if (val.length < 3) {
         setIsVerifying(false);
@@ -969,12 +1060,12 @@ function QuestDrawer({
       // Success logic
       if (typeof window !== "undefined") {
         localStorage.setItem(`quest_verify_${quest.id}`, val);
-        localStorage.setItem(`quest_completed_${quest.id}`, "true");
       }
-      onAction(false, val); // Triggers App.tsx to mark as ready in DB and local
+      onAction(false, val); // Triggers App.tsx to mark as ready in DB
+      setIsVerified(true);   // Immediately unlock CLAIM button in this session
       setIsVerifying(false);
-      notify?.("Task verified! You can now claim your coins.", "success");
-    }, 1500);
+      notify?.("Task verified! Tap CLAIM REWARD below to collect your coins.", "success");
+    }, 6000); // 6 second delay as requested
   };
 
   return (
@@ -1049,12 +1140,12 @@ function QuestDrawer({
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground/60 font-medium">
+              <p className="text-[10px] text-muted-foreground/60 font-medium tracking-tight">
                 {quest.completed
-                  ? "You have finished this task! Your account is credited."
-                  : isComplete
-                  ? "Verification successful. Tap below to claim your COINS!"
-                  : "Complete the requirements to unlock your reward."}
+                  ? "Task Finalized. Your reward has been added to your balance."
+                  : canClaim
+                  ? "Quest verified! Tap 'CLAIM REWARD' below to collect your coins."
+                  : "Submit your details or follow the link to start the verification process."}
               </p>
             </div>
 
@@ -1175,23 +1266,36 @@ function QuestDrawer({
 
                   {!quest.completed && (
                     <button
-                      onClick={onClaim}
-                      disabled={!canClaim}
+                      onClick={() => {
+                        if (claimInProgress) return;
+                        setClaimInProgress(true);
+                        onClaim();
+                      }}
+                      disabled={!canClaim || isVerifying || claimInProgress}
                       className={cn(
                         "btn h-16 w-full font-black text-lg tracking-tight transition-all active:scale-95 duration-500",
-                        canClaim
+                        canClaim && !isVerifying && !claimInProgress
                           ? "btn-primary shadow-2xl shadow-primary/30 border-none ring-4 ring-primary/20 animate-pulse"
                           : "bg-muted/50 text-muted-foreground/40 border-2 border-muted cursor-not-allowed grayscale",
                       )}
                     >
-                      <IconGift className={cn("w-6 h-6 mr-3", !canClaim && "opacity-20")} />
-                      {canClaim ? `CLAIM ${quest.reward} COINS` : "CLAIM REWARD LOCKED"}
+                      {isVerifying || claimInProgress ? (
+                        <IconRefresh className="w-6 h-6 mr-3 animate-spin text-primary" />
+                      ) : (
+                        <IconGift className={cn("w-6 h-6 mr-3", !canClaim && "opacity-20")} />
+                      )}
+                      {isVerifying || claimInProgress
+                        ? "PROCESSING..."
+                        : canClaim
+                        ? `CLAIM ${quest.reward} COINS`
+                        : "CLAIM REWARD LOCKED"}
                     </button>
                   )}
                 </div>
               </div>
             )}
 
+            {/* Task Rewarded Success Screen - ONLY after CLAIM and server confirmation */}
             {quest.completed && (
               <div className="flex flex-col items-center justify-center pt-10 text-center gap-4">
                 <div className="w-20 h-20 rounded-full bg-primary/10 border-4 border-primary/20 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]">
@@ -1202,8 +1306,7 @@ function QuestDrawer({
                     Task Rewarded
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    You đã completed this task and received your reward. Awesome
-                    job!
+                    You have successfully completed this task and received your reward. Awesome job!
                   </p>
                 </div>
               </div>

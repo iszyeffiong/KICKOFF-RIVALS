@@ -36,29 +36,8 @@ export const wagmiAdapter = new WagmiAdapter({
   ssr: true,
 });
 
-// 5. Create modal - only on client
-if (typeof window !== "undefined") {
-  const appKit = createAppKit({
-    adapters: [wagmiAdapter],
-    networks,
-    projectId,
-    metadata,
-    features: {
-      analytics: true,
-      email: false,
-      socials: false,
-    },
-    themeMode: "dark",
-    themeVariables: {
-      "--w3m-accent": "#1d4ed8",
-      "--w3m-border-radius-master": "1px",
-    },
-  });
-
-  // Expose appKit for global access
-  (window as any).appKit = appKit;
-  console.log("AppKit initialized and attached to window");
-}
+// 5. AppKit initialization singleton
+let appKitInitialized = false;
 
 // 6. Create query client
 const queryClient = new QueryClient({
@@ -74,6 +53,39 @@ export { queryClient };
 
 // 7. Export provider wrapper with SSR support
 export function AppKitProvider({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !appKitInitialized) {
+      const appKit = createAppKit({
+        adapters: [wagmiAdapter],
+        networks,
+        projectId,
+        metadata: {
+          ...metadata,
+          icons: ["https://avatars.githubusercontent.com/u/179229932"] // Stable fallback icon
+        },
+        features: {
+          analytics: false, // Disable analytics to reduce load
+          email: false,
+          socials: false,
+        },
+        themeMode: "dark",
+        themeVariables: {
+          "--w3m-accent": "#1d4ed8",
+          "--w3m-border-radius-master": "2px",
+          "--w3m-z-index": 10000, // Ensure it's above other elements
+        },
+      });
+
+      // Expose for global access if needed
+      (window as any).appKit = appKit;
+      appKitInitialized = true;
+      console.log("AppKit initialized smoothly");
+    }
+    setReady(true);
+  }, []);
+
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

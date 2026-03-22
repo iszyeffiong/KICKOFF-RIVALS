@@ -3,7 +3,9 @@ import {
   HeadContent,
   Scripts,
   createRootRoute,
+  Link,
 } from "@tanstack/react-router";
+import { IconTrophy, IconChevronRight } from "../components/Icons";
 import type { ReactNode } from "react";
 import appCss from "../styles/globals.css?url";
 import { GameProvider } from "../contexts/GameContext";
@@ -39,6 +41,26 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  notFoundComponent: () => {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
+        <div className="p-6 rounded-full bg-primary/20 mb-6 font-bold text-primary animate-bounce">
+          <IconTrophy className="w-16 h-16" />
+        </div>
+        <h1 className="text-4xl font-black text-white mb-2">404</h1>
+        <p className="text-slate-400 mb-8 max-w-xs">
+          This page hasn't hit the stadium yet. Let's get you back to the game.
+        </p>
+        <Link 
+          to="/" 
+          className="btn btn-primary h-14 px-8 font-bold text-lg shadow-lg shadow-primary/20"
+        >
+          Return to Pitch
+          <IconChevronRight className="w-5 h-5 ml-2" />
+        </Link>
+      </div>
+    )
+  }
 });
 
 function RootComponent() {

@@ -20,18 +20,32 @@ export function ReturningUserWelcome({
 }: ReturningUserWelcomeProps) {
   const [showStats, setShowStats] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [showReloadPrompt, setShowReloadPrompt] = useState(false);
 
   useEffect(() => {
     const timer1 = setTimeout(() => setShowStats(true), 500);
     const timer2 = setTimeout(() => setAnimationComplete(true), 1500);
 
+    // If data is still missing after 5 seconds, show a reload prompt
+    const reloadTimer = setTimeout(() => {
+      if (korBalance === undefined || korBalance === null) {
+        setShowReloadPrompt(true);
+      }
+    }, 5000);
+
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(reloadTimer);
     };
-  }, []);
+  }, [korBalance]);
 
-  const winRate = totalBets > 0 ? Math.round((wins / totalBets) * 100) : 0;
+  const safeWins = Number(wins) || 0;
+  const safeTotalBets = Number(totalBets) || 0;
+  const safeKorBalance = Number(korBalance) || 0;
+  const isDataReady = korBalance !== undefined && korBalance !== null;
+
+  const winRate = safeTotalBets > 0 ? Math.round((safeWins / safeTotalBets) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
@@ -67,7 +81,7 @@ export function ReturningUserWelcome({
           </p>
 
           <p className="text-slate-400 mb-8 animate-fade-in">
-            Great to see you again. Ready to win?
+            {isDataReady ? "Great to see you again. Ready to win?" : "Syncing your stats from database..."}
           </p>
 
           {/* Stats Section */}
@@ -79,31 +93,46 @@ export function ReturningUserWelcome({
 
               {/* Main Stats Grid */}
               <div className="bg-slate-800/50 border border-primary/20 rounded-xl p-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  {/* Total Bets */}
-                  <div className="bg-slate-700/30 rounded-lg p-4">
-                    <p className="text-3xl font-bold text-white">
-                      {totalBets ?? "--"}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-2">Total Bets</p>
+                {!isDataReady ? (
+                  <div className="flex flex-col items-center py-4">
+                    <span className="loading loading-spinner text-primary mb-2"></span>
+                    <p className="text-sm text-slate-400">Pulling data...</p>
+                    {showReloadPrompt && (
+                      <button 
+                        onClick={() => window.location.reload()}
+                        className="mt-4 text-xs text-primary underline hover:text-primary/80"
+                      >
+                        Taking too long? Tap here to reload
+                      </button>
+                    )}
                   </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    {/* Total Bets */}
+                    <div className="bg-slate-700/30 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-white">
+                        {safeTotalBets}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-2">Total Bets</p>
+                    </div>
 
-                  {/* Win Rate */}
-                  <div className="bg-primary/10 rounded-lg p-4">
-                    <p className="text-3xl font-bold text-primary">
-                      {totalBets > 0 ? `${winRate}%` : "--"}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-2">Win Rate</p>
-                  </div>
+                    {/* Win Rate */}
+                    <div className="bg-primary/10 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-primary">
+                        {safeTotalBets > 0 ? `${winRate}%` : "--"}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-2">Win Rate</p>
+                    </div>
 
-                  {/* KOR Balance */}
-                  <div className="bg-yellow-500/10 rounded-lg p-4">
-                    <p className="text-3xl font-bold text-yellow-400">
-                      {Math.floor(korBalance) ?? "--"}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-2">KOR Balance</p>
+                    {/* KOR Balance */}
+                    <div className="bg-yellow-500/10 rounded-lg p-4">
+                      <p className="text-3xl font-bold text-yellow-400">
+                        {Math.floor(safeKorBalance)}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-2">KOR Balance</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

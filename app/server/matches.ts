@@ -427,8 +427,13 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
                      xp: sql`${users.xp} + 25`,
                   }).where(eq(users.walletAddress, bet.walletAddress));
                   
-                    // QUESTS: Increment Win Progress
+                    // QUESTS: Increment Win Progress (all wins)
                     await updateQuestProgressInternal(bet.walletAddress, "win", 1);
+                    
+                    // QUESTS: Increment Win Accumulator Progress (only accumulators)
+                    if (bet.betType === "accumulator" || bet.accumulatorId) {
+                      await updateQuestProgressInternal(bet.walletAddress, "win_accumulator", 1);
+                    }
                     
                     await db.insert(transactions).values({
                     id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
@@ -1066,6 +1071,9 @@ export const settleBets = createServerFn({ method: "POST" })
                     level: sql`CASE WHEN ${users.xp} + 50 >= (${users.level} + 1) * 1000 THEN ${users.level} + 1 ELSE ${users.level} END`,
                   })
                   .where(eq(users.walletAddress, bet.walletAddress));
+              
+              // QUESTS: Increment Win Progress
+              await updateQuestProgressInternal(bet.walletAddress, "win", 1);
 
                 await db.insert(transactions).values({
                   id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -1075,6 +1083,9 @@ export const settleBets = createServerFn({ method: "POST" })
                   currency: "coins",
                   description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} Coins`,
                 });
+
+                // QUESTS: Increment Win Accumulator Progress
+                await updateQuestProgressInternal(bet.walletAddress, "win_accumulator", 1);
               }
             }
           } else if (bet.betType === "single") {
@@ -1101,6 +1112,9 @@ export const settleBets = createServerFn({ method: "POST" })
               currency: "coins",
               description: `Bet win @ ${bet.odds} — +${bet.potentialReturn} Coins`,
             });
+
+            // QUESTS: Increment Win Progress
+            await updateQuestProgressInternal(bet.walletAddress, "win", 1);
           }
         } else {
           // Loss case for settleBets

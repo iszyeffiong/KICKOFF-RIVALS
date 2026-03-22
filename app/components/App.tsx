@@ -6,10 +6,13 @@ import React, {
   Suspense,
   useCallback,
 } from "react";
-import { cn } from "../lib/utils";
+import {
+  cn,
+  generateHash,
+  generate6DigitCode
+} from "../lib/utils";
 import {
   TEAMS,
-  INITIAL_BALANCE,
   LEAGUES,
   ROUND_DURATION_SEC,
   MATCH_DURATION_SEC,
@@ -84,14 +87,6 @@ let adminSessionToken: string | null = null;
 // API URL - empty string for same-origin requests in TanStack Start
 const API_URL = "";
 
-const generateHash = () =>
-  "0x" +
-  Array.from({ length: 64 }, () =>
-    Math.floor(Math.random() * 16).toString(16),
-  ).join("");
-
-const generate6DigitCode = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
 
 const App: React.FC = () => {
   // Enhanced Entry Flow: landing -> selection -> entryChoice -> onboarding/alliance -> connect -> sign -> welcome -> main
@@ -132,7 +127,6 @@ const App: React.FC = () => {
     "home" | "league" | "bets" | "leaderboard" | "profile"
   >("home");
   const [betTab, setBetTab] = useState<"ongoing" | "ended">("ongoing");
-  const [balance, setBalance] = useState(INITIAL_BALANCE);
   const [showWallet, setShowWallet] = useState(false);
   // Mystery box removed
   const [showSwapConfirm, setShowSwapConfirm] = useState(false);
@@ -451,21 +445,21 @@ const App: React.FC = () => {
                 : INITIAL_QUESTS;
 
             return masterQuests.map((baseQuest: any) => {
-              const prevQuest = prev.quests.find(
-                (pq) => pq.id === baseQuest.id,
-              );
-              const isCompleted =
-                dbCompletedIds.has(baseQuest.id) ||
-                (prevQuest?.completed ?? false);
+              const prevQuest = prev.quests.find((pq) => pq.id === baseQuest.id);
+              const dbQuest = (userData.quests || []).find((uq: any) => uq.questId === baseQuest.id);
+              
+              // ONLY completed in DB = truly completed.
+              const isCompleted = dbQuest?.completed ?? false;
+
               return {
                 ...baseQuest,
-                progress: prevQuest?.progress ?? baseQuest.progress,
+                progress: prevQuest?.progress ?? (dbQuest?.progress || baseQuest.progress),
                 completed: isCompleted,
+                proof: dbQuest?.proof || prevQuest?.proof || ""
               };
             });
           })(),
         }));
-        setBalance(Number(userData.korBalance) || 0); // Use KOR balance for main display if that's the currency
         if (address) localStorage.setItem("rivals_wallet", address);
       } else {
         // Fallback for failed profile fetch - don't block the user
@@ -697,11 +691,14 @@ const App: React.FC = () => {
 
       if (profileData.success && profileData.user) {
         const newBalance = Number(profileData.user.coins) || 0;
-        const oldBalance = balance;
+        const oldBalance = userStats.coins;
         const winnings = newBalance - oldBalance;
 
-        setBalance(newBalance);
-        setUserStats((prev) => ({ ...prev, coins: newBalance, korBalance: Number(profileData.user.korBalance) || 0 }));
+        setUserStats((prev) => ({ 
+          ...prev, 
+          coins: newBalance, 
+          korBalance: Number(profileData.user.korBalance) || 0 
+        }));
 
         if (winnings > 0) {
           console.log(`[WINNINGS] You won ${winnings} Coins!`);
@@ -896,9 +893,7 @@ const App: React.FC = () => {
     setShowAdmin(false);
   }
 
-  function handleClaimMysteryBox() {
-    // Mystery box removed - no-op
-  }
+
 
   function handleProceedFromWelcome() {
     localStorage.setItem(`user_${userStats.walletAddress}`, userStats.username);
@@ -916,7 +911,7 @@ const App: React.FC = () => {
       const data = await res.json();
       if (data.success) {
         notify(
-          `SUCCESS! Claimed ${data.claimed} KOR from Alliance matches.`,
+          `SUCCESS! Claimed ${data.claimed} Coins from Alliance matches.`,
           "success",
         );
         if (userStats.walletAddress) refreshProfile(userStats.walletAddress);
@@ -931,7 +926,6 @@ const App: React.FC = () => {
   function handleLogout() {
     setAppView("connect");
     setActiveTab("home");
-    setBalance(INITIAL_BALANCE);
     setActiveBets([]);
     setTransactions([]);
     setUserStats({
@@ -1029,8 +1023,7 @@ const App: React.FC = () => {
 
       if (data.success) {
         // Update local state
-        setBalance(data.newBalance);
-        setUserStats((prev) => ({ ...prev, korBalance: data.newBalance }));
+        setUserStats((prev) => ({ ...prev, coins: data.newBalance }));
 
         const bet: Bet = {
           id: data.bet.id,
@@ -1044,7 +1037,7 @@ const App: React.FC = () => {
           txHash: generateHash(),
         };
         setActiveBets((prev) => [bet, ...prev]);
-        addTransaction("bet", stake, "kor", `Match wager`);
+        addTransaction("bet", stake, "coins", `Match wager`);
 
         // Update Quest Progress
         setUserStats((prev) => ({
@@ -1052,7 +1045,9 @@ const App: React.FC = () => {
           quests: prev.quests.map((q) =>
             q.type === "bet"
               ? { ...q, progress: q.progress + Number(stake) }
-              : q,
+              : q.type === "play"
+                ? { ...q, progress: q.progress + 1 }
+                : q,
           ),
         }));
 
@@ -1163,7 +1158,6 @@ const App: React.FC = () => {
           coins: s.coins - totalStake,
           totalBets: s.totalBets + betSlipSelections.length,
         }));
-        setBalance((prev) => prev - totalStake);
         addTransaction(
           "bet",
           totalStake,
@@ -1218,8 +1212,14 @@ const App: React.FC = () => {
             ...s,
             coins: s.coins - stake,
             totalBets: s.totalBets + 1,
+            quests: s.quests.map((q) =>
+              q.type === "bet"
+                ? { ...q, progress: q.progress + Number(stake) }
+                : q.type === "play"
+                  ? { ...q, progress: q.progress + 1 }
+                  : q,
+            ),
           }));
-          setBalance((prev) => prev - stake);
           addTransaction(
             "bet",
             stake,
@@ -1314,14 +1314,9 @@ const App: React.FC = () => {
       }
 
       if (quest.requiresVerification && openUrl) {
-        // Just opened the link, don't mark as complete yet
+        // Just opened the link, don't mark as ready yet
       } else {
-        // Mark as complete in LS for local persistence
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`quest_completed_${id}`, "true");
-        }
-
-        // 1. UPDATE SERVER (DB)
+        // 1. UPDATE SERVER (DB) to mark as ready to claim
         fetch(`${API_URL}/api/user/submit-quest-verification`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1337,7 +1332,12 @@ const App: React.FC = () => {
         setUserStats((prev) => ({
           ...prev,
           quests: prev.quests.map((q) =>
-            q.id === id ? { ...q, progress: q.target } : q,
+            q.id === id ? { 
+              ...q, 
+              progress: q.target, 
+              completed: false, // FORCE false here to clear any memory/ghost completion
+              proof: (verificationCode || localStorage.getItem(`quest_verify_${id}`) || "") 
+            } : q,
           ),
         }));
       }
@@ -1363,9 +1363,6 @@ const App: React.FC = () => {
       }
     } else if (quest.type === "click") {
       // Simple click complete
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`quest_completed_${id}`, "true");
-      }
       setUserStats((prev) => ({
         ...prev,
         quests: prev.quests.map((q) =>
@@ -1442,6 +1439,35 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("[QUEST] API call failed:", err);
       notify?.("Connection failed. Please try again.", "error");
+    }
+  }
+
+  async function handleQuestSync() {
+    if (!userStats.walletAddress) return;
+    try {
+      const res = await fetch(`${API_URL}/api/user/sync-gameplay-quests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress: userStats.walletAddress,
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.quests) {
+        // Update local quest state with synced progress
+        setUserStats((prev) => {
+          const syncedQuests = prev.quests.map((q) => {
+            const found = result.quests.find((sq: any) => (sq.questId || sq.id) === q.id);
+            if (found) {
+              return { ...q, progress: found.progress };
+            }
+            return q;
+          });
+          return { ...prev, quests: syncedQuests };
+        });
+      }
+    } catch (err) {
+      console.error("[QUEST] Sync failed:", err);
     }
   }
 
@@ -1760,7 +1786,7 @@ const App: React.FC = () => {
                         <span className="text-brand">{b.odds}</span>
                       </div>
                       <div className="text-[10px] font-mono text-gray-400 mt-1">
-                        Stake: {b.stake} KOR • Return: {b.potentialReturn} KOR
+                        Stake: {b.stake} Coins • Return: {b.potentialReturn} Coins
                       </div>
                     </div>
                     {b.homeScore !== null && b.awayScore !== null && (
@@ -1789,6 +1815,7 @@ const App: React.FC = () => {
             onQuestAction={handleQuestAction}
             onReferral={handleReferral}
             onSystemSync={handleAdminSyncRequest}
+            onQuestRefresh={handleQuestSync}
             onOpenWallet={() => setShowWallet(true)}
             onClaimAllianceRewards={handleClaimAllianceRewards}
             onCheckIn={handleCheckIn}
@@ -1814,7 +1841,7 @@ const App: React.FC = () => {
             setShowWallet(false);
             setShowSwapKorConfirm(true);
           }}
-          currentBalance={balance}
+          currentBalance={userStats.coins}
           userStats={userStats}
           onWalkReward={() => {}}
         />
@@ -1844,7 +1871,6 @@ const App: React.FC = () => {
                   coins: data.coins,
                   korBalance: data.korBalance,
                 }));
-                setBalance(data.korBalance);
                 addTransaction("convert", amount, "coins", "Swapped for KOR");
               } else {
                 notify("Swap failed: " + data.error, "error");
@@ -1881,7 +1907,6 @@ const App: React.FC = () => {
                   coins: data.coins,
                   korBalance: data.korBalance,
                 }));
-                setBalance(data.korBalance);
                 addTransaction("convert", amount, "kor", "Swapped for Coins");
                 notify(`Successfully converted ${amount} KOR to coins!`, "success");
               } else {
