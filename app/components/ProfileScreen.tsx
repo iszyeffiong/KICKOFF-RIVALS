@@ -255,6 +255,12 @@ export function ProfileScreen({
               CONVERSION_YIELD}{" "}
             KOR available
           </p>
+          <button 
+            onClick={onOpenWallet}
+            className="w-full mt-3 py-1.5 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 hover:bg-primary/20 transition-all active:scale-95"
+          >
+            Transfer to KOR
+          </button>
         </div>
 
         <div className="card p-4">
@@ -670,13 +676,13 @@ export function ProfileScreen({
           />
           <SettingsButton
             icon={<IconZap className="w-5 h-5 text-primary" />}
-            label="KOR Transfer"
-            description="Coming Soon"
-            onClick={() => notify?.("transfer is coming soon!", "info")}
+            label="Coins to KOR Transfer"
+            description="Transfer your coins to KOR tokens"
+            onClick={onOpenWallet}
           />
           <SettingsButton
             icon={<IconCoins className="w-5 h-5 text-yellow-500" />}
-            label="Coin Transfer"
+            label="KOR to Coins Transfer"
             description="Coming Soon"
             onClick={() => notify?.("KOR to Coins transfer is coming soon!", "info")}
           />

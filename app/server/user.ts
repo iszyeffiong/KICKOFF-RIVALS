@@ -1181,11 +1181,16 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
             throw new Error("Insufficient balance");
         }
         
-        // Update balances
-        await tx.update(users).set({
+        // Update balances with atomicity check to prevent negative balance race conditions
+        const updateResult = await tx.update(users).set({
             coins: sql`${users.coins} - ${convertibleCoins}`,
             doodlBalance: sql`${users.doodlBalance} + ${korToAdd}`
-        }).where(eq(users.walletAddress, normalized));
+        }).where(and(eq(users.walletAddress, normalized), gte(users.coins, convertibleCoins)));
+        
+        // If no rows were updated, it means balance changed between read and write
+        if (!updateResult) {
+            throw new Error("Insufficient balance or concurrent transaction");
+        }
         
         // Log transaction
         await tx.insert(transactions).values({
@@ -1194,7 +1199,7 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
             type: "convert",
             amount: convertibleCoins,
             currency: "coins",
-            description: `Swap ${convertibleCoins} Coins to ${korToAdd} KOR`
+            description: `Transfer ${convertibleCoins} Coins to ${korToAdd} KOR`
         });
         
         return { 

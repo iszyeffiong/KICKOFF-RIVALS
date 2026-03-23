@@ -30,6 +30,7 @@ export function WalletModal({
   onWalkReward,
 }: WalletModalProps) {
   const [activeTab, setActiveTab] = useState<"balance" | "history">("balance");
+  const [isSwapping, setIsSwapping] = useState(false);
 
   const canConvertCoins = userStats.coins >= CONVERSION_RATE;
   const convertibleKOR =
@@ -147,12 +148,6 @@ export function WalletModal({
 
               {/* Coin to KOR Conversion */}
               <div className="card p-4 border-dashed bg-muted/20 relative overflow-hidden group">
-                {/* Coming Soon Overlay */}
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
-                  <div className="bg-card px-3 py-1 rounded-full shadow-sm border text-[10px] font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
-                    Coming Soon
-                  </div>
-                </div>
                 <div className="flex items-center justify-between mb-3 relative z-20">
                   <h3 className="font-medium text-foreground">Coins to KOR Transfer</h3>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -179,15 +174,24 @@ export function WalletModal({
                 </div>
 
                 <button
-                  onClick={onSwapRequest}
-                  disabled={!canConvertCoins}
+                  onClick={async () => {
+                    if (isSwapping || !canConvertCoins) return;
+                    setIsSwapping(true);
+                    try {
+                      await onSwapRequest();
+                    } finally {
+                      setIsSwapping(true); // Wait, false!
+                      setIsSwapping(false);
+                    }
+                  }}
+                  disabled={!canConvertCoins || isSwapping}
                   className={cn(
                     "btn w-full h-11",
-                    canConvertCoins ? "btn-primary shadow-lg shadow-primary/20" : "btn-secondary opacity-50",
+                    canConvertCoins && !isSwapping ? "btn-primary shadow-lg shadow-primary/20" : "btn-secondary opacity-50",
                   )}
                 >
                   <IconArrowDown className="w-4 h-4 mr-2" />
-                  {canConvertCoins ? "Convert to KOR" : "Not Enough Coins"}
+                  {isSwapping ? "Applying..." : (canConvertCoins ? "Transfer to KOR" : "Not Enough Coins")}
                 </button>
               </div>
 
@@ -272,7 +276,8 @@ export function WalletModal({
                           tx.type === "win" ||
                             tx.type === "redeem" ||
                             tx.type === "referral" ||
-                            tx.type === "bonus"
+                            tx.type === "bonus" ||
+                            tx.type === "convert"
                             ? "bg-green-500/10 text-green-500"
                             : "bg-primary/10 text-primary",
                         )}
@@ -280,7 +285,8 @@ export function WalletModal({
                         {tx.type === "win" ||
                         tx.type === "redeem" ||
                         tx.type === "referral" ||
-                        tx.type === "bonus" ? (
+                        tx.type === "bonus" ||
+                        tx.type === "convert" ? (
                           <IconArrowUp className="w-5 h-5 rotate-45" />
                         ) : (
                           <IconArrowDown className="w-5 h-5 -rotate-45" />
@@ -302,7 +308,8 @@ export function WalletModal({
                           tx.type === "win" ||
                             tx.type === "redeem" ||
                             tx.type === "referral" ||
-                            tx.type === "bonus"
+                            tx.type === "bonus" ||
+                            tx.type === "convert"
                             ? "text-green-500"
                             : "text-foreground",
                         )}
@@ -310,7 +317,8 @@ export function WalletModal({
                         {tx.type === "win" ||
                         tx.type === "redeem" ||
                         tx.type === "referral" ||
-                        tx.type === "bonus"
+                        tx.type === "bonus" ||
+                        tx.type === "convert"
                           ? "+"
                           : "-"}
                         {formatNumber(tx.amount)}
