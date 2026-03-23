@@ -147,8 +147,14 @@ export function WalletModal({
 
               {/* Coin to KOR Conversion */}
               <div className="card p-4 border-dashed bg-muted/20 relative overflow-hidden group">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-foreground">Coins to KOR</h3>
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[1px] rounded-lg">
+                  <div className="bg-card px-3 py-1 rounded-full shadow-sm border text-[10px] font-bold uppercase tracking-widest text-muted-foreground animate-pulse">
+                    Coming Soon
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mb-3 relative z-20">
+                  <h3 className="font-medium text-foreground">Coins to KOR Transfer</h3>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {CONVERSION_RATE} Coins = {CONVERSION_YIELD} KOR
                   </span>
@@ -194,7 +200,7 @@ export function WalletModal({
                   </div>
                 </div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-foreground">KOR to Coins</h3>
+                  <h3 className="font-medium text-foreground">KOR to Coins Transfer</h3>
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     1 KOR = 10 Coins
                   </span>

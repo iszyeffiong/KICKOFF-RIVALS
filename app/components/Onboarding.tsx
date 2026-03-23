@@ -41,12 +41,12 @@ const infoSteps: OnboardingStep[] = [
     id: 2,
     title: "Earn KOR Tokens",
     description:
-      "Win bets to earn KOR tokens. Convert your coins to tokens and climb the leaderboards!",
+      "Win bets to earn KOR tokens. Transfer your coins to tokens and climb the leaderboards!",
     icon: <IconCoins className="w-16 h-16" />,
     features: [
       "Win bets to earn rewards",
       "Daily quests for bonus coins",
-      "Convert coins to KOR tokens",
+      "Transfer coins to KOR tokens",
     ],
   },
   {

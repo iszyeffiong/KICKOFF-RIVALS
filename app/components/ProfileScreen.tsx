@@ -96,7 +96,6 @@ export function ProfileScreen({
   const [claimReward, setClaimReward] = useState<number>(0);
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [questTab, setQuestTab] = useState<"daily" | "weekly" | "social" | "partners">("daily");
-  const [showConversion, setShowConversion] = useState(false);
 
   const handleRedeem = async () => {
     if (!redeemCode.trim()) return;
@@ -671,15 +670,15 @@ export function ProfileScreen({
           />
           <SettingsButton
             icon={<IconZap className="w-5 h-5 text-primary" />}
-            label="Coins to KOR"
-            description="Convert your coins into KOR tokens"
-            onClick={() => setShowConversion(true)}
+            label="KOR Transfer"
+            description="Coming Soon"
+            onClick={() => notify?.("transfer is coming soon!", "info")}
           />
           <SettingsButton
             icon={<IconCoins className="w-5 h-5 text-yellow-500" />}
-            label="KOR to Coins"
+            label="Coin Transfer"
             description="Coming Soon"
-            onClick={() => notify?.("KOR to Coins conversion is coming soon!", "info")}
+            onClick={() => notify?.("KOR to Coins transfer is coming soon!", "info")}
           />
           <SettingsButton
             icon={<IconLogOut className="w-5 h-5 text-destructive" />}
@@ -715,18 +714,6 @@ export function ProfileScreen({
             });
           }}
           notify={notify}
-        />
-      )}
-      {showConversion && (
-        <SwapConfirm
-          coins={stats?.coins || 0}
-          onCancel={() => setShowConversion(false)}
-          onConfirm={async () => {
-            if (stats?.coins) {
-               await onConvert?.(stats.coins);
-               setShowConversion(false);
-            }
-          }}
         />
       )}
     </div>
