@@ -6,11 +6,9 @@ import React, {
   Suspense,
   useCallback,
 } from "react";
-import {
-  cn,
-  generateHash,
-  generate6DigitCode
-} from "../lib/utils";
+import { useSendTransaction, useAccount } from "wagmi";
+import { parseEther, getAddress } from "viem";
+import { cn, generateHash, generate6DigitCode } from "../lib/utils";
 import {
   TEAMS,
   LEAGUES,
@@ -69,6 +67,7 @@ import { AdminAuth } from "./AdminAuth";
 import { SignMessage } from "./SignMessage";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { ReturningUserScreen } from "./ReturningUserScreen";
+import { PushNotificationManager } from "./PushNotificationManager";
 import {
   hasValidAdminSession,
   getSessionToken,
@@ -88,8 +87,14 @@ let adminSessionToken: string | null = null;
 // API URL - empty string for same-origin requests in TanStack Start
 const API_URL = "";
 
+const TREASURY_WALLET = (import.meta as any).env.VITE_TREASURY_WALLET || "0x7AcbaEf80145c363941F480072b260909A64B294";
+const CLAIM_FEE = (import.meta as any).env.VITE_CLAIM_FEE || "0.0001"; // small gas fee in ETH
+
 
 const App: React.FC = () => {
+  const { sendTransactionAsync } = useSendTransaction();
+  const { address: connectedAddress } = useAccount();
+
   // Enhanced Entry Flow: landing -> selection -> entryChoice -> onboarding/alliance -> connect -> sign -> welcome -> main
   const [appView, setAppView] = useState<
     | "landing"
@@ -164,6 +169,7 @@ const App: React.FC = () => {
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeBets, setActiveBets] = useState<Bet[]>([]);
+  const [historyLimit, setHistoryLimit] = useState(10);
   const [leagueTables, setLeagueTables] = useState<
     Record<string, LeagueEntry[]>
   >({});
@@ -330,17 +336,53 @@ const App: React.FC = () => {
           };
         });
 
-        setMatches(serverMatches);
-
-        // Update Global State from the first match found
+        // ── TIMER SYNC FIX ──────────────────────────────────────────
+        // Derive the correct phase & remaining seconds from server startTime
+        // so the client timer always matches the server, even after a refresh.
         if (serverMatches.length > 0) {
           const first = serverMatches[0];
+          const nowMs = Date.now();
+          const startMs = first.startTime; // already a ms timestamp
+          const elapsed = Math.floor((nowMs - startMs) / 1000); // seconds since round started
+
+          const bettingEnd = ROUND_DURATION_SEC;
+          const liveEnd = ROUND_DURATION_SEC + MATCH_DURATION_SEC;
+          const cycleEnd = ROUND_DURATION_SEC + MATCH_DURATION_SEC + RESULT_DURATION_SEC;
+
+          if (elapsed >= cycleEnd) {
+            // The server returned a round that has completely finished.
+            // This happens due to a 30s cache on the backend or slight drift.
+            // We MUST NOT overwrite our locally projected upcoming matches with these old ones.
+            // Just let the client's handleStateTransition generate the next ones until server catches up.
+            return;
+          }
+
+          // It's a valid current round from the server, we can apply it safely
+          setMatches(serverMatches);
           const sId = Number(first.seasonId) || 1;
           const rNum = Number(first.round) || 1;
 
           setSeasonId(sId);
           setRoundNumber(rNum);
           fetchStandings(sId);
+
+          if (elapsed < bettingEnd) {
+            setGameState("BETTING");
+            setTimer(bettingEnd - elapsed);
+          } else if (elapsed < liveEnd) {
+            // In LIVE phase
+            setGameState("LIVE");
+            setTimer(liveEnd - elapsed);
+          } else if (elapsed < cycleEnd) {
+            // In RESULT phase
+            setGameState("RESULT");
+            setTimer(cycleEnd - elapsed);
+          } else {
+            // Stale — server will advance on next poll, default to BETTING
+            setGameState("BETTING");
+            setTimer(ROUND_DURATION_SEC);
+          }
+          // ──────────────────────────────────────────────────────────────
         }
       } else {
         // Fallback if server empty
@@ -376,6 +418,15 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [appView, gameState, timer]);
 
+  // Periodic server re-sync to keep the timer accurate (every 30s)
+  useEffect(() => {
+    if (appView !== "main") return;
+    const syncInterval = setInterval(() => {
+      fetchMatches();
+    }, 30000);
+    return () => clearInterval(syncInterval);
+  }, [appView]);
+
   async function refreshProfile(address: string) {
     if (!address) return;
 
@@ -396,8 +447,12 @@ const App: React.FC = () => {
         )}`;
       }
 
+      // Add cache buster to prevent stale balance overrides
+      const cacheBustStr = `&_t=${Date.now()}`;
+      url += url.includes("?") ? cacheBustStr : `?${cacheBustStr}`;
+
       // Fetch profile from Backend (Supabase)
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: { 'Cache-Control': 'no-store, max-age=0' }, cache: 'no-store' });
       data = await res.json();
 
       if (data && data.success) {
@@ -691,27 +746,29 @@ const App: React.FC = () => {
       const profileData = await profileRes.json();
 
       if (profileData.success && profileData.user) {
-        const newBalance = Number(profileData.user.coins) || 0;
-        const oldBalance = userStats.coins;
-        const winnings = newBalance - oldBalance;
+        const newKorBalance = Number(profileData.user.korBalance) || 0;
+        const oldKorBalance = userStats.korBalance;
+        const winnings = newKorBalance - oldKorBalance;
 
         setUserStats((prev) => ({ 
           ...prev, 
-          coins: newBalance, 
-          korBalance: Number(profileData.user.korBalance) || 0 
+          coins: Number(profileData.user.coins) || prev.coins, 
+          korBalance: newKorBalance,
         }));
 
         if (winnings > 0) {
-          console.log(`[WINNINGS] You won ${winnings} Coins!`);
-          addTransaction("win", winnings, "coins", "Match Winnings");
+          console.log(`[WINNINGS] You won ${winnings} KOR!`);
+          addTransaction("win", winnings, "kor", "Match Winnings");
         }
       }
     } catch (err) {
       console.error("Failed to refresh balance:", err);
     }
 
-    // 4. Fetch updated bets
+    // 4. Fetch updated bets immediately so History tab is up to date
     fetchBets();
+    // Also re-fetch after a short delay to catch any server-side async settlement
+    setTimeout(() => fetchBets(), 3000);
 
     // 5. Refresh standings from database
     fetchStandings();
@@ -1023,8 +1080,8 @@ const App: React.FC = () => {
       const data = await res.json();
 
       if (data.success) {
-        // Update local state
-        setUserStats((prev) => ({ ...prev, coins: data.newBalance }));
+        // Deduct stake from KOR balance using exact server calculation if available
+        setUserStats((prev) => ({ ...prev, korBalance: data.newBalance !== undefined ? data.newBalance : Math.max(0, prev.korBalance - stake) }));
 
         const bet: Bet = {
           id: data.bet.id,
@@ -1038,7 +1095,7 @@ const App: React.FC = () => {
           txHash: generateHash(),
         };
         setActiveBets((prev) => [bet, ...prev]);
-        addTransaction("bet", stake, "coins", `Match wager`);
+        addTransaction("bet", stake, "kor", `Match wager`);
 
         // Update Quest Progress
         setUserStats((prev) => ({
@@ -1156,13 +1213,14 @@ const App: React.FC = () => {
         const totalStake = stake * betSlipSelections.length;
         setUserStats((s) => ({
           ...s,
-          coins: s.coins - totalStake,
+          // Deduct from KOR (doodlBalance) not coin points
+          korBalance: Math.max(0, s.korBalance - totalStake),
           totalBets: s.totalBets + betSlipSelections.length,
         }));
         addTransaction(
           "bet",
           totalStake,
-          "coins",
+          "kor",
           `${betSlipSelections.length} single bets`,
         );
       } else {
@@ -1211,7 +1269,8 @@ const App: React.FC = () => {
 
           setUserStats((s) => ({
             ...s,
-            coins: s.coins - stake,
+            // Deduct from KOR (doodlBalance) using exact server calculation if available
+            korBalance: data.newBalance !== undefined ? data.newBalance : Math.max(0, s.korBalance - stake),
             totalBets: s.totalBets + 1,
             quests: s.quests.map((q) =>
               q.type === "bet"
@@ -1224,7 +1283,7 @@ const App: React.FC = () => {
           addTransaction(
             "bet",
             stake,
-            "coins",
+            "kor",
             `Accumulator (${betSlipSelections.length} selections)`,
           );
         } else {
@@ -1256,10 +1315,19 @@ const App: React.FC = () => {
     console.log(`[CHECK-IN] Starting claim for ${walletState.address}...`);
 
     try {
+      // GAS FEE REQUIREMENT
+      const txHash = await sendTransactionAsync({
+        to: getAddress(TREASURY_WALLET),
+        value: parseEther(CLAIM_FEE),
+      });
+
       const res = await fetch(`${API_URL}/api/user/check-in`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: walletState.address }),
+        body: JSON.stringify({ 
+          walletAddress: walletState.address,
+          txHash 
+        }),
       });
       const data = await res.json();
       console.log("[CHECK-IN] Server response:", data);
@@ -1398,12 +1466,20 @@ const App: React.FC = () => {
     // Server-First Approach: DB decides if reward is valid
     try {
       console.log(`[QUEST] Syncing quest ${id} with DB...`);
+      
+      // GAS FEE REQUIREMENT
+      const txHash = await sendTransactionAsync({
+        to: getAddress(TREASURY_WALLET),
+        value: parseEther(CLAIM_FEE),
+      });
+
       const res = await fetch(`${API_URL}/api/user/claim-quest-reward`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: userStats.walletAddress,
           questId: id,
+          txHash,
         }),
       });
       const result = await res.json();
@@ -1475,12 +1551,19 @@ const App: React.FC = () => {
   async function handleCoinsToKor(amount: number) {
     if (!amount || !userStats.walletAddress) return;
     try {
+      // GAS FEE REQUIREMENT
+      const txHash = await sendTransactionAsync({
+        to: getAddress(TREASURY_WALLET),
+        value: parseEther(CLAIM_FEE),
+      });
+
       const res = await fetch(`${API_URL}/api/user/swap-coins-to-kor`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: userStats.walletAddress,
           coins: amount,
+          txHash,
         }),
       });
       const result = await res.json();
@@ -1517,8 +1600,14 @@ const App: React.FC = () => {
     }
 
     try {
+      // GAS FEE REQUIREMENT
+      const txHash = await sendTransactionAsync({
+        to: getAddress(TREASURY_WALLET),
+        value: parseEther(CLAIM_FEE),
+      });
+
       // Verify coupon server-side - codes are hidden on backend
-      const result = await verifyCoupon(code, userStats.walletAddress);
+      const result = await verifyCoupon(code, userStats.walletAddress, txHash);
 
       if (!result.success) {
         return { success: false, message: result.error };
@@ -1778,15 +1867,26 @@ const App: React.FC = () => {
             </button>
           </div>
           <div className="space-y-3">
-            {activeBets
-              .filter((b) =>
-                betTab === "ongoing"
-                  ? b.status === "pending"
-                  : b.status !== "pending",
-              )
-              .map((b, i) => (
-                <div
-                  key={`${b.id}-${i}`}
+            {(() => {
+              const pendingBets = activeBets.filter((b) => b.status === "pending");
+              const historyBets = activeBets.filter((b) => b.status !== "pending");
+              
+              // Ensure history is sorted newest-first by the time the game actually finished!
+              const sortedHistory = [...historyBets].sort((a, b) => (b.settledAt || b.timestamp) - (a.settledAt || a.timestamp));
+              
+              const betsToShow = betTab === "ongoing" 
+                ? pendingBets 
+                : sortedHistory.slice(0, historyLimit);
+
+              if (betsToShow.length === 0) {
+                 return <div className="text-center text-gray-500 py-8 text-sm">No bets found.</div>;
+              }
+
+              return (
+                <>
+                  {betsToShow.map((b, i) => (
+                    <div
+                      key={`${b.id}-${i}`}
                   className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 group hover:border-brand/30 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -1840,6 +1940,21 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ))}
+              
+              {betTab === "ended" && sortedHistory.length > historyLimit && (
+                <div className="pt-2 text-center pb-8">
+                  <button 
+                    onClick={() => setHistoryLimit(prev => prev + 15)}
+                    className="inline-flex items-center justify-center space-x-2 bg-gray-50 text-gray-600 font-bold text-xs py-2 px-4 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors"
+                  >
+                    <span>Load 15 More</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                </div>
+              )}
+            </>
+           );
+          })()}
           </div>
         </main>
       )}
@@ -1888,9 +2003,8 @@ const App: React.FC = () => {
       {showSwapConfirm && (
         <SwapConfirm
           coins={userStats.coins}
-          onConfirm={async () => {
-            const amount = Math.floor(userStats.coins / CONVERSION_RATE) * CONVERSION_RATE;
-            await handleCoinsToKor(amount);
+          onConfirm={async (selectedAmount) => {
+            await handleCoinsToKor(selectedAmount);
             setShowSwapConfirm(false);
           }}
           onCancel={() => setShowSwapConfirm(false)}
@@ -2019,6 +2133,7 @@ const App: React.FC = () => {
         </div>
       )}
       <InstallPrompt />
+      <PushNotificationManager walletAddress={walletState.address} />
     </div>
   );
 };

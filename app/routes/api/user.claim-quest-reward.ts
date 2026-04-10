@@ -7,12 +7,12 @@ export const Route = createFileRoute("/api/user/claim-quest-reward")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { walletAddress, questId } = body;
-          console.log(`[API] Claim Quest Reward hit: ${walletAddress}, ${questId}`);
+          const { walletAddress, questId, txHash } = body;
+          console.log(`[API] Claim Quest Reward hit: ${walletAddress}, ${questId}, ${txHash}`);
 
-          if (!walletAddress || !questId) {
+          if (!walletAddress || !questId || !txHash) {
             return Response.json(
-              { success: false, error: "Missing walletAddress or questId" },
+              { success: false, error: "Missing required fields (walletAddress, questId, or txHash)" },
               { status: 400 },
             );
           }
@@ -21,6 +21,7 @@ export const Route = createFileRoute("/api/user/claim-quest-reward")({
             data: {
               walletAddress,
               questId,
+              txHash,
             },
           });
 

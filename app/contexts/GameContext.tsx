@@ -6,7 +6,8 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { useAccount } from "wagmi";
+import { useSendTransaction, useAccount } from "wagmi";
+import { parseEther, getAddress } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/userStore";
@@ -42,6 +43,9 @@ import {
 } from "../services/adminAuthService";
 
 const API_URL = "";
+
+const TREASURY_WALLET = (import.meta as any).env.VITE_TREASURY_WALLET || "0x7AcbaEf80145c363941F480072b260909A64B294";
+const CLAIM_FEE = (import.meta as any).env.VITE_CLAIM_FEE || "0.000022";
 
 import { 
   generateHash, 
@@ -214,6 +218,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     isConnected: isWagmiConnected,
     status: wagmiStatus,
   } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
   const [isInitializing, setIsInitializing] = useState(true);
 
   // New storage integration
@@ -252,10 +257,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
   // Balance (Read directly from profile where possible)
-  const balance = profile?.coins || 0;
+  const balance = profile?.korBalance || 0;
   // We can keep setBalance as a no-op or a local update if needed for optimistic UI
   const setBalance = (val: any) => {
-    // Optimistically updating coins is better handled in useProfile or via query invalidation
+    // Optimistically updating KOR balance is better handled in useProfile or via query invalidation
   };
 
   // Game State
@@ -459,7 +464,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleBetPlacement = useCallback(
     async (match: Match, selection: Bet["selection"], stake: number) => {
-      if (stake > (profile?.coins || 0)) return false;
+      if (stake > (profile?.korBalance || 0)) return false;
       if (!match.odds) return false;
 
       try {
@@ -493,7 +498,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             txHash: generateHash(),
           };
           setActiveBets((prev) => [bet, ...prev]);
-          addTransaction("bet", stake, "coins", "Match wager");
+          addTransaction("bet", stake, "kor", "Match wager");
           refreshProfileQuery();
           return true;
         } else {
@@ -643,7 +648,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           addTransaction(
             "bet",
             totalStake,
-            "coins",
+            "kor",
             `${betSlipSelections.length} single bets`,
           );
           setBetSlipSelections([]); // Clear slip on success
@@ -713,7 +718,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             addTransaction(
               "bet",
               stake,
-              "coins",
+              "kor",
               `Accumulator (${betSlipSelections.length} selections)`,
             );
           } else {
@@ -807,12 +812,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       try {
         console.log(`[QUEST] Syncing quest ${id} with DB...`);
+
+        // GAS FEE REQUIREMENT
+        const txHash = await sendTransactionAsync({
+          to: getAddress(TREASURY_WALLET),
+          value: parseEther(CLAIM_FEE),
+        });
+
         const res = await fetch(`${API_URL}/api/user/claim-quest-reward`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             walletAddress: profile.walletAddress,
             questId: id,
+            txHash,
           }),
         });
         const result = await res.json();
@@ -863,12 +876,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const handleRedeem = useCallback(
     async (code: string): Promise<{ success: boolean; message?: string }> => {
       try {
+        // GAS FEE REQUIREMENT
+        const txHash = await sendTransactionAsync({
+          to: getAddress(TREASURY_WALLET),
+          value: parseEther(CLAIM_FEE),
+        });
+
         const res = await fetch(`${API_URL}/api/coupons/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             code,
             walletAddress: profile?.walletAddress,
+            txHash,
           }),
         });
         const data = await res.json();
@@ -937,10 +957,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // GAS FEE REQUIREMENT
+      const txHash = await sendTransactionAsync({
+        to: getAddress(TREASURY_WALLET),
+        value: parseEther(CLAIM_FEE),
+      });
+
       const res = await fetch(`${API_URL}/api/user/check-in`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress: walletState.address }),
+        body: JSON.stringify({ 
+          walletAddress: walletState.address,
+          txHash,
+        }),
       });
       const data = await res.json();
 

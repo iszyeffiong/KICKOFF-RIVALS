@@ -1,18 +1,28 @@
-// Minimal service worker to satisfy PWA requirements for "Add to Home Screen"
-// This app still requires internet connectivity to function.
+self.addEventListener('push', function(event) {
+  if (event.data) {
+    const data = event.data.json();
+    const options = {
+      body: data.body,
+      icon: '/logo.png',
+      badge: '/badge.png',
+      vibrate: [100, 50, 100],
+      data: {
+        url: data.url || '/'
+      },
+      actions: [
+        { action: 'open', title: 'Open Game' }
+      ]
+    };
 
-const CACHE_NAME = 'kickoff-rivals-v1';
-
-self.addEventListener('install', (event) => {
-  // Pass through
+    event.waitUntil(
+      self.registration.showNotification(data.title, options)
+    );
+  }
 });
 
-self.addEventListener('activate', (event) => {
-  // Pass through
-});
-
-// Browsers require a fetch listener to trigger the native install prompt
-self.addEventListener('fetch', (event) => {
-  // We don't cache anything yet, just networking as usual
-  // event.respondWith(fetch(event.request));
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow(event.notification.data.url)
+  );
 });

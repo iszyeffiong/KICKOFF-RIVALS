@@ -196,6 +196,7 @@ export const transactions = pgTable(
     amount: integer("amount").notNull(),
     currency: varchar("currency", { length: 10 }).default("kor").notNull(), // 'kor', 'coins'
     description: text("description"),
+    txHash: varchar("tx_hash", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -231,6 +232,7 @@ export const couponRedemptions = pgTable(
     couponCode: varchar("coupon_code", { length: 20 })
       .notNull()
       .references(() => coupons.code),
+    txHash: varchar("tx_hash", { length: 100 }),
     redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -272,6 +274,27 @@ export const userQuests = pgTable(
       table.walletAddress,
       table.questId
     ),
+  })
+);
+
+// ==========================================
+// PUSH SUBSCRIPTIONS TABLE
+// ==========================================
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    walletAddress: varchar("wallet_address", { length: 42 })
+      .notNull()
+      .references(() => users.walletAddress),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    walletIdx: index("push_wallet_idx").on(table.walletAddress),
+    endpointIdx: uniqueIndex("push_endpoint_idx").on(table.endpoint),
   })
 );
 
@@ -327,6 +350,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   bets: many(bets),
   transactions: many(transactions),
   quests: many(userQuests),
+  pushSubscriptions: many(pushSubscriptions),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({
@@ -448,3 +472,6 @@ export type NewUserQuest = typeof userQuests.$inferInsert;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type NewAuditLog = typeof auditLogs.$inferInsert;
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;

@@ -7,11 +7,11 @@ export const Route = createFileRoute("/api/user/check-in")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { walletAddress } = body;
+          const { walletAddress, txHash } = body;
 
-          if (!walletAddress) {
+          if (!walletAddress || !txHash) {
             return Response.json(
-              { success: false, error: "Missing walletAddress" },
+              { success: false, error: "Missing required fields (walletAddress or txHash)" },
               { status: 400 },
             );
           }
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/api/user/check-in")({
           const result = await checkIn({
             data: {
               walletAddress,
+              txHash,
             },
           });
 

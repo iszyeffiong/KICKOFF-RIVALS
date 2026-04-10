@@ -10,6 +10,7 @@ import {
   IconCoins,
   IconUsers,
   IconZap,
+  IconBell,
 } from "./Icons";
 
 interface OnboardingProps {
@@ -83,6 +84,18 @@ const infoSteps: OnboardingStep[] = [
       "5000 welcome coins bonus",
       "Free first-time referral rewards",
       "Instant betting - no delays",
+    ],
+  },
+  {
+    id: 6,
+    title: "Stay Notified",
+    description:
+      "Get instant alerts the second betting rounds open and when final results are published!",
+    icon: <IconBell className="w-16 h-16" />,
+    features: [
+      "Betting round alerts",
+      "Live match updates",
+      "Final result notifications",
     ],
   },
 ];

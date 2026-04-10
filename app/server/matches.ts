@@ -12,6 +12,7 @@ import {
 import { eq, and, desc, sql, lte, not, aliasedTable } from "drizzle-orm";
 import { z } from "zod";
 import { updateQuestProgressInternal } from "./user";
+import { sendNotificationToAll } from "./notifications";
 
 // Standings Cache
 let standingsCache: { data: any; timestamp: number } | null = null;
@@ -339,18 +340,44 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
               await db.update(bets).set({ status: statusUpdated, settledAt: new Date() }).where(eq(bets.id, bet.id));
 
               if (won) {
-                const potentialReturn = Math.floor(bet.potentialReturn);
-                await db.update(users).set({
-                   doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                   wins: sql`${users.wins} + 1`,
-                   biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                   xp: sql`${users.xp} + 25`,
-                }).where(eq(users.walletAddress, bet.walletAddress));
-                
-                await db.insert(transactions).values({
-                  id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                  walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (Auto)`
-                });
+                if (bet.betType === "accumulator" && bet.accumulatorId) {
+                  const allBetsInAccumulator = await db.select().from(bets).where(eq(bets.accumulatorId, bet.accumulatorId)).orderBy(bets.createdAt);
+                  const allSettled = allBetsInAccumulator.every(b => b.status !== "pending" && b.id !== bet.id) && true; 
+                  // Because the current bet is still pending in db (updated above but we just queried it), wait the current bet WAS updated above! 
+                  const allWonLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) === "won");
+                  const allSettledLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) !== "pending");
+                  
+                  if (allSettledLocally && allWonLocally) {
+                    const isFirstLeg = allBetsInAccumulator[0]?.id === bet.id;
+                    if (isFirstLeg || true) { // We can just credit because this is the last leg completing
+                      const potentialReturn = Math.floor(bet.potentialReturn);
+                      await db.update(users).set({
+                         doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                         wins: sql`${users.wins} + 1`,
+                         biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                         xp: sql`${users.xp} + 25`,
+                      }).where(eq(users.walletAddress, bet.walletAddress));
+                      
+                      await db.insert(transactions).values({
+                        id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                        walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win Accumulator (Auto)`
+                      });
+                    }
+                  }
+                } else {
+                  const potentialReturn = Math.floor(bet.potentialReturn);
+                  await db.update(users).set({
+                     doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                     wins: sql`${users.wins} + 1`,
+                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                     xp: sql`${users.xp} + 25`,
+                  }).where(eq(users.walletAddress, bet.walletAddress));
+                  
+                  await db.insert(transactions).values({
+                    id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                    walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (Auto)`
+                  });
+                }
               } else {
                  await db.update(users).set({ xp: sql`${users.xp} + 5`, currentStreak: 0 }).where(eq(users.walletAddress, bet.walletAddress));
               }
@@ -379,6 +406,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
 
           const catchupNext = generateNextRoundMatches(activeSeason.id, currentTickRound, currentTickTime);
           await db.insert(matches).values(catchupNext).onConflictDoNothing();
+          await sendNotificationToAll("New Round Started!", `Betting is now open for Round ${currentTickRound}!`);
           await db.update(seasons).set({ 
             currentRound: currentTickRound, 
             vrfRequestId: null, 
@@ -401,8 +429,10 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
 
         if (now > bettingEnd && now <= liveEnd && first.status === "SCHEDULED") {
            await startLiveMatch(activeSeason.id, currentRound);
+           await sendNotificationToAll("Matches are LIVE!", "The matches have started! Watch the action unfold.");
         } else if (now > liveEnd && first.status === "LIVE") {
            // Immediate Settlement for the just-finished match
+           await sendNotificationToAll("Final Results are in!", "Check the leaderboard to see if you won!");
            for (const m of roundMatches) {
               const sim = simulateMatchResult(m.homeTeamId, m.awayTeamId, m.vrfSeed || undefined);
               await db.update(matches).set({ status: "FINISHED", homeScore: sim.homeScore, awayScore: sim.awayScore, events: sim.events as any }).where(eq(matches.id, m.id));
@@ -419,26 +449,42 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
                 await db.update(bets).set({ status: statusUpdated, settledAt: new Date() }).where(eq(bets.id, bet.id));
 
                 if (won) {
-                  const potentialReturn = Math.floor(bet.potentialReturn);
-                  await db.update(users).set({
-                     doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                     wins: sql`${users.wins} + 1`,
-                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                     xp: sql`${users.xp} + 25`,
-                  }).where(eq(users.walletAddress, bet.walletAddress));
-                  
-                    // QUESTS: Increment Win Progress (all wins)
-                    await updateQuestProgressInternal(bet.walletAddress, "win", 1);
+                  if (bet.betType === "accumulator" && bet.accumulatorId) {
+                    const allBetsInAccumulator = await db.select().from(bets).where(eq(bets.accumulatorId, bet.accumulatorId)).orderBy(bets.createdAt);
+                    const allWonLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) === "won");
+                    const allSettledLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) !== "pending");
                     
-                    // QUESTS: Increment Win Accumulator Progress (only accumulators)
-                    if (bet.betType === "accumulator" || bet.accumulatorId) {
+                    if (allSettledLocally && allWonLocally) {
+                      const potentialReturn = Math.floor(bet.potentialReturn);
+                      await db.update(users).set({
+                         doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                         wins: sql`${users.wins} + 1`,
+                         biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                         xp: sql`${users.xp} + 25`,
+                      }).where(eq(users.walletAddress, bet.walletAddress));
+                      
+                      await updateQuestProgressInternal(bet.walletAddress, "win", 1);
                       await updateQuestProgressInternal(bet.walletAddress, "win_accumulator", 1);
+                      await db.insert(transactions).values({
+                        id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                        walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win Accumulator (${bet.accumulatorId})`
+                      });
                     }
+                  } else {
+                    const potentialReturn = Math.floor(bet.potentialReturn);
+                    await db.update(users).set({
+                       doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
+                       wins: sql`${users.wins} + 1`,
+                       biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
+                       xp: sql`${users.xp} + 25`,
+                    }).where(eq(users.walletAddress, bet.walletAddress));
                     
+                    await updateQuestProgressInternal(bet.walletAddress, "win", 1);
                     await db.insert(transactions).values({
-                    id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                    walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (${m.id})`
-                  });
+                      id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+                      walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (${m.id})`
+                    });
+                  }
                 } else {
                    await db.update(users).set({ xp: sql`${users.xp} + 5`, currentStreak: 0 }).where(eq(users.walletAddress, bet.walletAddress));
                 }
@@ -452,7 +498,28 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
     const updatedSeason = await db.query.seasons.findFirst({
       where: eq(seasons.id, activeSeason.id),
     });
-    const currentActiveRound = updatedSeason?.currentRound || 1;
+    let currentActiveRound = updatedSeason?.currentRound || 1;
+
+    // Check if the current round is completed. If so, return next round so users can bet during intermission.
+    const currentRoundMatches = await db.select().from(matches).where(and(eq(matches.seasonId, activeSeason.id), eq(matches.round, currentActiveRound)));
+    const allFinished = currentRoundMatches.length > 0 && currentRoundMatches.every(m => m.status === 'FINISHED');
+
+    if (allFinished) {
+      const nextRound = currentActiveRound + 1;
+      const nextMatches = await db.select().from(matches).where(and(eq(matches.seasonId, activeSeason.id), eq(matches.round, nextRound)));
+      
+      if (nextMatches.length > 0) {
+        currentActiveRound = nextRound;
+      } else {
+        // Generate next round immediately if it doesn't exist yet
+        const first = currentRoundMatches[0];
+        const nextStartTime = new Date(first.startTime.getTime() + TOTAL_CYCLE * 1000);
+        const generated = generateNextRoundMatches(activeSeason.id, nextRound, nextStartTime);
+        await db.insert(matches).values(generated).onConflictDoNothing();
+        await sendNotificationToAll("New Round Started!", `Betting is now open for Round ${nextRound}!`);
+        currentActiveRound = nextRound;
+      }
+    }
 
     // Build query conditions
     const conditions = [
@@ -636,6 +703,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       timer: 0, // Placeholder, derive from match/round start time if needed
       round: currentActiveRound,
       seasonId: activeSeason.id,
+      serverTime: new Date().toISOString(),
     };
 
     // Update Cache
@@ -871,7 +939,7 @@ export const placeBet = createServerFn({ method: "POST" })
         walletAddress: normalized,
         type: "bet",
         amount: data.stake,
-        currency: "coins",
+        currency: "kor",
         description: `Bet on ${match.id} (${data.selection})`,
       });
 
@@ -924,7 +992,9 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
         return { success: false, error: "Insufficient balance" };
       }
 
-      const potentialReturn = Math.floor(data.stake * data.totalOdds);
+      const MAX_PAYOUT = 1000000000; // 1 Billion KOR max payout to prevent DB int overflow and protect economy
+      const calculatedReturn = Math.floor(data.stake * data.totalOdds);
+      const potentialReturn = Math.min(calculatedReturn, MAX_PAYOUT);
 
       // Create bets for each selection
       const betValues = data.selections.map((sel) => ({
@@ -943,14 +1013,14 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
 
       await db.insert(bets).values(betValues);
 
-      // Deduct balance
-      const newBalance = (user.coins || 0) - data.stake;
-      console.log(`[ACCUMULATOR] Deducting stake ${data.stake} from ${user.coins}. New Balance: ${newBalance}`);
+      // Deduct balance from KOR (doodlBalance), NOT coin points
+      const newBalance = (user.doodlBalance || 0) - data.stake;
+      console.log(`[ACCUMULATOR] Deducting stake ${data.stake} from KOR ${user.doodlBalance}. New Balance: ${newBalance}`);
 
       await db
         .update(users)
         .set({
-          coins: newBalance,
+          doodlBalance: sql`${users.doodlBalance} - ${data.stake}`,
           totalBets: (user.totalBets || 0) + 1,
         })
         .where(eq(users.walletAddress, normalized));
@@ -963,7 +1033,7 @@ export const placeAccumulatorBet = createServerFn({ method: "POST" })
         walletAddress: normalized,
         type: "bet",
         amount: data.stake, // This should be positive for a deduction transaction
-        currency: "coins",
+        currency: "kor",
         description: `Accumulator Bet (${data.selections.length} legs) @ ${data.totalOdds.toFixed(2)}`,
       });
 
@@ -1061,7 +1131,8 @@ export const settleBets = createServerFn({ method: "POST" })
                 await db
                   .update(users)
                   .set({
-                    coins: sql`${users.coins} + ${potentialReturn}`,
+                    // BUG FIX: Credit KOR (doodlBalance) not coins
+                    doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
                     wins: sql`${users.wins} + 1`,
                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
                     bestOddsWon: sql`CASE WHEN ${effectiveOdds} > ${users.bestOddsWon} THEN ${effectiveOdds} ELSE ${users.bestOddsWon} END`,
@@ -1080,8 +1151,8 @@ export const settleBets = createServerFn({ method: "POST" })
                   walletAddress: bet.walletAddress,
                   type: "win",
                   amount: potentialReturn,
-                  currency: "coins",
-                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} Coins`,
+                  currency: "kor",
+                  description: `Accumulator win (${allBetsInAccumulator.length} legs) — +${potentialReturn} KOR`,
                 });
 
                 // QUESTS: Increment Win Accumulator Progress
@@ -1093,7 +1164,8 @@ export const settleBets = createServerFn({ method: "POST" })
             await db
               .update(users)
               .set({
-                coins: sql`${users.coins} + ${bet.potentialReturn}`,
+                // BUG FIX: credit doodlBalance (KOR), NOT coins (coin points)
+                doodlBalance: sql`${users.doodlBalance} + ${bet.potentialReturn}`,
                 wins: sql`${users.wins} + 1`,
                 biggestWin: sql`CASE WHEN ${bet.potentialReturn} > ${users.biggestWin} THEN ${bet.potentialReturn} ELSE ${users.biggestWin} END`,
                 bestOddsWon: sql`CASE WHEN ${odds} > ${users.bestOddsWon} THEN ${odds} ELSE ${users.bestOddsWon} END`,
@@ -1109,8 +1181,8 @@ export const settleBets = createServerFn({ method: "POST" })
               walletAddress: bet.walletAddress,
               type: "win",
               amount: bet.potentialReturn,
-              currency: "coins",
-              description: `Bet win @ ${bet.odds} — +${bet.potentialReturn} Coins`,
+              currency: "kor",
+              description: `Bet win @ ${bet.odds} — +${bet.potentialReturn} KOR`,
             });
 
             // QUESTS: Increment Win Progress
@@ -1171,6 +1243,7 @@ export const getActiveBets = createServerFn({ method: "GET" })
           potentialReturn: bets.potentialReturn,
           status: bets.status,
           createdAt: bets.createdAt,
+          settledAt: bets.settledAt,
           txHash: bets.txHash,
           betType: bets.betType,
           accumulatorId: bets.accumulatorId,
@@ -1189,13 +1262,14 @@ export const getActiveBets = createServerFn({ method: "GET" })
         .leftJoin(awayTeams, eq(matches.awayTeamId, awayTeams.id))
         .where(eq(bets.walletAddress, normalized))
         .orderBy(desc(bets.createdAt))
-        .limit(50); // Optimization: Limit to last 50 bets
+        .limit(200); // Increased limit to support "Load More" history
 
       return {
         success: true,
         bets: userBets.map((b) => ({
           ...b,
           timestamp: b.createdAt?.getTime() || Date.now(),
+          settledAt: b.settledAt?.getTime() || null,
         })),
       };
     } catch (error: any) {

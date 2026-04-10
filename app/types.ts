@@ -73,6 +73,7 @@ export interface Bet {
   potentialReturn: number;
   status: 'pending' | 'won' | 'lost';
   timestamp: number;
+  settledAt?: number | null;
   txHash: string;
   betType?: 'single' | 'accumulator';  // Type of bet
   accumulatorId?: string;              // Group ID for accumulator bets

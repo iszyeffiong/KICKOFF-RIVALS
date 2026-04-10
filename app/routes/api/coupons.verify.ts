@@ -7,11 +7,11 @@ export const Route = createFileRoute("/api/coupons/verify")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { code, walletAddress } = body;
+          const { code, walletAddress, txHash } = body;
 
-          if (!code || !walletAddress) {
+          if (!code || !walletAddress || !txHash) {
             return Response.json(
-              { success: false, error: "Missing required fields" },
+              { success: false, error: "Missing required fields (code, walletAddress, or txHash)" },
               { status: 400 },
             );
           }
@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/coupons/verify")({
             data: {
               code,
               walletAddress,
+              txHash,
             },
           });
 

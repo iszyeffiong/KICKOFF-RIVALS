@@ -155,15 +155,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center justify-center px-6 pt-20 pb-16 md:pt-32 md:pb-24">
         {/* Live badge */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8 animate-fade-in">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-            Live Matches Available
-          </span>
-        </div>
 
         {/* Headline */}
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-center leading-[1.1] mb-6 max-w-4xl">
@@ -311,39 +302,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               title="Earn Rewards"
               description="Collect your winnings in KOR tokens and unlock premium features."
             />
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="relative z-10 px-6 md:px-12 py-20 md:py-28">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="glass-card p-10 md:p-14 relative overflow-hidden">
-            {/* Background glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-emerald-500/10 rounded-full blur-[80px]" />
-
-            <h2 className="relative text-3xl md:text-4xl font-bold mb-4">
-              Ready to Enter the Arena?
-            </h2>
-            <p className="relative text-slate-400 mb-8 max-w-lg mx-auto">
-              Join thousands of players already competing. Connect your wallet
-              and claim your welcome bonus today.
-            </p>
-            <button
-              onClick={onEnter}
-              className={cn(
-                "relative group px-10 py-4 rounded-2xl font-bold text-lg",
-                "bg-gradient-to-r from-emerald-500 to-emerald-600",
-                "text-white shadow-lg shadow-emerald-500/25",
-                "hover:shadow-xl hover:shadow-emerald-500/40",
-                "transition-all duration-300 hover:scale-105",
-              )}
-            >
-              <span className="flex items-center gap-2">
-                Get Started Now
-                <IconArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </button>
           </div>
         </div>
       </section>

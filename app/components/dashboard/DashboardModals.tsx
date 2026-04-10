@@ -1,4 +1,6 @@
 import { lazy, Suspense } from "react";
+import { useSendTransaction } from "wagmi";
+import { parseEther, getAddress } from "viem";
 import { useGame } from "../../contexts/GameContext";
 import { useProfile } from "../../hooks/useProfile";
 import { CONVERSION_RATE, CONVERSION_YIELD } from "../../constants";
@@ -55,6 +57,9 @@ export function DashboardModals() {
     fetchMatches,
     adminSessionToken,
   } = useGame();
+  const { sendTransactionAsync } = useSendTransaction();
+  const TREASURY_WALLET = (import.meta as any).env.VITE_TREASURY_WALLET || "0x7AcbaEf80145c363941F480072b260909A64B294";
+  const CLAIM_FEE = (import.meta as any).env.VITE_CLAIM_FEE || "0.000022";
 
   if (!profile) return null;
 
@@ -80,16 +85,21 @@ export function DashboardModals() {
       {showSwapConfirm && (
         <SwapConfirm
           coins={profile.coins}
-          onConfirm={async () => {
-            const coins =
-              Math.floor(profile.coins / CONVERSION_RATE) * CONVERSION_RATE;
+          onConfirm={async (selectedAmount) => {
             try {
+              // GAS FEE REQUIREMENT
+              const txHash = await sendTransactionAsync({
+                to: getAddress(TREASURY_WALLET),
+                value: parseEther(CLAIM_FEE),
+              });
+
               const res = await fetch(`${API_URL}/api/user/swap-coins-to-kor`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   walletAddress: profile.walletAddress,
-                  coins,
+                  coins: selectedAmount,
+                  txHash,
                 }),
               });
               const data = await res.json();
@@ -97,7 +107,7 @@ export function DashboardModals() {
                 // Refresh profile to pick up new balances
                 refreshProfile();
                 setBalance(data.newKor);
-                addTransaction("convert", coins, "coins", "Swapped for KOR");
+                addTransaction("convert", selectedAmount, "coins", "Swapped for KOR");
               } else {
                 alert("Swap failed: " + data.error);
               }

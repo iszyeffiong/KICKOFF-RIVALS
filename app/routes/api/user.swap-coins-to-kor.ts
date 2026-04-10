@@ -7,11 +7,11 @@ export const Route = createFileRoute("/api/user/swap-coins-to-kor")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { walletAddress, coins } = body;
+          const { walletAddress, coins, txHash } = body;
 
-          if (!walletAddress || coins === undefined) {
+          if (!walletAddress || coins === undefined || !txHash) {
             return Response.json(
-              { success: false, error: "Missing required fields" },
+              { success: false, error: "Missing required fields (walletAddress, coins, or txHash)" },
               { status: 400 },
             );
           }
@@ -20,6 +20,7 @@ export const Route = createFileRoute("/api/user/swap-coins-to-kor")({
             data: {
               walletAddress,
               coins: Number(coins),
+              txHash,
             },
           });
 

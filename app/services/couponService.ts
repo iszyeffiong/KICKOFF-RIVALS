@@ -15,12 +15,13 @@ export interface CouponVerifyResponse {
 export const verifyCoupon = async (
   code: string,
   walletAddress: string,
+  txHash?: string,
 ): Promise<CouponVerifyResponse> => {
   try {
     const response = await fetch(`${API_URL}/api/coupons/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, walletAddress }),
+      body: JSON.stringify({ code, walletAddress, txHash }),
     });
 
     const data = await response.json();

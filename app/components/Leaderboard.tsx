@@ -60,35 +60,56 @@ export function Leaderboard() {
         </div>
       </div>
 
-      {/* Prize Pool & Season Section */}
-      <div className="flex justify-between items-center px-2 py-4 bg-white rounded-2xl border border-gray-100 shadow-sm mt-2 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110" />
-
+      {/* Weekly Contest Section */}
+      <div className="bg-gradient-to-r from-brand/10 to-transparent rounded-2xl border border-brand/20 p-4 shadow-sm mt-2 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110" />
         <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-yellow-400/10 rounded-xl flex items-center justify-center border border-yellow-400/20 shadow-inner">
-            <IconCoins className="w-5 h-5 text-yellow-600" />
+          <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center border border-brand/20 shadow-inner">
+            <IconTarget className="w-5 h-5 text-brand" />
           </div>
           <div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">
-              Active Reward
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">
+              CONTEST
             </div>
-            <div className="text-lg font-black text-dark tracking-tighter flex items-center gap-1">
-              $1,000,000
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 bg-slate-100 px-1.5 py-0.5 rounded">KOR</span>
+            <div className="text-sm font-black text-dark tracking-tight">
+              Weekly Contest Coming Soon
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="text-right relative z-10">
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-2">
-            Status
-          </div>
-          <div className="inline-flex items-center gap-2 bg-brand text-white pl-3 pr-1 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl shadow-brand/20 border border-brand-light/30">
-            Season 1
-            <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+      {/* Leaderboard Notice Section */}
+      <div className="bg-white rounded-2xl border-2 border-brand/20 p-5 shadow-lg shadow-brand/10 mt-2 relative overflow-hidden group">
+        <div className="absolute -right-4 -top-4 w-24 h-24 bg-brand/5 rounded-full" />
+
+        <div className="relative z-10 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center border border-brand/20 shadow-inner">
+              <IconTrendingDown className="w-5 h-5 text-brand" />
+            </div>
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">
+                NOTICE
+              </div>
+              <div className="text-sm font-black text-dark tracking-tight">
+                Leaderboard Reset in Progress
+              </div>
             </div>
           </div>
+
+          <div className="text-xs text-slate-500 leading-relaxed bg-brand/5 border border-brand/10 rounded-xl p-3">
+            The leaderboard will be reset due to ongoing fixes and balance adjustments. We appreciate your patience as we optimize the economy.
+          </div>
+
+          <a
+            href="#"
+            target="_self"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#0088cc] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#0088cc]/30 hover:bg-[#0077b5] transition-all active:scale-95"
+          >
+            <IconShare className="w-4 h-4 text-white" />
+            Report Bugs via Telegram
+          </a>
         </div>
       </div>
 
@@ -96,8 +117,8 @@ export function Leaderboard() {
         <button
           onClick={() => setActiveTab("kor")}
           className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "kor"
-              ? "bg-white text-brand shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+            ? "bg-white text-brand shadow-sm"
+            : "text-gray-500 hover:text-gray-700"
             }`}
         >
           Highest KOR
@@ -105,8 +126,8 @@ export function Leaderboard() {
         <button
           onClick={() => setActiveTab("referral")}
           className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "referral"
-              ? "bg-white text-brand shadow-sm"
-              : "text-gray-500 hover:text-gray-700"
+            ? "bg-white text-brand shadow-sm"
+            : "text-gray-500 hover:text-gray-700"
             }`}
         >
           Most Referrals

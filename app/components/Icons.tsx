@@ -23,6 +23,7 @@ import {
   Share2,
   Copy,
   ExternalLink,
+  ShieldCheck,
   Loader2,
   AlertCircle,
   Info,
@@ -89,6 +90,7 @@ export const IconGift = Gift;
 export const IconCoins = Coins;
 export const IconZap = Zap;
 export const IconShield = Shield;
+export const IconShieldCheck = ShieldCheck;
 export const IconUsers = Users;
 export const IconShare = Share2;
 export const IconCopy = Copy;

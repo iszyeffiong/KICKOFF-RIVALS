@@ -3,6 +3,7 @@ import { db, coupons, couponRedemptions, users, auditLogs } from "../lib/db";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
+import { verifyGasFeeTransaction } from "../lib/blockchain";
 
 // ==========================================
 // CONSTANTS
@@ -49,6 +50,7 @@ async function logAudit(action: string, actor: string, details: string, ip?: str
 const verifyCouponSchema = z.object({
   code: z.string().min(1),
   walletAddress: z.string().min(1),
+  txHash: z.string().min(1),
 });
 
 export const verifyCoupon = createServerFn({ method: "POST" })
@@ -58,6 +60,11 @@ export const verifyCoupon = createServerFn({ method: "POST" })
     const codeUpper = data.code.toUpperCase().trim();
 
     try {
+      // VERIFY GAS FEE
+      const txVerification = await verifyGasFeeTransaction(data.txHash, normalized);
+      if (!txVerification.success) {
+        return { success: false, error: txVerification.error || "Gas fee verification failed" };
+      }
       // Find coupon
       const coupon = await db.query.coupons.findFirst({
         where: eq(coupons.code, codeUpper),
@@ -116,6 +123,7 @@ export const verifyCoupon = createServerFn({ method: "POST" })
       await db.insert(couponRedemptions).values({
         walletAddress: normalized,
         couponCode: codeUpper,
+        txHash: data.txHash,
       });
 
       // Increment usage

@@ -4,6 +4,7 @@ import { eq, and, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { INITIAL_QUESTS, CONVERSION_RATE, CONVERSION_YIELD } from "../constants";
 import { desc } from "drizzle-orm"
+import { verifyGasFeeTransaction } from "../lib/blockchain";
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -698,6 +699,7 @@ export const checkUsernameAvailability = createServerFn({ method: "GET" })
 
 const checkInSchema = z.object({
   walletAddress: z.string().min(1),
+  txHash: z.string().min(1),
 });
 
 export const checkIn = createServerFn({ method: "POST" })
@@ -713,8 +715,14 @@ export const checkIn = createServerFn({ method: "POST" })
       return { success: false, error: "User not found" };
     }
 
-    const CHECK_IN_INTERVAL = 0.01; // almost instant (36 seconds) for fast testing/claiming
-    const REWARD = 5000; // 5000 coins
+    // VERIFY GAS FEE
+    const txVerification = await verifyGasFeeTransaction(data.txHash, normalized);
+    if (!txVerification.success) {
+      return { success: false, error: txVerification.error || "Gas fee verification failed" };
+    }
+
+    const CHECK_IN_INTERVAL = Number(process.env.VITE_CHECK_IN_INTERVAL || "4"); 
+    const REWARD = Number(process.env.VITE_CHECK_IN_REWARD || "5000"); 
 
     if (user.lastCheckInDate) {
       const lastCheckIn = new Date(user.lastCheckInDate);
@@ -740,7 +748,8 @@ export const checkIn = createServerFn({ method: "POST" })
       type: "bonus",
       amount: REWARD,
       currency: "coins",
-      description: "4-Hourly Check-in Bonus"
+      description: "4-Hourly Check-in Bonus",
+      txHash: data.txHash,
     });
 
     return { 
@@ -754,6 +763,7 @@ export const claimQuestReward = createServerFn({ method: "POST" })
     z.object({
       walletAddress: z.string().min(1),
       questId: z.coerce.string().min(1),
+      txHash: z.string().min(1),
     }).parse(data)
   )
   .handler(async ({ data }) => {
@@ -808,6 +818,12 @@ export const claimQuestReward = createServerFn({ method: "POST" })
       }
     }
 
+    // VERIFY GAS FEE
+    const txVerification = await verifyGasFeeTransaction(data.txHash, normalized);
+    if (!txVerification.success) {
+      return { success: false, error: txVerification.error || "Gas fee verification failed" };
+    }
+
     const rewardAmount = userQuest.reward || 0;
 
     // 3. Perform atomic payout transaction
@@ -837,7 +853,8 @@ export const claimQuestReward = createServerFn({ method: "POST" })
         type: "redeem",
         amount: rewardAmount,
         currency: "coins",
-        description: `Quest Reward: ${userQuest.title}`
+        description: `Quest Reward: ${userQuest.title}`,
+        txHash: data.txHash,
       });
       console.log(`[CLAIM] transaction inserted`);
     });
@@ -1157,7 +1174,8 @@ export const getLeaderboard = createServerFn({ method: "GET" }).handler(
 );
 const swapCoinsToKorSchema = z.object({
   walletAddress: z.string().min(1),
-  coins: z.number().min(CONVERSION_RATE),
+  coins: z.number().min(2000).max(10000),
+  txHash: z.string().min(1),
 });
 
 export const swapCoinsToKor = createServerFn({ method: "POST" })
@@ -1165,9 +1183,11 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const normalized = data.walletAddress.toLowerCase();
     
-    // Ensure amount is multiples of CONVERSION_RATE
-    const convertibleCoins = Math.floor(data.coins / CONVERSION_RATE) * CONVERSION_RATE;
-    if (convertibleCoins <= 0) return { success: false, error: "Not enough coins" };
+    // Ensure amount is multiples of 500
+    const STEP = 500;
+    const convertibleCoins = Math.floor(data.coins / STEP) * STEP;
+    if (convertibleCoins < 2000) return { success: false, error: "Minimum conversion is 2,000 coins" };
+    if (convertibleCoins > 10000) return { success: false, error: "Maximum conversion is 10,000 coins" };
     
     const korToAdd = (convertibleCoins / CONVERSION_RATE) * CONVERSION_YIELD;
     
@@ -1179,6 +1199,12 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
         
         if (!user || user.coins < convertibleCoins) {
             throw new Error("Insufficient balance");
+        }
+
+        // VERIFY GAS FEE
+        const txVerification = await verifyGasFeeTransaction(data.txHash, normalized);
+        if (!txVerification.success) {
+          throw new Error(txVerification.error || "Gas fee verification failed");
         }
         
         // Update balances with atomicity check to prevent negative balance race conditions
@@ -1199,7 +1225,8 @@ export const swapCoinsToKor = createServerFn({ method: "POST" })
             type: "convert",
             amount: convertibleCoins,
             currency: "coins",
-            description: `Transfer ${convertibleCoins} Coins to ${korToAdd} KOR`
+            description: `Transfer ${convertibleCoins} Coins to ${korToAdd} KOR`,
+            txHash: data.txHash,
         });
         
         return { 
