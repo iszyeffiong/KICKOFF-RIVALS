@@ -58,8 +58,10 @@ export const useProfile = () => {
       return data;
     },
     enabled: !!address,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 5000, // Reduced to 5 seconds for more frequent updates in betting environment
+    refetchInterval: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const refresh = useCallback(() => {

@@ -726,6 +726,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           }
         }
         fetchActiveBets();
+        refreshProfileQuery();
         setBetSlipSelections([]);
         return true;
       } catch (e) {
@@ -894,6 +895,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json();
         if (data.success) {
           // Success handled by backend, we just notify user
+          refreshProfileQuery();
           return { success: true, message: data.message || "Code redeemed!" };
         }
         return { success: false, message: data.error || "Invalid code" };
@@ -919,6 +921,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
         const json = await res.json();
         if (!res.ok) return { success: false, message: json.error || "Failed" };
+        refreshProfileQuery();
         return { success: true, message: "Referral linked!" };
       } catch {
         return { success: false, message: "Connection failed" };
