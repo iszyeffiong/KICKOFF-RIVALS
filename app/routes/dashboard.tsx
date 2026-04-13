@@ -7,13 +7,17 @@ import { DashboardModals } from "../components/dashboard/DashboardModals";
 import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
 
 // Set to true to enable maintenance mode
-const IS_MAINTENANCE = false;
+const IS_MAINTENANCE = true;
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
 });
 
 function DashboardLayout() {
+  if (IS_MAINTENANCE) {
+    return <MaintenanceOverlay />;
+  }
+
   const navigate = useNavigate();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const { isInitializing, setDashboardMounted, betSlipSelections } = useGame();
@@ -31,10 +35,6 @@ function DashboardLayout() {
       navigate({ to: "/" });
     }
   }, [profile?.username, isInitializing, isProfileLoading, navigate]);
-
-  if (IS_MAINTENANCE) {
-    return <MaintenanceOverlay />;
-  }
 
   if (isInitializing || isProfileLoading) {
     return (

@@ -6,27 +6,20 @@ import { useUserStore } from "../stores/userStore";
 import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
 
 // Set to true to enable maintenance mode
-const IS_MAINTENANCE = false;
+const IS_MAINTENANCE = true;
 
 export const Route = createFileRoute("/play")({
   component: PlayRoute,
 });
 
 function PlayRoute() {
-  const navigate = useNavigate();
-  const { walletState } = useGame();
-  const { onboardingComplete } = useUserStore();
-
-  // Auto-redirect if everything is set
-  useEffect(() => {
-    if (walletState.isConnected && walletState.isVerified && onboardingComplete) {
-      navigate({ to: "/dashboard" });
-    }
-  }, [walletState.isConnected, walletState.isVerified, onboardingComplete, navigate]);
-
   if (IS_MAINTENANCE) {
     return <MaintenanceOverlay />;
   }
+
+  const navigate = useNavigate();
+  const { walletState } = useGame();
+  const { onboardingComplete } = useUserStore();
 
   return (
     <GameSelection
