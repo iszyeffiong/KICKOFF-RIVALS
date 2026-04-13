@@ -37,7 +37,7 @@ async function fixSequences() {
       `);
       
       console.log(`Successfully synced ${item.table}. Next ID will be:`, parseInt(res.rows[0].setval) + 1);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to sync ${item.table}:`, err.message);
     }
   }

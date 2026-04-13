@@ -24,13 +24,17 @@ function DashboardLayout() {
     return () => setDashboardMounted(false);
   }, [setDashboardMounted]);
 
-  // Route Guard: Redirect if no user logged in
+  // Route Guard: Redirect if no user logged in or incomplete profile
   useEffect(() => {
     if (isInitializing || isProfileLoading) return;
+    
     if (!profile?.username) {
       navigate({ to: "/" });
+    } else if (!profile.allianceLeagueId || !profile.allianceTeamId) {
+      console.log("[DASHBOARD] Incomplete profile detected, redirecting to onboarding...");
+      navigate({ to: "/onboarding" });
     }
-  }, [profile?.username, isInitializing, isProfileLoading, navigate]);
+  }, [profile?.username, profile?.allianceLeagueId, profile?.allianceTeamId, isInitializing, isProfileLoading, navigate]);
 
   if (IS_MAINTENANCE) {
     return <MaintenanceOverlay />;

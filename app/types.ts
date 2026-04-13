@@ -172,6 +172,7 @@ export interface UserStats {
   nextCheckInIn?: number;
   lastCheckInDate?: string | Date | null;
   transactions?: Transaction[];
+  hasChangedUsername?: boolean;
 }
 
 export interface Coupon {

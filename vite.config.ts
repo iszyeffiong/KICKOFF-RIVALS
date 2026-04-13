@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       axios: path.resolve(process.cwd(), "node_modules/axios/dist/esm/axios.js"),
       "@solana/web3.js": path.resolve(process.cwd(), "mocks/empty.js"),
+      pg: path.resolve(process.cwd(), "mocks/pg.js"),
     },
   },
   optimizeDeps: {

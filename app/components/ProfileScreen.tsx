@@ -40,7 +40,7 @@ interface ProfileScreenProps {
   onQuestClaim: (
     questId: string,
     onSuccess?: (reward: number) => void,
-  ) => Promise<void>;
+  ) => void;
   onQuestAction: (
     questId: string,
     openUrl?: boolean,
@@ -57,6 +57,7 @@ interface ProfileScreenProps {
   }>;
   onQuestRefresh?: () => Promise<void>;
   onConvert?: (amount: number) => Promise<void>;
+  onShowUpdateUsername?: () => void;
   notify?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
@@ -73,6 +74,7 @@ export function ProfileScreen({
   onQuestRefresh,
   onCheckIn,
   onConvert,
+  onShowUpdateUsername,
   notify,
 }: ProfileScreenProps) {
   const [activeSection, setActiveSection] = useState<
@@ -194,9 +196,24 @@ export function ProfileScreen({
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-foreground truncate">
-              {stats?.username || "Guest User"}
-            </h2>
+            <div 
+              className={cn(
+                "group relative inline-block max-w-full",
+                !stats?.hasChangedUsername && "cursor-pointer hover:bg-primary/5 rounded-lg px-2 -ml-2 transition-all"
+              )}
+              onClick={() => !stats?.hasChangedUsername && onShowUpdateUsername?.()}
+            >
+              <h2 className="text-xl font-bold text-foreground truncate pr-6">
+                {stats?.username || "Guest User"}
+              </h2>
+              {!stats?.hasChangedUsername && (
+                <div className="absolute top-1/2 -right-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                    Change
+                  </span>
+                </div>
+              )}
+            </div>
             <p className="text-sm text-muted-foreground font-mono">
               {truncateAddress(stats?.walletAddress || "")}
             </p>

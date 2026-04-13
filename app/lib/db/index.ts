@@ -1,12 +1,14 @@
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { neon } from "@neondatabase/serverless";
-import pg from "pg";
+import { Pool } from "pg";
 import * as schema from "./schema";
 import * as dotenv from "dotenv";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables (Server-side only)
+if (typeof window === "undefined") {
+  dotenv.config();
+}
 
 // Determine if we're using Neon (serverless) or standard PostgreSQL
 const isNeonDatabase = (url: string): boolean => {
@@ -39,7 +41,7 @@ const createDatabaseClient = () => {
     // Use node-postgres for Railway / standard PostgreSQL
     // standard PostgreSQL
     console.log("🚂 Using Railway PostgreSQL database driver");
-    const pool = new pg.Pool({
+    const pool = new Pool({
       connectionString: databaseUrl,
       ssl: { rejectUnauthorized: false }, // Required for Railway external proxy
     });

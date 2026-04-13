@@ -24,7 +24,12 @@ function SignRoute() {
   useEffect(() => {
     if (walletState.isConnected && walletState.isVerified && profile) {
       handleMessageSigned();
-      navigate({ to: "/welcome" });
+      
+      if (profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId) {
+        navigate({ to: "/onboarding" });
+      } else {
+        navigate({ to: "/welcome" });
+      }
     }
   }, [
     walletState.isConnected,
@@ -38,7 +43,15 @@ function SignRoute() {
   useEffect(() => {
     if (waitingForProfile && profile && !isProfileLoading) {
       handleMessageSigned();
-      navigate({ to: "/welcome" });
+      
+      // If the user is NEW (mistakenly used sign-in) or incomplete (no team/league),
+      // redirect them back to onboarding setup
+      if (profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId) {
+        console.log("[SIGN] New or incomplete user detected, redirecting to onboarding...");
+        navigate({ to: "/onboarding" });
+      } else {
+        navigate({ to: "/welcome" });
+      }
     }
   }, [
     waitingForProfile,

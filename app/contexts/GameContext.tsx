@@ -51,6 +51,7 @@ import {
   generateHash, 
   generate6DigitCode 
 } from "../lib/utils";
+import { updateUsername } from "../server/user";
 
 interface GameContextType {
   isInitializing: boolean;
@@ -182,6 +183,11 @@ interface GameContextType {
   notify: (message: string, type?: "success" | "error" | "info") => void;
   adminSessionValid: boolean;
   adminSessionToken: string | null;
+  showUpdateUsername: boolean;
+  setShowUpdateUsername: React.Dispatch<React.SetStateAction<boolean>>;
+  handleUpdateUsername: (
+    newUsername: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // Game Loop
   generateRoundMatches: (
@@ -300,6 +306,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [adminSessionValid, setAdminSessionValid] = useState(false);
+  const [showUpdateUsername, setShowUpdateUsername] = useState(false);
 
   // Dashboard tracking
   const [dashboardMounted, setDashboardMounted] = useState(false);
@@ -992,6 +999,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [walletState.address, addTransaction, refreshProfileQuery]);
 
+  const handleUpdateUsername = useCallback(
+    async (newUsername: string) => {
+      const address =
+        walletState.address || profile?.walletAddress;
+      if (!address) return { success: false, error: "Wallet not connected" };
+
+      try {
+        const result = await updateUsername({
+          data: {
+            walletAddress: address,
+            newUsername,
+          },
+        });
+        if (result.success) {
+          refreshProfileQuery();
+          setShowUpdateUsername(false);
+          toast.success("Username updated!");
+          return { success: true };
+        } else {
+          return { success: false, error: result.error };
+        }
+      } catch (err) {
+        console.error("Update username error:", err);
+        return { success: false, error: "Network error" };
+      }
+    },
+    [walletState.address, profile?.walletAddress, refreshProfileQuery],
+  );
+
   // ==========================================
   // ADMIN HANDLERS
   // ==========================================
@@ -1359,6 +1395,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setShowAdminAuth,
         adminSessionValid,
         adminSessionToken: adminSessionTokenRef.current,
+        showUpdateUsername,
+        setShowUpdateUsername,
+        handleUpdateUsername,
         generateRoundMatches,
         handleStateTransition,
         updateLiveScores,
