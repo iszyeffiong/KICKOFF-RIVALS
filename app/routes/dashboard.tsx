@@ -4,6 +4,10 @@ import { useGame } from "../contexts/GameContext";
 import { useProfile } from "../hooks/useProfile";
 import { DashboardHeader } from "../components/dashboard/DashboardHeader";
 import { DashboardModals } from "../components/dashboard/DashboardModals";
+import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
+
+// Set to true to enable maintenance mode
+const IS_MAINTENANCE = true;
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
@@ -27,6 +31,10 @@ function DashboardLayout() {
       navigate({ to: "/" });
     }
   }, [profile?.username, isInitializing, isProfileLoading, navigate]);
+
+  if (IS_MAINTENANCE) {
+    return <MaintenanceOverlay />;
+  }
 
   if (isInitializing || isProfileLoading) {
     return (
