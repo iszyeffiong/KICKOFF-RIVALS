@@ -1,26 +1,33 @@
+import pg from "pg";
+import * as dotenv from "dotenv";
 
-import { db, matches, seasons } from "../app/lib/db";
-import { eq, desc } from "drizzle-orm";
+dotenv.config();
 
-async function main() {
-  console.log("Checking Seasons...");
-  const seasonList = await db.select().from(seasons);
-  console.log("Seasons:", seasonList);
+const DATABASE_URL = "postgresql://postgres:SDdgXKUnLwyfkfFYmWRWMZAgqibSvMUx@metro.proxy.rlwy.net:19221/railway";
 
-  const activeSeason = seasonList.find(s => s.isActive);
-  if (!activeSeason) {
-      console.log("No active season found!");
-  } else {
-      console.log("Active Season:", activeSeason.id);
-  }
+async function debugMatches() {
+  const client = new pg.Client({ connectionString: DATABASE_URL });
+  await client.connect();
 
-  console.log("\nChecking Matches...");
-  const matchesList = await db.select().from(matches).orderBy(desc(matches.createdAt)).limit(10);
-  console.log(`Found ${matchesList.length} matches (showing last 10).`);
+  console.log("Checking for active seasons and their matches...");
   
-  for (const m of matchesList) {
-      console.log(`Match ${m.id}: Season=${m.seasonId}, Round=${m.round}, Status=${m.status}, Score=${m.homeScore}-${m.awayScore}`);
+  const seasons = await client.query("SELECT * FROM seasons WHERE is_active = true ORDER BY id DESC");
+  console.log(`Found ${seasons.rows.length} active seasons.`);
+
+  for (const s of seasons.rows) {
+    const res = await client.query("SELECT count(*) FROM matches WHERE season_id = $1", [s.id]);
+    console.log(`Season ${s.id} (Started: ${s.started_at}) has ${res.rows[0].count} matches.`);
+    
+    if (parseInt(res.rows[0].count) > 0) {
+        const statuses = await client.query("SELECT status, count(*) FROM matches WHERE season_id = $1 GROUP BY status", [s.id]);
+        console.log(`Match breakdown for season ${s.id}:`, statuses.rows);
+    }
   }
+
+  const latestMatches = await client.query("SELECT * FROM matches ORDER BY start_time DESC LIMIT 5");
+  console.log("Latest 5 matches found in DB:", latestMatches.rows.map(m => `id:${m.id} season:${m.season_id} status:${m.status}`));
+
+  await client.end();
 }
 
-main().catch(console.error);
+debugMatches();
