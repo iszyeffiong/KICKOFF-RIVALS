@@ -1,13 +1,22 @@
-import { useState, useEffect } from "react";
 import { cn } from "../lib/utils";
 import { RivalsLogo } from "./RivalsLogo";
-import { IconTrophy, IconChevronRight } from "./Icons";
+import {
+  IconTrophy,
+  IconCoins,
+  IconChevronRight,
+  IconActivity,
+  IconTrendingUp,
+  IconCrown,
+  IconStar,
+  IconZap,
+} from "./Icons";
 
 interface ReturningUserWelcomeProps {
   username: string;
   totalBets: number;
   wins: number;
   korBalance: number;
+  coins: number;
   onProceed: () => void;
 }
 
@@ -16,153 +25,131 @@ export function ReturningUserWelcome({
   totalBets,
   wins,
   korBalance,
+  coins,
   onProceed,
 }: ReturningUserWelcomeProps) {
-  const [showStats, setShowStats] = useState(false);
-  const [animationComplete, setAnimationComplete] = useState(false);
-  const [showReloadPrompt, setShowReloadPrompt] = useState(false);
-
-  useEffect(() => {
-    const timer1 = setTimeout(() => setShowStats(true), 500);
-    const timer2 = setTimeout(() => setAnimationComplete(true), 1500);
-
-    // If data is still missing after 5 seconds, show a reload prompt
-    const reloadTimer = setTimeout(() => {
-      if (korBalance === undefined || korBalance === null) {
-        setShowReloadPrompt(true);
-      }
-    }, 5000);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(reloadTimer);
-    };
-  }, [korBalance]);
-
-  const safeWins = Number(wins) || 0;
-  const safeTotalBets = Number(totalBets) || 0;
-  const safeKorBalance = Number(korBalance) || 0;
-  const isDataReady = korBalance !== undefined && korBalance !== null;
-
-  const winRate = safeTotalBets > 0 ? Math.round((safeWins / safeTotalBets) * 100) : 0;
+  const winRate = totalBets > 0 ? Math.round((wins / totalBets) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-      {/* Animated background */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] flex flex-col relative overflow-hidden">
+      {/* Dynamic Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/15 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-500" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse delay-700" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('/grid.svg')] opacity-[0.03] bg-center [mask-image:radial-gradient(white,transparent_70%)]" />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 p-6">
+      <header className="relative z-10 p-6 flex justify-between items-center animate-fade-in">
         <RivalsLogo size="md" variant="full" className="text-white" />
+        <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full px-4 py-1.5">
+          <IconZap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+          <span className="text-xs font-bold text-white tracking-wider uppercase">Pro Player</span>
+        </div>
       </header>
 
       {/* Content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8">
-        <div className="max-w-md w-full text-center">
-          {/* Welcome Icon */}
-          <div className="flex justify-center mb-6 animate-bounce-subtle">
-            <div className="p-6 rounded-full bg-primary/20 shadow-lg shadow-primary/20">
-              <IconTrophy className="w-16 h-16 text-primary" />
+        <div className="max-w-lg w-full">
+          {/* Welcome Avatar/Icon */}
+          <div className="flex justify-center mb-8 relative animate-bounce-subtle">
+            <div className="relative">
+              <div className="absolute -inset-4 bg-primary/30 rounded-full blur-2xl animate-pulse" />
+              <div className="relative p-8 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-primary/50 shadow-2xl shadow-primary/20">
+                <IconCrown className="w-20 h-20 text-primary" />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-yellow-500 text-slate-900 p-2 rounded-full shadow-lg">
+                <IconStar className="w-6 h-6 fill-current" />
+              </div>
             </div>
           </div>
 
           {/* Welcome Message */}
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 animate-fade-in">
-            Welcome Back!
-          </h1>
+          <div className="text-center mb-10 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 tracking-tight">
+              Welcome Back,
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
+                {username}
+              </span>
+            </h1>
+            <p className="text-slate-400 text-lg">
+              The arena has missed your presence. Your stats were waiting.
+            </p>
+          </div>
 
-          <p className="text-xl text-slate-300 mb-2 animate-fade-in">
-            {username}
-          </p>
-
-          <p className="text-slate-400 mb-8 animate-fade-in">
-            {isDataReady ? "Great to see you again. Ready to win?" : "Syncing your stats from database..."}
-          </p>
-
-          {/* Stats Section */}
-          {showStats && (
-            <div className="space-y-4 mb-8 animate-slide-up">
-              <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-widest">
-                Your Performance
-              </h2>
-
-              {/* Main Stats Grid */}
-              <div className="bg-slate-800/50 border border-primary/20 rounded-xl p-6">
-                {!isDataReady ? (
-                  <div className="flex flex-col items-center py-4">
-                    <span className="loading loading-spinner text-primary mb-2"></span>
-                    <p className="text-sm text-slate-400">Pulling data...</p>
-                    {showReloadPrompt && (
-                      <button 
-                        onClick={() => window.location.reload()}
-                        className="mt-4 text-xs text-primary underline hover:text-primary/80"
-                      >
-                        Taking too long? Tap here to reload
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    {/* Total Bets */}
-                    <div className="bg-slate-700/30 rounded-lg p-4">
-                      <p className="text-3xl font-bold text-white">
-                        {safeTotalBets}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-2">Total Bets</p>
-                    </div>
-
-                    {/* Win Rate */}
-                    <div className="bg-primary/10 rounded-lg p-4">
-                      <p className="text-3xl font-bold text-primary">
-                        {safeTotalBets > 0 ? `${winRate}%` : "--"}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-2">Win Rate</p>
-                    </div>
-
-                    {/* KOR Balance */}
-                    <div className="bg-yellow-500/10 rounded-lg p-4">
-                      <p className="text-3xl font-bold text-yellow-400">
-                        {Math.floor(safeKorBalance)}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-2">KOR Balance</p>
-                    </div>
-                  </div>
-                )}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 hover:border-primary/30 transition-colors group animate-slide-up" style={{ animationDelay: '300ms' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <IconTrophy className="w-5 h-5" />
+                </div>
+                <span className="text-slate-400 text-sm font-medium">Wins</span>
               </div>
+              <div className="text-3xl font-bold text-white leading-none">{wins}</div>
+              <div className="mt-2 text-xs text-slate-500 uppercase tracking-wider font-bold">Total Victories</div>
             </div>
-          )}
+
+            <div className="bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 hover:border-blue-400/30 transition-colors group animate-slide-up" style={{ animationDelay: '400ms' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-blue-400/10 text-blue-400 group-hover:bg-blue-400 group-hover:text-white transition-colors">
+                  <IconActivity className="w-5 h-5" />
+                </div>
+                <span className="text-slate-400 text-sm font-medium">Win Rate</span>
+              </div>
+              <div className="text-3xl font-bold text-white leading-none">{winRate}%</div>
+              <div className="mt-2 text-xs text-slate-500 uppercase tracking-wider font-bold">Performance</div>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 hover:border-yellow-400/30 transition-colors group animate-slide-up" style={{ animationDelay: '500ms' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-yellow-400/10 text-yellow-500 group-hover:bg-yellow-400 group-hover:text-white transition-colors">
+                  <IconCoins className="w-5 h-5" />
+                </div>
+                <span className="text-slate-400 text-sm font-medium">Coins</span>
+              </div>
+              <div className="text-3xl font-bold text-white leading-none">{coins.toLocaleString()}</div>
+              <div className="mt-2 text-xs text-slate-500 uppercase tracking-wider font-bold">Game Currency</div>
+            </div>
+
+            <div className="bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 hover:border-primary/30 transition-colors group animate-slide-up" style={{ animationDelay: '600ms' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <IconStar className="w-5 h-5" />
+                </div>
+                <span className="text-slate-400 text-sm font-medium">Tokens</span>
+              </div>
+              <div className="text-3xl font-bold text-white leading-none">{korBalance.toLocaleString()}</div>
+              <div className="mt-2 text-xs text-slate-500 uppercase tracking-wider font-bold">KOR Balance</div>
+            </div>
+          </div>
 
           {/* CTA Button */}
-          {animationComplete && (
-            <button
-              onClick={onProceed}
-              className={cn(
-                "btn btn-primary w-full h-14 font-semibold text-lg",
-                "hover:scale-[1.02] transition-all duration-300",
-                "shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30",
-                "animate-fade-in",
-              )}
-            >
-              Continue
-              <IconChevronRight className="w-5 h-5 ml-2" />
-            </button>
-          )}
+          <button
+            onClick={onProceed}
+            className={cn(
+              "btn btn-primary w-full h-16 rounded-2xl font-bold text-xl group animate-fade-in",
+              "shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]",
+              "transition-all duration-300 transform hover:-translate-y-1 active:scale-95",
+              "flex items-center justify-center gap-2"
+            )}
+            style={{ animationDelay: '800ms' }}
+          >
+            Enter Dashboard
+            <IconChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+          </button>
 
-          {/* Tips */}
-          <div className="mt-8 text-slate-500 text-sm animate-fade-in">
-            <p>New matches start every few seconds. Good luck!</p>
-          </div>
+          <p className="mt-6 text-center text-slate-500 text-sm animate-fade-in" style={{ animationDelay: '1000ms' }}>
+            Syncing results from the arena...
+          </p>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="relative z-10 p-6 text-center text-slate-500 text-xs">
-        Play responsibly. Virtual currency only.
+      <footer className="relative z-10 p-8 flex justify-center gap-6 animate-fade-in" style={{ animationDelay: '1200ms' }}>
+        <div className="h-1 w-12 rounded-full bg-slate-700" />
+        <div className="h-1 w-12 rounded-full bg-primary" />
+        <div className="h-1 w-12 rounded-full bg-slate-700" />
       </footer>
     </div>
   );

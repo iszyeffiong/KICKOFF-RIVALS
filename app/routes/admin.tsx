@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
-import { useGame } from "../contexts/GameContext";
-import { useProfile } from "../hooks/useProfile";
+import { useGame } from "@/contexts/GameContext";
+import { useProfile } from "@/hooks/useProfile";
 import { AdminAuth } from "../components/AdminAuth";
 
 const AdminPortal = lazy(() =>

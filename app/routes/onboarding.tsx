@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Onboarding } from "../components/Onboarding";
-import { useGame } from "../contexts/GameContext";
+import { useGame } from "@/contexts/GameContext";
 
 export const Route = createFileRoute("/onboarding")({
   component: OnboardingRoute,

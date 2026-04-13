@@ -144,7 +144,7 @@ export function Leaderboard() {
             const isTop3 = index < 3;
             return (
               <div
-                key={entry.walletAddress}
+                key={`${entry.walletAddress}-${index}`}
                 className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 group hover:border-brand/30 transition-colors"
               >
                 <div className="flex justify-between items-start mb-2">

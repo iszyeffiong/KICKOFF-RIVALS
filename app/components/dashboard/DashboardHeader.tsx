@@ -10,9 +10,9 @@ import {
   IconTrophy,
 } from "../Icons";
 import { RivalsLogo } from "../RivalsLogo";
-import { useUserStore } from "../../stores/userStore";
-import { useProfile } from "../../hooks/useProfile";
-import { useGame } from "../../contexts/GameContext";
+import { useUserStore } from "@/stores/userStore";
+import { useProfile } from "@/hooks/useProfile";
+import { useGame } from "@/contexts/GameContext";
 import { formatNumber } from "../../lib/utils";
 
 const NAV_TABS = [

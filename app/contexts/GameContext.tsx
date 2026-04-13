@@ -6,12 +6,12 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { useSendTransaction, useAccount } from "wagmi";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { parseEther, getAddress } from "viem";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { useUserStore } from "../stores/userStore";
-import { useProfile } from "../hooks/useProfile";
+import { useUserStore } from "@/stores/userStore";
+import { useProfile } from "@/hooks/useProfile";
 import {
   TEAMS,
   LEAGUES,
@@ -120,7 +120,6 @@ interface GameContextType {
 
   // Handlers
   handleWalletConnected: (address: string, checkOnly?: boolean) => void;
-  handleMessageSigned: () => void;
   handleProceedFromWelcome: () => void;
   handleLogout: () => void;
   refreshProfile: (address: string, checkOnly?: boolean) => Promise<void>;
@@ -219,12 +218,11 @@ export function useGame() {
 // ==========================================
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const {
-    address: wagmiAddress,
-    isConnected: isWagmiConnected,
-    status: wagmiStatus,
-  } = useAccount();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { authenticated, ready, logout: privyLogout } = usePrivy();
+  const { wallets } = useWallets();
+  // Primary wallet: first embedded or injected wallet from Privy
+  const privyWallet = wallets[0] ?? null;
+  const privyAddress = privyWallet?.address ?? null;
   const [isInitializing, setIsInitializing] = useState(true);
 
   // New storage integration
@@ -364,100 +362,73 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const handleWalletConnected = useCallback(
     (address: string) => {
-      setWalletAddress(address);
+      setWalletAddress(address.toLowerCase());
       refreshProfileQuery();
     },
     [setWalletAddress, refreshProfileQuery],
   );
 
-  const handleMessageSigned = useCallback(() => {
-    setWalletVerified(true);
-  }, [setWalletVerified]);
 
   const handleProceedFromWelcome = useCallback(() => {
     if (!profile?.walletAddress) return;
     localStorage.setItem(`user_${profile.walletAddress}`, profile.username);
     setOnboardingComplete(true);
-  }, [profile?.walletAddress, profile?.username, setOnboardingComplete]);
+    refreshProfileQuery();
+  }, [profile?.walletAddress, profile?.username, setOnboardingComplete, refreshProfileQuery]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     setActiveBets([]);
     setTransactions([]);
     storeLogout();
-  }, [storeLogout]);
+    if (authenticated) {
+      await privyLogout();
+    }
+  }, [storeLogout, authenticated, privyLogout]);
 
   // ==========================================
-  // SYNC WAGMI STATE
+  // SYNC PRIVY STATE
   // ==========================================
 
   useEffect(() => {
+    // Privy not ready yet — keep initializing
+    if (!ready) return;
+
     const sync = async () => {
-      console.log("Sync Check:", {
-        wagmiStatus,
-        isWagmiConnected,
-        wagmiAddress,
-        currentWallet: walletState.address,
-        isInitializing,
-      });
+      console.log("[PRIVY SYNC]", { authenticated, privyAddress, currentWallet: walletState.address });
 
-      if (
-        (wagmiStatus === "reconnecting" ||
-          (wagmiStatus === "connecting" && !walletState.isConnected)) &&
-        !wagmiAddress
-      ) {
-        console.log(
-          "[SYNC] Wagmi still connecting and no address yet. Skipping sync.",
-        );
-        return;
-      }
-
-      if (wagmiAddress) {
-        if (walletState.address !== wagmiAddress) {
-          console.log("[SYNC] Address mismatch/init. Syncing...", wagmiAddress);
-          setWalletAddress(wagmiAddress);
+      if (authenticated && privyAddress) {
+        if (walletState.address?.toLowerCase() !== privyAddress.toLowerCase()) {
+          const lowerAddress = privyAddress.toLowerCase();
+          console.log("[PRIVY SYNC] New/changed address — syncing...", lowerAddress);
+          setWalletAddress(lowerAddress);
+          setWalletVerified(true); // Privy auth = verified
           try {
-            await refreshProfile(wagmiAddress);
+            await refreshProfile(lowerAddress);
           } catch (e) {
-            console.error("[SYNC] Profile refresh failed", e);
+            console.error("[PRIVY SYNC] Profile refresh failed", e);
           }
-        } else {
-          // Address matches, but make sure we have a username
-          // If username is missing, we MUST refresh the profile, even (and especially) during initialization
-          if (!profile?.username) {
-            console.log(
-              "[SYNC] Address matched but no username. Refreshing profile...",
-            );
-            await refreshProfile(wagmiAddress);
-          }
+        } else if (!profile?.username) {
+          console.log("[PRIVY SYNC] Authenticated but no username — refreshing...");
+          await refreshProfile(privyAddress);
         }
-      } else if (wagmiStatus === "disconnected") {
-        console.log("[SYNC] Wagmi disconnected.");
+      } else if (!authenticated) {
+        // User logged out of Privy
         if (walletState.isConnected) {
-          console.log("[SYNC] Wallet was connected, logging out.");
+          console.log("[PRIVY SYNC] Privy logged out — clearing state.");
           handleLogout();
-        } else {
-          // Check local storage for manual onboarding completion if needed
-          const completed = localStorage.getItem("onboarding_complete");
-          if (completed === "true") {
-            // If we were manually onboarded but disconnected, maybe we shouldn't fully logout?
-            // For now, let's allow the disconnect to handle state clean up
-          }
         }
       }
 
-      // Delay finishing initialization slightly to ensure state propagation
       if (isInitializing) {
-        console.log(
-          "[SYNC] Initialization complete. Setting isInitializing to false in 500ms.",
-        );
         setTimeout(() => setIsInitializing(false), 500);
       }
     };
+
     sync();
   }, [
-    wagmiAddress,
-    isWagmiConnected,
-    wagmiStatus,
+    ready,
+    authenticated,
+    privyAddress,
     refreshProfile,
     handleLogout,
     walletState.address,
@@ -1409,7 +1380,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dashboardMounted,
         setDashboardMounted,
         handleWalletConnected,
-        handleMessageSigned,
         handleProceedFromWelcome,
         handleLogout,
         refreshProfile,

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getUserProfile } from "../../server/user";
+import { getOrCreateUserInternal } from "../../server/user";
 
 export const Route = createFileRoute("/api/user/profile")({
   server: {
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/api/user/profile")({
         const username = url.searchParams.get("username") || undefined;
         const leagueId = url.searchParams.get("leagueId") || undefined;
         const teamId = url.searchParams.get("teamId") || undefined;
+        const checkOnly = url.searchParams.get("checkOnly") === "true";
 
         if (!walletAddress) {
           return Response.json(
@@ -19,13 +20,14 @@ export const Route = createFileRoute("/api/user/profile")({
         }
 
         try {
-          const result = await getUserProfile({
-            data: {
-              walletAddress,
-              username,
-              leagueId,
-              teamId,
-            },
+          // Calling the internal function directly to avoid double-wrapping
+          // which can cause hangs during Nitro request processing
+          const result = await getOrCreateUserInternal({
+            walletAddress,
+            username,
+            leagueId,
+            teamId,
+            checkOnly,
           });
 
           return Response.json(result);

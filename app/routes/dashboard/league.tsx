@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useGame } from "../../contexts/GameContext";
-import { useProfile } from "../../hooks/useProfile";
+import { useGame } from "@/contexts/GameContext";
+import { useProfile } from "@/hooks/useProfile";
 import { LeagueTable } from "../../components/LeagueTable";
 
 export const Route = createFileRoute("/dashboard/league")({

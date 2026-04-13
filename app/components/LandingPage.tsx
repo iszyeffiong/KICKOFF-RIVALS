@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "../lib/utils";
 import { RivalsLogo } from "./RivalsLogo";
+import { useUserStore } from "@/stores/userStore";
 import {
   IconFootball,
   IconTrophy,
@@ -70,6 +71,7 @@ function FloatingIcon({
 }
 
 export function LandingPage({ onEnter }: LandingPageProps) {
+  const { walletState } = useUserStore();
   // Generate random positions for icons on mount to avoid hydration mismatch
   const [icons, setIcons] = useState<
     Array<{
@@ -143,13 +145,24 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             Stats
           </a>
         </div>
-        {/* <button
-          onClick={onEnter}
-          className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-500/30 text-emerald-400 text-sm font-medium hover:bg-emerald-500/10 transition-all"
-        >
-          <IconWallet className="w-4 h-4" />
-          Connect Wallet
-        </button> */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onEnter}
+            className="hidden md:flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/20 transition-all active:scale-95"
+          >
+            {walletState.isConnected && walletState.isVerified ? (
+              <>
+                <IconZap className="w-4 h-4" />
+                Go to Dashboard
+              </>
+            ) : (
+              <>
+                <IconWallet className="w-4 h-4" />
+                Sign In
+              </>
+            )}
+          </button>
+        </div>
       </nav>
 
       {/* Hero Section */}

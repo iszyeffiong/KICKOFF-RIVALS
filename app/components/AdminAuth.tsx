@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSignMessage } from "wagmi";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { cn } from "../lib/utils";
 import {
   IconShield,
@@ -24,7 +24,9 @@ export function AdminAuth({ onAuthSuccess, onCancel }: AdminAuthProps) {
     "idle" | "signing" | "verifying" | "success" | "error"
   >("idle");
   const [error, setError] = useState<string | null>(null);
-  const { signMessageAsync } = useSignMessage();
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+  const wallet = wallets[0];
 
   const handleAuthenticate = async () => {
     setStatus("signing");
@@ -34,17 +36,14 @@ export function AdminAuth({ onAuthSuccess, onCancel }: AdminAuthProps) {
       // Create auth message with nonce
       const { message, nonce, timestamp } = createAuthMessage();
 
-      // Request signature from wallet
-      const signature = await signMessageAsync({ message });
-
-      setStatus("verifying");
-
-      // Get wallet address from wagmi
-      const address = (window as any).ethereum?.selectedAddress;
-
-      if (!address) {
-        throw new Error("No wallet address found");
-      }
+      // Request signature via Privy wallet
+      if (!wallet) throw new Error("No wallet connected");
+      const provider = await wallet.getEthereumProvider();
+      const address = wallet.address;
+      const signature = await provider.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
 
       // Verify with backend
       const result = await verifyAdminWithBackend(address, signature, message);

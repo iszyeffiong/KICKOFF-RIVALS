@@ -42,15 +42,23 @@ export const useUserStore = create<UserState>()(
       },
       setWalletAddress: (address) =>
         set((state) => {
-          const addressChanged = state.walletState.address !== address;
+          const oldAddress = state.walletState.address?.toLowerCase();
+          const newAddress = address?.toLowerCase();
+          
+          if (oldAddress === newAddress && state.walletState.isConnected === !!address) {
+            return state;
+          }
+
+          const addressChanged = oldAddress !== newAddress;
+          
           return {
             walletState: {
               ...state.walletState,
-              address,
+              address: address ? address.toLowerCase() : null,
               isConnected: !!address,
               isVerified: addressChanged ? false : state.walletState.isVerified,
             },
-            // Reset onboarding state if switching wallets
+            // Reset onboarding state ONLY if switching to a DIFFERENT wallet
             onboardingComplete: addressChanged ? false : state.onboardingComplete,
             isNewUser: addressChanged ? false : state.isNewUser,
             registrationData: addressChanged ? null : state.registrationData,

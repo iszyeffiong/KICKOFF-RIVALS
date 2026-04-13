@@ -1,8 +1,8 @@
 import { lazy, Suspense } from "react";
-import { useSendTransaction } from "wagmi";
+import { useWallets } from "@privy-io/react-auth";
 import { parseEther, getAddress } from "viem";
-import { useGame } from "../../contexts/GameContext";
-import { useProfile } from "../../hooks/useProfile";
+import { useGame } from "@/contexts/GameContext";
+import { useProfile } from "@/hooks/useProfile";
 import { CONVERSION_RATE, CONVERSION_YIELD } from "../../constants";
 import { WalletModal } from "../WalletModal";
 import { SwapConfirm } from "../SwapConfirm";
@@ -61,7 +61,8 @@ export function DashboardModals() {
     setShowUpdateUsername,
     handleUpdateUsername,
   } = useGame();
-  const { sendTransactionAsync } = useSendTransaction();
+  const { wallets } = useWallets();
+  const privyWallet = wallets[0];
   const TREASURY_WALLET = (import.meta as any).env.VITE_TREASURY_WALLET || "0x7AcbaEf80145c363941F480072b260909A64B294";
   const CLAIM_FEE = (import.meta as any).env.VITE_CLAIM_FEE || "0.000022";
 
@@ -91,10 +92,16 @@ export function DashboardModals() {
           coins={profile.coins}
           onConfirm={async (selectedAmount) => {
             try {
-              // GAS FEE REQUIREMENT
-              const txHash = await sendTransactionAsync({
-                to: getAddress(TREASURY_WALLET),
-                value: parseEther(CLAIM_FEE),
+              // GAS FEE REQUIREMENT via Privy wallet
+              if (!privyWallet) throw new Error("No wallet connected");
+              const provider = await privyWallet.getEthereumProvider();
+              const txHash = await provider.request({
+                method: "eth_sendTransaction",
+                params: [{
+                  to: getAddress(TREASURY_WALLET),
+                  value: `0x${parseEther(CLAIM_FEE).toString(16)}`,
+                  from: privyWallet.address,
+                }],
               });
 
               const res = await fetch(`${API_URL}/api/user/swap-coins-to-kor`, {

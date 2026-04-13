@@ -8,9 +8,9 @@ import {
 import { IconTrophy, IconChevronRight } from "../components/Icons";
 import type { ReactNode } from "react";
 import appCss from "../styles/globals.css?url";
-import { GameProvider } from "../contexts/GameContext";
+import { GameProvider } from "@/contexts/GameContext";
 import { Toaster } from "react-hot-toast";
-import { AppKitProvider } from "../config/appkit";
+import { PrivyClientProvider } from "@/config/privy";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -76,12 +76,12 @@ function RootComponent() {
 
   return (
     <RootDocument>
-      <AppKitProvider>
+      <PrivyClientProvider>
         <GameProvider>
           <Outlet />
           <Toaster position="top-center" />
         </GameProvider>
-      </AppKitProvider>
+      </PrivyClientProvider>
     </RootDocument>
   );
 }

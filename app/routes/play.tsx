@@ -3,23 +3,28 @@ import { useEffect } from "react";
 import { GameSelection } from "../components/GameSelection";
 import { useGame } from "../contexts/GameContext";
 import { useUserStore } from "../stores/userStore";
-import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
-
-// Set to true to enable maintenance mode
-const IS_MAINTENANCE = true;
+import { useProfile } from "../hooks/useProfile";
 
 export const Route = createFileRoute("/play")({
   component: PlayRoute,
 });
 
 function PlayRoute() {
-  if (IS_MAINTENANCE) {
-    return <MaintenanceOverlay />;
-  }
-
   const navigate = useNavigate();
-  const { walletState } = useGame();
-  const { onboardingComplete } = useUserStore();
+  const { walletState, onboardingComplete } = useUserStore();
+  
+  // Background profile fetch - will auto-update onboardingComplete if user exists
+  const { profile, isLoading } = useProfile();
+
+  // Auto-redirect if everything is set
+  useEffect(() => {
+    if (walletState.isConnected && walletState.isVerified && onboardingComplete) {
+      navigate({ to: "/dashboard" });
+    } else if (!walletState.isConnected) {
+      // Not even connected? Go to entry choice first
+      navigate({ to: "/entry" });
+    }
+  }, [walletState.isConnected, walletState.isVerified, onboardingComplete, navigate]);
 
   return (
     <GameSelection
@@ -30,6 +35,11 @@ function PlayRoute() {
           } else {
             navigate({ to: "/onboarding" });
           }
+        } else if (walletState.isConnected && !walletState.isVerified) {
+          navigate({ 
+            to: "/sign", 
+            search: { address: walletState.address || "" } as any 
+          });
         } else {
           navigate({ to: "/entry" });
         }

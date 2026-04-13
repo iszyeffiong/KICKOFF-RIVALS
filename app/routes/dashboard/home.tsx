@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useGame } from "../../contexts/GameContext";
+import { useGame } from "@/contexts/GameContext";
 import { LEAGUES } from "../../constants";
 import { ResultsOverlay } from "../../components/dashboard/ResultsOverlay";
 import { TimerBanner } from "../../components/dashboard/TimerBanner";

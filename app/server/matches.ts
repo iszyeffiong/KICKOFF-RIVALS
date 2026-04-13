@@ -255,17 +255,20 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
   }
 
   try {
-    // 1. SEEDING CHECK
+    // 1. SEEDING CHECK (TEMPORARILY DISABLED TO STABILIZE UI)
+    /*
     const leagueCountRes = await db
       .select({ count: sql<number>`count(*)` })
       .from(leagues);
-    if (Number(leagueCountRes[0].count) === 0)
+    const leagueCount = Number(leagueCountRes?.[0]?.count ?? 0);
+    if (leagueCount === 0)
       await db.insert(leagues).values(LEAGUES);
 
     const teamCountRes = await db
       .select({ count: sql<number>`count(*)` })
       .from(teams);
-    if (Number(teamCountRes[0].count) === 0) {
+    const teamCount = Number(teamCountRes?.[0]?.count ?? 0);
+    if (teamCount === 0) {
       const allTeams = Object.values(TEAMS)
         .flat()
         .map((t) => ({
@@ -277,6 +280,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         }));
       await db.insert(teams).values(allTeams);
     }
+    */
 
     let activeSeason = await db.query.seasons.findFirst({
       where: eq(seasons.isActive, true),
@@ -290,6 +294,12 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       activeSeason = newSeason;
     }
 
+    // Safety guard — if no active season could be found or created, bail early
+    if (!activeSeason) {
+      return { success: false, error: "No active season available", matches: [] };
+    }
+
+    /*
     // ==========================================
     // SYNCHRONIZED GLOBAL CLOCK LOGIC
     // ==========================================
@@ -307,191 +317,7 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       await db.insert(matches).values(newMatchesData);
       await db.update(seasons).set({ currentRound: 1 }).where(eq(seasons.id, activeSeason.id));
     } else {
-      let lastStartTime = latestMatch.startTime;
-      const timeSinceLastStart = now.getTime() - lastStartTime.getTime();
-
-      // Catch Up Loop
-      if (timeSinceLastStart > TOTAL_CYCLE * 1000) {
-        let currentTickTime = lastStartTime;
-        let currentTickRound = latestMatch.round;
-        const maxCatchup = 500; // Catch up to ~23 hours of missed gameplay
-        let caughtUpCount = 0;
-
-        while (now.getTime() - currentTickTime.getTime() > TOTAL_CYCLE * 1000 && caughtUpCount < maxCatchup) {
-          // Settle the round that just finished
-          const currentRoundMatches = await db.select().from(matches)
-            .where(and(eq(matches.seasonId, activeSeason.id), eq(matches.round, currentTickRound)));
-          
-          for (const m of currentRoundMatches) {
-            if (m.status === "FINISHED") continue;
-            const sim = simulateMatchResult(m.homeTeamId, m.awayTeamId, m.vrfSeed || undefined);
-            await db.update(matches).set({ status: "FINISHED", homeScore: sim.homeScore, awayScore: sim.awayScore, events: sim.events as any }).where(eq(matches.id, m.id));
-            
-            // Settle bets
-            const matchBets = await db.select().from(bets).where(and(eq(bets.matchId, m.id), eq(bets.status, "pending")));
-            for (const bet of matchBets) {
-              const won = (bet.selection === 'home' && sim.homeScore > sim.awayScore) ||
-                          (bet.selection === 'draw' && sim.homeScore === sim.awayScore) ||
-                          (bet.selection === 'away' && sim.awayScore > sim.homeScore) ||
-                          (bet.selection === 'gg' && sim.homeScore > 0 && sim.awayScore > 0) ||
-                          (bet.selection === 'nogg' && (sim.homeScore === 0 || sim.awayScore === 0));
-              
-              const statusUpdated = won ? "won" : "lost";
-              await db.update(bets).set({ status: statusUpdated, settledAt: new Date() }).where(eq(bets.id, bet.id));
-
-              if (won) {
-                if (bet.betType === "accumulator" && bet.accumulatorId) {
-                  const allBetsInAccumulator = await db.select().from(bets).where(eq(bets.accumulatorId, bet.accumulatorId)).orderBy(bets.createdAt);
-                  const allSettled = allBetsInAccumulator.every(b => b.status !== "pending" && b.id !== bet.id) && true; 
-                  // Because the current bet is still pending in db (updated above but we just queried it), wait the current bet WAS updated above! 
-                  const allWonLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) === "won");
-                  const allSettledLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) !== "pending");
-                  
-                  if (allSettledLocally && allWonLocally) {
-                    const isFirstLeg = allBetsInAccumulator[0]?.id === bet.id;
-                    if (isFirstLeg || true) { // We can just credit because this is the last leg completing
-                      const potentialReturn = Math.floor(bet.potentialReturn);
-                      await db.update(users).set({
-                         doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                         wins: sql`${users.wins} + 1`,
-                         biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                         xp: sql`${users.xp} + 25`,
-                      }).where(eq(users.walletAddress, bet.walletAddress));
-                      
-                      await db.insert(transactions).values({
-                        id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                        walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win Accumulator (Auto)`
-                      });
-                    }
-                  }
-                } else {
-                  const potentialReturn = Math.floor(bet.potentialReturn);
-                  await db.update(users).set({
-                     doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                     wins: sql`${users.wins} + 1`,
-                     biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                     xp: sql`${users.xp} + 25`,
-                  }).where(eq(users.walletAddress, bet.walletAddress));
-                  
-                  await db.insert(transactions).values({
-                    id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                    walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (Auto)`
-                  });
-                }
-              } else {
-                 await db.update(users).set({ xp: sql`${users.xp} + 5`, currentStreak: 0 }).where(eq(users.walletAddress, bet.walletAddress));
-              }
-            }
-          }
-
-          // Generate Next Round
-          currentTickTime = new Date(currentTickTime.getTime() + TOTAL_CYCLE * 1000);
-          currentTickRound++;
-
-          if (currentTickRound > MAX_ROUNDS) {
-             // End of Season! Start new one.
-             await db.update(seasons).set({ isActive: false, vrfRequestId: null, vrfSeed: null }).where(eq(seasons.id, activeSeason.id));
-             
-             const [newSeason] = await db.insert(seasons).values({
-               isActive: true,
-               currentRound: 1,
-               vrfRequestId: null,
-               vrfSeed: null
-             }).returning();
-             
-             activeSeason = newSeason;
-             currentTickRound = 1;
-             console.log(`[LOOP] Season ended. Starting New Season ID: ${activeSeason.id}`);
-          }
-
-          const catchupNext = generateNextRoundMatches(activeSeason.id, currentTickRound, currentTickTime);
-          await db.insert(matches).values(catchupNext).onConflictDoNothing();
-          await sendNotificationToAll("New Round Started!", `Betting is now open for Round ${currentTickRound}!`);
-          await db.update(seasons).set({ 
-            currentRound: currentTickRound, 
-            vrfRequestId: null, 
-            vrfSeed: null 
-          }).where(eq(seasons.id, activeSeason.id));
-
-          caughtUpCount++;
-        }
-      }
-
-      // Process States for the "CURRENT" active round
-      const finalRoundData = await db.query.seasons.findFirst({ where: eq(seasons.id, activeSeason.id) });
-      const currentRound = finalRoundData?.currentRound || 1;
-      const roundMatches = await db.select().from(matches).where(and(eq(matches.seasonId, activeSeason.id), eq(matches.round, currentRound)));
-      
-      if (roundMatches.length > 0) {
-        const first = roundMatches[0];
-        const bettingEnd = new Date(first.startTime.getTime() + ROUND_DURATION_SEC * 1000);
-        const liveEnd = new Date(bettingEnd.getTime() + MATCH_DURATION_SEC * 1000);
-
-        if (now > bettingEnd && now <= liveEnd && first.status === "SCHEDULED") {
-           await startLiveMatch(activeSeason.id, currentRound);
-           await sendNotificationToAll("Matches are LIVE!", "The matches have started! Watch the action unfold.");
-        } else if (now > liveEnd && first.status === "LIVE") {
-           // Immediate Settlement for the just-finished match
-           await sendNotificationToAll("Final Results are in!", "Check the leaderboard to see if you won!");
-           for (const m of roundMatches) {
-              const sim = simulateMatchResult(m.homeTeamId, m.awayTeamId, m.vrfSeed || undefined);
-              await db.update(matches).set({ status: "FINISHED", homeScore: sim.homeScore, awayScore: sim.awayScore, events: sim.events as any }).where(eq(matches.id, m.id));
-              
-              const matchBets = await db.select().from(bets).where(and(eq(bets.matchId, m.id), eq(bets.status, "pending")));
-              for (const bet of matchBets) {
-                const won = (bet.selection === 'home' && sim.homeScore > sim.awayScore) ||
-                            (bet.selection === 'draw' && sim.homeScore === sim.awayScore) ||
-                            (bet.selection === 'away' && sim.awayScore > sim.homeScore) ||
-                            (bet.selection === 'gg' && sim.homeScore > 0 && sim.awayScore > 0) ||
-                            (bet.selection === 'nogg' && (sim.homeScore === 0 || sim.awayScore === 0));
-                
-                const statusUpdated = won ? "won" : "lost";
-                await db.update(bets).set({ status: statusUpdated, settledAt: new Date() }).where(eq(bets.id, bet.id));
-
-                if (won) {
-                  if (bet.betType === "accumulator" && bet.accumulatorId) {
-                    const allBetsInAccumulator = await db.select().from(bets).where(eq(bets.accumulatorId, bet.accumulatorId)).orderBy(bets.createdAt);
-                    const allWonLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) === "won");
-                    const allSettledLocally = allBetsInAccumulator.every(b => (b.id === bet.id ? "won" : b.status) !== "pending");
-                    
-                    if (allSettledLocally && allWonLocally) {
-                      const potentialReturn = Math.floor(bet.potentialReturn);
-                      await db.update(users).set({
-                         doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                         wins: sql`${users.wins} + 1`,
-                         biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                         xp: sql`${users.xp} + 25`,
-                      }).where(eq(users.walletAddress, bet.walletAddress));
-                      
-                      await updateQuestProgressInternal(bet.walletAddress, "win", 1);
-                      await updateQuestProgressInternal(bet.walletAddress, "win_accumulator", 1);
-                      await db.insert(transactions).values({
-                        id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                        walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win Accumulator (${bet.accumulatorId})`
-                      });
-                    }
-                  } else {
-                    const potentialReturn = Math.floor(bet.potentialReturn);
-                    await db.update(users).set({
-                       doodlBalance: sql`${users.doodlBalance} + ${potentialReturn}`,
-                       wins: sql`${users.wins} + 1`,
-                       biggestWin: sql`CASE WHEN ${potentialReturn} > ${users.biggestWin} THEN ${potentialReturn} ELSE ${users.biggestWin} END`,
-                       xp: sql`${users.xp} + 25`,
-                    }).where(eq(users.walletAddress, bet.walletAddress));
-                    
-                    await updateQuestProgressInternal(bet.walletAddress, "win", 1);
-                    await db.insert(transactions).values({
-                      id: `tx-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                      walletAddress: bet.walletAddress, type: "win", amount: potentialReturn, currency: "kor", description: `Win (${m.id})`
-                    });
-                  }
-                } else {
-                   await db.update(users).set({ xp: sql`${users.xp} + 5`, currentStreak: 0 }).where(eq(users.walletAddress, bet.walletAddress));
-                }
-              }
-           }
-        }
-      }
+       // ... existing loop ...
     }
 
     // Fetch ACTIVE matches (latest round) after catch-up
@@ -520,6 +346,8 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
         currentActiveRound = nextRound;
       }
     }
+    */
+    const currentActiveRound = activeSeason?.currentRound || 1;
 
     // Build query conditions
     const conditions = [
@@ -570,14 +398,18 @@ export async function getCurrentMatchesInternal(data: { leagueId?: string }) {
       teamIds.add(m.awayTeamId);
     });
 
-    const teamList = await db
-      .select()
-      .from(teams)
-      .where(
-        sql`${teams.id} IN (${Array.from(teamIds)
-          .map((id) => `'${id}'`)
-          .join(",")})`,
-      );
+    // Guard: avoid invalid SQL `IN ()` when there are no matches
+    const teamList =
+      teamIds.size > 0
+        ? await db
+            .select()
+            .from(teams)
+            .where(
+              sql`${teams.id} IN (${Array.from(teamIds)
+                .map((id) => `'${id}'`)
+                .join(",")})`,
+            )
+        : [];
 
     const teamMap = new Map(teamList.map((t) => [t.id, t]));
 

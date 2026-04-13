@@ -352,6 +352,15 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   transactions: many(transactions),
   quests: many(userQuests),
   pushSubscriptions: many(pushSubscriptions),
+  couponRedemptions: many(couponRedemptions),
+  auditLogs: many(auditLogs),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.actor],
+    references: [users.walletAddress],
+  }),
 }));
 
 export const matchesRelations = relations(matches, ({ one, many }) => ({
@@ -400,6 +409,34 @@ export const userQuestsRelations = relations(userQuests, ({ one }) => ({
     references: [users.walletAddress],
   }),
 }));
+
+export const pushSubscriptionsRelations = relations(
+  pushSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [pushSubscriptions.walletAddress],
+      references: [users.walletAddress],
+    }),
+  })
+);
+
+export const couponsRelations = relations(coupons, ({ many }) => ({
+  redemptions: many(couponRedemptions),
+}));
+
+export const couponRedemptionsRelations = relations(
+  couponRedemptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [couponRedemptions.walletAddress],
+      references: [users.walletAddress],
+    }),
+    coupon: one(coupons, {
+      fields: [couponRedemptions.couponCode],
+      references: [coupons.code],
+    }),
+  })
+);
 
 export const quests = pgTable("quests", {
   id: varchar("id", { length: 50 }).primaryKey(),

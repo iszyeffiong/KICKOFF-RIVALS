@@ -17,7 +17,7 @@ function EntryRoute() {
       if (onboardingComplete) {
         navigate({ to: "/dashboard" });
       } else {
-        navigate({ to: "/onboarding" });
+        navigate({ to: "/welcome" });
       }
     }
   }, [walletState.isConnected, walletState.isVerified, onboardingComplete, navigate]);

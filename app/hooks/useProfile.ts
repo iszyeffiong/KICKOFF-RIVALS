@@ -6,7 +6,12 @@ import { INITIAL_QUESTS } from '../constants';
 
 const API_URL = "";
 
-export const useProfile = () => {
+interface UseProfileOptions {
+  checkOnly?: boolean;
+  address?: string;
+}
+
+export const useProfile = ({ checkOnly = false, address: overrideAddress }: UseProfileOptions = {}) => {
   const queryClient = useQueryClient();
   const { 
     walletState, 
@@ -15,7 +20,7 @@ export const useProfile = () => {
     setIsNewUser 
   } = useUserStore();
   
-  const address = walletState.address;
+  const address = overrideAddress || walletState.address;
 
   const query = useQuery<UserStats & { success: boolean; isNew?: boolean }>({
     queryKey: ['profile', address],
@@ -25,6 +30,7 @@ export const useProfile = () => {
       const params = new URLSearchParams({
         walletAddress: address.toLowerCase(),
       });
+      if (checkOnly) params.set("checkOnly", "true");
 
       // Include registration data if available to create/update user
       if (registrationData) {
@@ -39,12 +45,17 @@ export const useProfile = () => {
       const data = await res.json();
 
       if (data.success) {
-        // If the server confirms the user is fully setup, clear pending registration data
+        // If the server confirms the user is fully setup, restore state
         if (!data.isNew && data.username && data.allianceTeamId) {
           setIsNewUser(false);
           setRegistrationData(null);
+          // NEW: Ensure they are marked as onboarded if they have a valid team/username
+          const store = useUserStore.getState();
+          store.setOnboardingComplete(true);
+          store.setWalletVerified(true);
         } else if (data.isNew) {
           setIsNewUser(true);
+          useUserStore.getState().setOnboardingComplete(false);
         }
 
         // Merge INITIAL_SOCIAL_QUESTS

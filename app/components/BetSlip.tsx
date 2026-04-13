@@ -216,7 +216,7 @@ export function BetSlip({
         <div className="space-y-2 mb-4">
           {selections.map((sel) => (
             <div
-              key={sel.matchId}
+              key={`${sel.matchId}-${sel.selection}`}
               className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
             >
               <div className="flex-1 min-w-0">

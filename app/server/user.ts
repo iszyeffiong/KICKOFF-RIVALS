@@ -34,9 +34,9 @@ export const updateUsername = createServerFn({ method: "POST" })
       return { success: false, error: "Username can only be changed once" };
     }
 
-    // Check if username is already taken
+    // Check if username is already taken (case-insensitive)
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.username, data.newUsername),
+      where: sql`LOWER(${users.username}) = LOWER(${data.newUsername})`,
     });
 
     if (existingUser) {
@@ -151,7 +151,7 @@ const getOrCreateUserSchema = z.object({
 type GetOrCreateUserInput = z.infer<typeof getOrCreateUserSchema>;
 
 // Internal function to be used by other server functions
-async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
+export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   const normalized = data.walletAddress.toLowerCase();
 
   // Try to find existing user
@@ -270,8 +270,8 @@ async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
 
   if (data.checkOnly) {
     return {
-      success: false,
-      error: "User not found",
+      success: true,
+      user: null,
       isNew: true,
     };
   }
@@ -726,7 +726,7 @@ export const checkUsernameAvailability = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => checkUsernameSchema.parse(data))
   .handler(async ({ data }) => {
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.username, data.username),
+      where: sql`LOWER(${users.username}) = LOWER(${data.username})`,
     });
 
     return {

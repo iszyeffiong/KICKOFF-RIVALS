@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useGame } from "../../contexts/GameContext";
+import { useGame } from "@/contexts/GameContext";
 import { ProfileScreen } from "../../components/ProfileScreen";
-import { useUserStore } from "../../stores/userStore";
-import { useProfile } from "../../hooks/useProfile";
+import { useUserStore } from "@/stores/userStore";
+import { useProfile } from "@/hooks/useProfile";
 
 export const Route = createFileRoute("/dashboard/profile")({
   component: ProfileTab,
