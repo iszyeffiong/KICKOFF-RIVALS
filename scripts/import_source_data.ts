@@ -1,9 +1,11 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
 import fs from "fs";
 import path from "path";
+import pg from "pg";
+import * as dotenv from "dotenv";
 
-const TARGET_URL = process.env.DATABASE_URL || "postgresql://postgres:SDdgXKUnLwyfkfFYmWRWMZAgqibSvMUx@postgres.railway.internal:5432/railway";
+dotenv.config();
+
+const TARGET_URL = process.env.DATABASE_URL || "postgresql://postgres:SDdgXKUnLwyfkfFYmWRWMZAgqibSvMUx@metro.proxy.rlwy.net:19221/railway";
 
 async function importData() {
   const client = new pg.Client({ connectionString: TARGET_URL });

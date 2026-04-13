@@ -6,7 +6,7 @@ import { useUserStore } from "../stores/userStore";
 import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
 
 // Set to true to enable maintenance mode
-const IS_MAINTENANCE = true;
+const IS_MAINTENANCE = false;
 
 export const Route = createFileRoute("/play")({
   component: PlayRoute,
