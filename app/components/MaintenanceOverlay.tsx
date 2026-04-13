@@ -8,27 +8,21 @@ export function MaintenanceOverlay() {
           <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
           <div className="relative text-7xl mb-4">🚧</div>
         </div>
-        
-        <h1 className="text-4xl font-sport italic text-white tracking-widest uppercase">
+
+        <h1 className="text-4xl font-sport italic text-black tracking-widest uppercase">
           Under Maintenance
         </h1>
-        
+
         <div className="h-1 w-24 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto" />
-        
+
         <p className="text-light-secondary text-lg leading-relaxed font-sans">
-          We're currently preparing the field for a major upgrade. 
+          We're currently preparing the field for a major upgrade.
           The game will be back online shortly with improved features and performance.
         </p>
-        
-        <div className="flex items-center justify-center gap-3 text-primary py-4">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="font-mono text-sm uppercase tracking-widest">
-            Database Migration in Progress
-          </span>
-        </div>
+
 
         <div className="pt-8 border-t border-white/10">
-          <p className="text-xs text-white/40 uppercase tracking-[0.2em]">
+          <p className="text-xs text-black uppercase tracking-[0.2em]">
             Thanks for your patience, Rivals!
           </p>
         </div>

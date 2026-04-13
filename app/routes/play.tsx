@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { GameSelection } from "../components/GameSelection";
 import { useGame } from "../contexts/GameContext";
+import { useUserStore } from "../stores/userStore";
 import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
 
 // Set to true to enable maintenance mode
@@ -21,6 +22,8 @@ function PlayRoute() {
     if (walletState.isConnected && walletState.isVerified && onboardingComplete) {
       navigate({ to: "/dashboard" });
     }
+  }, [walletState.isConnected, walletState.isVerified, onboardingComplete, navigate]);
+
   if (IS_MAINTENANCE) {
     return <MaintenanceOverlay />;
   }

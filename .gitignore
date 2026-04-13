@@ -62,3 +62,4 @@ contracts/cache/
 
 # Local dev notes (never push)
 TODO.md
+db_backup/
