@@ -41,17 +41,21 @@ export const useUserStore = create<UserState>()(
         verificationTimestamp: null,
       },
       setWalletAddress: (address) =>
-        set((state) => ({
-          walletState: {
-            ...state.walletState,
-            address,
-            isConnected: !!address,
-            // Reset verification only if switching to a DIFFERENT non-null address
-            isVerified: (state.walletState.address && address && state.walletState.address !== address)
-              ? false
-              : state.walletState.isVerified,
-          },
-        })),
+        set((state) => {
+          const addressChanged = state.walletState.address !== address;
+          return {
+            walletState: {
+              ...state.walletState,
+              address,
+              isConnected: !!address,
+              isVerified: addressChanged ? false : state.walletState.isVerified,
+            },
+            // Reset onboarding state if switching wallets
+            onboardingComplete: addressChanged ? false : state.onboardingComplete,
+            isNewUser: addressChanged ? false : state.isNewUser,
+            registrationData: addressChanged ? null : state.registrationData,
+          };
+        }),
       setWalletVerified: (verified) =>
         set((state) => ({
           walletState: {
@@ -70,6 +74,7 @@ export const useUserStore = create<UserState>()(
           },
           isNewUser: false,
           registrationData: null,
+          onboardingComplete: false,
         }),
 
       // Onboarding

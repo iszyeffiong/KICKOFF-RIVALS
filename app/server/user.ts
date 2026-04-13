@@ -447,6 +447,7 @@ export const getUserProfile = createServerFn({ method: "GET" })
       nextCheckInIn: 0,
       transactions: ((user as any).transactions || [])
         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 50)
         .map((tx: any) => ({
           ...tx,
           timestamp: new Date(tx.createdAt).getTime(),
