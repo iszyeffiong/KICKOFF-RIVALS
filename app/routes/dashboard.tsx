@@ -16,7 +16,7 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardLayout() {
   const navigate = useNavigate();
   const { profile, isLoading: isProfileLoading, isFetching } = useProfile();
-  const { isInitializing, setDashboardMounted, betSlipSelections, walletState } = useGame();
+  const { isInitializing, setDashboardMounted, betSlipSelections, walletState, registrationData } = useGame();
 
   // Tell the context that the dashboard is mounted (starts game loop)
   useEffect(() => {
@@ -35,13 +35,17 @@ function DashboardLayout() {
       return;
     }
 
+    const hasPendingData = !!(registrationData?.username && registrationData?.leagueId && registrationData?.teamId);
+
     // Profile finished loading but we have no username? 
     // This means the user is not in our DB yet
-    if (!profile?.username) {
-      console.log("[DASHBOARD] No profile found, redirecting to onboarding...");
+    // If we HAVE pending data, we expect the useProfile hook to finalize the creation shortly, 
+    // so we don't redirect yet.
+    if (!profile?.username && !hasPendingData) {
+      console.log("[DASHBOARD] No profile found and no pending data, redirecting to onboarding...");
       navigate({ to: "/onboarding" });
-    } else if (!profile.allianceLeagueId || !profile.allianceTeamId) {
-      console.log("[DASHBOARD] Incomplete profile detected, redirecting to onboarding...");
+    } else if (profile?.username && (!profile.allianceLeagueId || !profile.allianceTeamId) && !hasPendingData) {
+      console.log("[DASHBOARD] Incomplete profile detected and no pending data, redirecting to onboarding...");
       navigate({ to: "/onboarding" });
     }
   }, [
@@ -51,6 +55,7 @@ function DashboardLayout() {
     isInitializing, 
     isProfileLoading, 
     walletState.isConnected,
+    registrationData,
     navigate
   ]);
 
