@@ -16,6 +16,7 @@ function SignRoute() {
     handleMessageSigned,
     handleLogout: contextLogout,
     profile,
+    registrationData,
   } = useGame();
   const { isPending: isProfileLoading } = useProfile();
   const [waitingForProfile, setWaitingForProfile] = useState(false);
@@ -25,7 +26,10 @@ function SignRoute() {
     if (walletState.isConnected && walletState.isVerified && profile) {
       handleMessageSigned();
       
-      if (profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId) {
+      const isIncomplete = profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId;
+      const hasPendingData = !!(registrationData?.username && registrationData?.leagueId && registrationData?.teamId);
+
+      if (isIncomplete && !hasPendingData) {
         navigate({ to: "/onboarding" });
       } else {
         navigate({ to: "/welcome" });
@@ -44,12 +48,14 @@ function SignRoute() {
     if (waitingForProfile && profile && !isProfileLoading) {
       handleMessageSigned();
       
-      // If the user is NEW (mistakenly used sign-in) or incomplete (no team/league),
-      // redirect them back to onboarding setup
-      if (profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId) {
-        console.log("[SIGN] New or incomplete user detected, redirecting to onboarding...");
+      const isIncomplete = profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId;
+      const hasPendingData = !!(registrationData?.username && registrationData?.leagueId && registrationData?.teamId);
+
+      if (isIncomplete && !hasPendingData) {
+        console.log("[SIGN] Incomplete user, redirecting to onboarding...");
         navigate({ to: "/onboarding" });
       } else {
+        console.log("[SIGN] Profile complete or registration pending, going to welcome...");
         navigate({ to: "/welcome" });
       }
     }
