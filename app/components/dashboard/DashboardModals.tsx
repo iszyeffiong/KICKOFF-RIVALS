@@ -11,6 +11,7 @@ import { SimulationScreen } from "../SimulationScreen";
 import { BetModal } from "../BetModal";
 import { BetSlip } from "../BetSlip";
 import { AdminAuth } from "../AdminAuth";
+import { UpdateUsernameModal } from "../UpdateUsernameModal";
 
 const AdminPortal = lazy(() =>
   import("../AdminPortal").then((mod) => ({
@@ -56,6 +57,9 @@ export function DashboardModals() {
     setCoupons,
     fetchMatches,
     adminSessionToken,
+    showUpdateUsername,
+    setShowUpdateUsername,
+    handleUpdateUsername,
   } = useGame();
   const { sendTransactionAsync } = useSendTransaction();
   const TREASURY_WALLET = (import.meta as any).env.VITE_TREASURY_WALLET || "0x7AcbaEf80145c363941F480072b260909A64B294";
@@ -175,6 +179,13 @@ export function DashboardModals() {
             onRefreshMatches={fetchMatches}
           />
         </Suspense>
+      )}
+
+      {showUpdateUsername && (
+        <UpdateUsernameModal
+          onClose={() => setShowUpdateUsername(false)}
+          onConfirm={handleUpdateUsername}
+        />
       )}
 
       <BetSlip

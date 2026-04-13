@@ -4,7 +4,65 @@ import { eq, and, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { INITIAL_QUESTS, CONVERSION_RATE, CONVERSION_YIELD } from "../constants";
 import { desc } from "drizzle-orm"
+// import { verifyGasFeeTransaction } from "../lib/blockchain";
+
 import { verifyGasFeeTransaction } from "../lib/blockchain";
+
+// ==========================================
+// UPDATE USERNAME (Server Function)
+// ==========================================
+
+const updateUsernameSchema = z.object({
+  walletAddress: z.string().min(1),
+  newUsername: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username must be alphanumeric and underscores only"),
+});
+
+export const updateUsername = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => updateUsernameSchema.parse(data))
+  .handler(async ({ data }) => {
+    const normalized = data.walletAddress.toLowerCase();
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, normalized),
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    if (user.hasChangedUsername) {
+      return { success: false, error: "Username can only be changed once" };
+    }
+
+    // Check if username is already taken
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.username, data.newUsername),
+    });
+
+    if (existingUser) {
+      return { success: false, error: "Username already taken" };
+    }
+
+    // Update username
+    try {
+      await db
+        .update(users)
+        .set({
+          username: data.newUsername,
+          hasChangedUsername: true,
+        })
+        .where(eq(users.walletAddress, normalized));
+
+      return { 
+        success: true, 
+        message: "Username updated successfully",
+        newUsername: data.newUsername 
+      };
+    } catch (err: any) {
+      console.error("Username update failed:", err);
+      return { success: false, error: "Database error during update" };
+    }
+  });
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -93,7 +151,7 @@ const getOrCreateUserSchema = z.object({
 type GetOrCreateUserInput = z.infer<typeof getOrCreateUserSchema>;
 
 // Internal function to be used by other server functions
-export async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
+async function getOrCreateUserInternal(data: GetOrCreateUserInput) {
   const normalized = data.walletAddress.toLowerCase();
 
   // Try to find existing user
@@ -360,15 +418,6 @@ export const getUserProfile = createServerFn({ method: "GET" })
     let canClaimWelcomeGift = true;
     let nextGiftClaimIn = 0;
 
-    if (user.lastWelcomeGiftDate) {
-      const lastGift = new Date(user.lastWelcomeGiftDate);
-      const now = new Date();
-      const hoursSince =
-        (now.getTime() - lastGift.getTime()) / (1000 * 60 * 60);
-      canClaimWelcomeGift = hoursSince >= 24;
-      nextGiftClaimIn = canClaimWelcomeGift ? 0 : Math.ceil(24 - hoursSince);
-    }
-
     const profileReturn = {
       success: true,
       walletAddress: user.walletAddress,
@@ -398,34 +447,27 @@ export const getUserProfile = createServerFn({ method: "GET" })
       nextCheckInIn: 0,
       transactions: ((user as any).transactions || [])
         .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 50)
         .map((tx: any) => ({
           ...tx,
           timestamp: new Date(tx.createdAt).getTime(),
           hash: tx.id,
         })),
       quests: ((user as any).quests || []).map((q: any) => {
-        // Ensure we use the string identifier (e.g. 'dq_win10') as the ID for the frontend
         const id = q.questId || q.id;
-
-        // Find master properties (requiresVerification, externalUrl, etc) from hardcoded list
-        // This ensures frontend has full quest metadata even if not in DB row
         const master = INITIAL_QUESTS.find((iq) => iq.id === id);
-
-        // If already completed in DB, keep it
         if (q.completed) return { ...master, ...q, id };
-
-        // Auto-update progress for play/win types based on actual user stats
         let progress = q.progress || 0;
         if (q.type === "play") {
           progress = user.gamePlays || 0;
         } else if (q.type === "win") {
           progress = user.wins || 0;
         }
-
         return { ...master, ...q, id, progress };
       }),
       masterQuests: await db.select().from(quests),
       isNew: result.isNew,
+      hasChangedUsername: user.hasChangedUsername || false,
     };
 
     // Calculate check-in status

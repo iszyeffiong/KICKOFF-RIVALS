@@ -8,7 +8,9 @@ export const Route = createFileRoute("/alliance")({
 
 function AllianceRoute() {
   const navigate = useNavigate();
-  const { registrationData, setRegistrationData } = useGame();
+  const { registrationData, setRegistrationData, walletState } = useGame();
+
+  const isAlreadyVerified = walletState.isConnected && walletState.isVerified;
 
   return (
     <AllianceSetup
@@ -23,7 +25,15 @@ function AllianceRoute() {
           leagueId: data.leagueId,
           teamId: data.teamId,
         });
-        navigate({ to: "/connect" });
+        
+        if (isAlreadyVerified) {
+          // Returning user who was incomplete - skip connect/sign and go to welcome
+          // The useProfile hook will pick up the registrationData and update the DB
+          console.log("[ALLIANCE] User already verified, skipping connect & going to welcome");
+          navigate({ to: "/welcome" });
+        } else {
+          navigate({ to: "/connect" });
+        }
       }}
     />
   );

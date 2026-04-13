@@ -95,6 +95,7 @@ export const users = pgTable(
     level: integer("level").default(1).notNull(),
     xp: integer("xp").default(0).notNull(),
     activeTheme: varchar("active_theme", { length: 20 }).default("default"),
+    hasChangedUsername: boolean("has_changed_username").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

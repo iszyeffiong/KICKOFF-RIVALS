@@ -39,12 +39,12 @@ export const useProfile = () => {
       const data = await res.json();
 
       if (data.success) {
-        // If the server tells us it's a new user, update the store
-        if (data.isNew) {
-          setIsNewUser(true);
-          setRegistrationData(null); // Clear pending registration
-        } else {
+        // If the server confirms the user is fully setup, clear pending registration data
+        if (!data.isNew && data.username && data.allianceTeamId) {
           setIsNewUser(false);
+          setRegistrationData(null);
+        } else if (data.isNew) {
+          setIsNewUser(true);
         }
 
         // Merge INITIAL_SOCIAL_QUESTS
@@ -58,8 +58,10 @@ export const useProfile = () => {
       return data;
     },
     enabled: !!address,
-    staleTime: 30000, // 30 seconds
-    refetchInterval: 60000, // 1 minute
+    staleTime: 5000, // Reduced to 5 seconds for more frequent updates in betting environment
+    refetchInterval: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const refresh = useCallback(() => {

@@ -16,6 +16,7 @@ function SignRoute() {
     handleMessageSigned,
     handleLogout: contextLogout,
     profile,
+    registrationData,
   } = useGame();
   const { isPending: isProfileLoading } = useProfile();
   const [waitingForProfile, setWaitingForProfile] = useState(false);
@@ -24,7 +25,15 @@ function SignRoute() {
   useEffect(() => {
     if (walletState.isConnected && walletState.isVerified && profile) {
       handleMessageSigned();
-      navigate({ to: "/welcome" });
+      
+      const isIncomplete = profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId;
+      const hasPendingData = !!(registrationData?.username && registrationData?.leagueId && registrationData?.teamId);
+
+      if (isIncomplete && !hasPendingData) {
+        navigate({ to: "/onboarding" });
+      } else {
+        navigate({ to: "/welcome" });
+      }
     }
   }, [
     walletState.isConnected,
@@ -38,7 +47,17 @@ function SignRoute() {
   useEffect(() => {
     if (waitingForProfile && profile && !isProfileLoading) {
       handleMessageSigned();
-      navigate({ to: "/welcome" });
+      
+      const isIncomplete = profile.isNew || !profile.allianceLeagueId || !profile.allianceTeamId;
+      const hasPendingData = !!(registrationData?.username && registrationData?.leagueId && registrationData?.teamId);
+
+      if (isIncomplete && !hasPendingData) {
+        console.log("[SIGN] Incomplete user, redirecting to onboarding...");
+        navigate({ to: "/onboarding" });
+      } else {
+        console.log("[SIGN] Profile complete or registration pending, going to welcome...");
+        navigate({ to: "/welcome" });
+      }
     }
   }, [
     waitingForProfile,

@@ -5,7 +5,12 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const TARGET_URL = process.env.DATABASE_URL || "postgresql://postgres:SDdgXKUnLwyfkfFYmWRWMZAgqibSvMUx@metro.proxy.rlwy.net:19221/railway";
+const TARGET_URL = process.env.DATABASE_URL;
+
+if (!TARGET_URL) {
+  console.error("DATABASE_URL not found in .env");
+  process.exit(1);
+}
 
 async function importData() {
   const client = new pg.Client({ connectionString: TARGET_URL });
@@ -63,7 +68,7 @@ async function importData() {
         await client.query(`INSERT INTO ${table} (${columnNames}) VALUES ${values} ON CONFLICT DO NOTHING;`);
       }
       console.log(`Successfully imported ${table}.`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to import ${table}:`, err.message);
     }
   }

@@ -143,13 +143,13 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             Stats
           </a>
         </div>
-        <button
+        {/* <button
           onClick={onEnter}
           className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-500/30 text-emerald-400 text-sm font-medium hover:bg-emerald-500/10 transition-all"
         >
           <IconWallet className="w-4 h-4" />
           Connect Wallet
-        </button>
+        </button> */}
       </nav>
 
       {/* Hero Section */}

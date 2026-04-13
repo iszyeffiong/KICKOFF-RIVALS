@@ -21,7 +21,7 @@ function WelcomeRoute() {
     if (storeIsNewUser) {
       useUserStore.getState().setIsNewUser(false);
     }
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/dashboard/home" });
   };
 
   if (isLoading) {
